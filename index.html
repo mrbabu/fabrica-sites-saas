@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carregando...</title>
+    <meta name="description" content="Carregando...">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.6s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .smoothScroll { scroll-behavior: smooth; }
+    </style>
+</head>
+<body class="smoothScroll text-gray-900 bg-white">
+    <div id="app"></div>
+
+    <script>
+        // Configuração global
+        let config = {};
+
+        // Carregar JSON de configuração
+        async function loadConfig() {
+            try {
+                const response = await fetch('./site-config.json');
+                config = await response.json();
+                render();
+            } catch (error) {
+                console.error('Erro ao carregar configuração:', error);
+                document.getElementById('app').innerHTML = '<p class="text-red-500 p-4">Erro ao carregar configuração</p>';
+            }
+        }
+
+        // Renderizar aplicação
+        function render() {
+            const app = document.getElementById('app');
+            
+            // Atualizar metadata
+            document.title = config.metadata.siteTitle;
+            document.querySelector('meta[name="description"]').setAttribute('content', config.metadata.siteDescription);
+            
+            app.innerHTML = `
+                ${renderNavigation()}
+                ${renderHero()}
+                ${renderSections()}
+                ${renderServices()}
+                ${renderTestimonials()}
+                ${renderCTA()}
+                ${renderFooter()}
+            `;
+
+            // Aplicar cores customizadas
+            applyThemeColors();
+        }
+
+        function applyThemeColors() {
+            const colors = config.colors;
+            const style = document.createElement('style');
+            style.textContent = `
+                :root {
+                    --color-primary: ${colors.primary};
+                    --color-primary-dark: ${colors.primaryDark};
+                    --color-secondary: ${colors.secondary};
+                    --color-accent: ${colors.accent};
+                }
+                .btn-primary { background-color: var(--color-primary); }
+                .btn-primary:hover { background-color: var(--color-primary-dark); }
+                .text-primary { color: var(--color-primary); }
+                .border-primary { border-color: var(--color-primary); }
+                .bg-primary { background-color: var(--color-primary); }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function renderNavigation() {
+            return `
+                <nav class="sticky top-0 z-50 bg-white shadow-sm" style="border-bottom: 2px solid ${config.colors.border}">
+                    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl">${config.hero ? config.hero.icon || '🚀' : '🚀'}</span>
+                            <h1 class="font-bold text-lg" style="color: ${config.colors.primary}">${config.company.name}</h1>
+                        </div>
+                        <div class="hidden md:flex gap-6">
+                            ${config.sections.filter(s => s.enabled).map(s => `
+                                <a href="#${s.id}" class="font-medium transition hover:opacity-75" style="color: ${config.colors.text}">${s.title}</a>
+                            `).join('')}
+                            <a href="#contato" class="btn-primary text-white px-6 py-2 rounded-lg font-medium transition hover:shadow-lg">Contato</a>
+                        </div>
+                    </div>
+                </nav>
+            `;
+        }
+
+        function renderHero() {
+            if (!config.hero || !config.hero.enabled) return '';
+            
+            return `
+                <section class="fade-in min-h-screen flex items-center justify-center relative overflow-hidden" 
+                         style="background: linear-gradient(135deg, ${config.colors.primary}15 0%, ${config.colors.secondary}15 100%)">
+                    <div class="absolute inset-0 opacity-10" style="background-image: url('${config.hero.backgroundImage}'); background-size: cover;"></div>
+                    <div class="max-w-5xl mx-auto px-4 py-20 text-center relative z-10">
+                        <h2 class="text-5xl md:text-6xl font-bold mb-6 leading-tight" style="color: ${config.colors.primary}">
+                            ${config.hero.title}
+                        </h2>
+                        <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto" style="color: ${config.colors.textLight}">
+                            ${config.hero.subtitle}
+                        </p>
+                        <a href="${config.hero.ctaLink}" class="btn-primary text-white px-8 py-4 rounded-lg font-bold text-lg inline-block transition transform hover:scale-105 hover:shadow-xl">
+                            ${config.hero.ctaText}
+                        </a>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderSections() {
+            return config.sections.filter(s => s.enabled).map((section, idx) => `
+                <section id="${section.id}" class="fade-in py-20" style="background-color: ${idx % 2 === 0 ? config.colors.background : config.colors.primary}10">
+                    <div class="max-w-5xl mx-auto px-4">
+                        <h3 class="text-4xl font-bold mb-4 text-center" style="color: ${config.colors.primary}">
+                            ${section.title}
+                        </h3>
+                        <p class="text-lg text-center mb-12" style="color: ${config.colors.textLight}">
+                            ${section.subtitle}
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                            <div>
+                                <p class="text-lg leading-relaxed mb-6" style="color: ${config.colors.text}">
+                                    ${section.content}
+                                </p>
+                            </div>
+                            <img src="${section.image}" alt="${section.title}" class="rounded-lg shadow-lg">
+                        </div>
+                    </div>
+                </section>
+            `).join('');
+        }
+
+        function renderServices() {
+            const enabledServices = config.services.filter(s => s.enabled);
+            if (enabledServices.length === 0) return '';
+            
+            return `
+                <section class="fade-in py-20 bg-gray-50">
+                    <div class="max-w-6xl mx-auto px-4">
+                        <h3 class="text-4xl font-bold mb-4 text-center" style="color: ${config.colors.primary}">
+                            Nossos Serviços
+                        </h3>
+                        <p class="text-lg text-center mb-12" style="color: ${config.colors.textLight}">
+                            Soluções completas para seu negócio
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            ${enabledServices.map(service => `
+                                <div class="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition transform hover:scale-105" 
+                                     style="border-top: 4px solid ${config.colors.primary}">
+                                    <div class="text-5xl mb-4">${service.icon}</div>
+                                    <h4 class="text-2xl font-bold mb-3" style="color: ${config.colors.primary}">
+                                        ${service.title}
+                                    </h4>
+                                    <p class="mb-4" style="color: ${config.colors.textLight}">
+                                        ${service.description}
+                                    </p>
+                                    <ul class="space-y-2">
+                                        ${service.features.map(f => `
+                                            <li class="flex items-center gap-2" style="color: ${config.colors.text}">
+                                                <span style="color: ${config.colors.accent}">✓</span> ${f}
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderTestimonials() {
+            const enabledTestimonials = config.testimonials.filter(t => t.enabled);
+            if (enabledTestimonials.length === 0) return '';
+            
+            return `
+                <section class="fade-in py-20" style="background: linear-gradient(135deg, ${config.colors.primary}15 0%, ${config.colors.secondary}15 100%)">
+                    <div class="max-w-6xl mx-auto px-4">
+                        <h3 class="text-4xl font-bold mb-4 text-center" style="color: ${config.colors.primary}">
+                            O Que Nossos Clientes Dizem
+                        </h3>
+                        <p class="text-lg text-center mb-12" style="color: ${config.colors.textLight}">
+                            Depoimentos de clientes satisfeitos
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            ${enabledTestimonials.map(testimonial => `
+                                <div class="bg-white p-8 rounded-lg shadow-md">
+                                    <div class="flex items-center gap-4 mb-4">
+                                        <img src="${testimonial.avatar}" alt="${testimonial.name}" class="w-12 h-12 rounded-full">
+                                        <div>
+                                            <p class="font-bold" style="color: ${config.colors.primary}">${testimonial.name}</p>
+                                            <p class="text-sm" style="color: ${config.colors.textLight}">${testimonial.role}</p>
+                                        </div>
+                                    </div>
+                                    <div class="mb-4 flex gap-1">
+                                        ${Array.from({length: testimonial.rating}).map(() => '⭐').join('')}
+                                    </div>
+                                    <p style="color: ${config.colors.text}">"${testimonial.content}"</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderCTA() {
+            if (!config.cta || !config.cta.enabled) return '';
+            
+            return `
+                <section class="fade-in py-20" style="background-color: ${config.colors.primary}">
+                    <div class="max-w-4xl mx-auto px-4 text-center">
+                        <h3 class="text-4xl font-bold mb-4 text-white">
+                            ${config.cta.title}
+                        </h3>
+                        <p class="text-lg mb-8 text-gray-100">
+                            ${config.cta.description}
+                        </p>
+                        <a href="${config.cta.buttonLink}" class="bg-white text-gray-900 px-8 py-4 rounded-lg font-bold text-lg inline-block transition transform hover:scale-105 hover:shadow-xl">
+                            ${config.cta.buttonText}
+                        </a>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderFooter() {
+            return `
+                <footer id="contato" class="fade-in" style="background-color: ${config.colors.text}">
+                    <div class="max-w-6xl mx-auto px-4 py-16">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                            <div>
+                                <h4 class="font-bold text-white mb-4 text-lg">Sobre</h4>
+                                <p class="text-gray-300">${config.company.description}</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white mb-4 text-lg">Links</h4>
+                                <ul class="space-y-2 text-gray-300">
+                                    ${config.sections.filter(s => s.enabled).map(s => `
+                                        <li><a href="#${s.id}" class="hover:text-white transition">${s.title}</a></li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white mb-4 text-lg">Contato</h4>
+                                <p class="text-gray-300 mb-2">📧 <a href="mailto:${config.contact.email}" class="hover:text-white transition">${config.contact.email}</a></p>
+                                <p class="text-gray-300 mb-2">📱 <a href="tel:${config.contact.phone}" class="hover:text-white transition">${config.contact.phone}</a></p>
+                                <p class="text-gray-300">📍 ${config.contact.address}</p>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white mb-4 text-lg">Redes Sociais</h4>
+                                <div class="flex gap-4">
+                                    ${config.contact.social.instagram ? `<a href="${config.contact.social.instagram}" class="text-gray-300 hover:text-white transition text-2xl">📸</a>` : ''}
+                                    ${config.contact.social.facebook ? `<a href="${config.contact.social.facebook}" class="text-gray-300 hover:text-white transition text-2xl">👍</a>` : ''}
+                                    ${config.contact.social.linkedin ? `<a href="${config.contact.social.linkedin}" class="text-gray-300 hover:text-white transition text-2xl">💼</a>` : ''}
+                                    ${config.contact.social.twitter ? `<a href="${config.contact.social.twitter}" class="text-gray-300 hover:text-white transition text-2xl">𝕏</a>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border-t border-gray-700 pt-8 text-center text-gray-400">
+                            <p>© 2026 ${config.company.name}. Todos os direitos reservados.</p>
+                            <p class="text-sm mt-2">Criado com ❤️ por Fábrica de Sites SaaS</p>
+                        </div>
+                    </div>
+                </footer>
+            `;
+        }
+
+        // Inicializar ao carregar a página
+        document.addEventListener('DOMContentLoaded', loadConfig);
+    </script>
+</body>
+</html>
