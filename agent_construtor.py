@@ -25,6 +25,10 @@ from metrics import obter_metricas
 from ai_provider import obter_ai_provider, ErroProvedorIA
 
 
+MAX_TENTATIVAS_GERACAO = 3
+ICONES_FALLBACK = ["⭐", "✅", "🔧", "📦", "🎯", "💡", "🛠️", "📋"]
+
+
 class AgenteConstrutor:
     """Agente que gera configuração de site baseado em dados de onboarding do cliente"""
 
@@ -258,15 +262,40 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
 
         print(f"🤖 Gerando configuração (SEO by design) via {' -> '.join(self.ai.ordem)}...")
 
-        config = self.ai.gerar_json(prompt, max_tokens=4096)
-        print(f"   ↳ Provedor utilizado: {self.ai.provedor_ativo}")
+        ultimo_erro = None
+        for tentativa in range(1, MAX_TENTATIVAS_GERACAO + 1):
+            config = self.ai.gerar_json(prompt, max_tokens=4096)
+            print(f"   ↳ Provedor utilizado: {self.ai.provedor_ativo}")
 
-        if logo_url:
-            config.setdefault("company", {})["logo"] = logo_url
+            if logo_url:
+                config.setdefault("company", {})["logo"] = logo_url
 
-        # Validar schema básico
-        self._validar_schema(config)
+            config = self._autocorrigir(config)
 
+            # Validar schema básico (campos obrigatórios presentes)
+            self._validar_schema(config)
+
+            # Validação completa (tipos, tamanhos, regras de negócio)
+            valido, erro, _ = ValidadorSchema.validar_json(config)
+            if valido:
+                return config
+
+            ultimo_erro = erro
+            print(f"⚠️  Validação de conteúdo falhou na tentativa {tentativa}/{MAX_TENTATIVAS_GERACAO}: {erro}")
+
+        raise ValueError(f"Schema inválido após {MAX_TENTATIVAS_GERACAO} tentativas: {ultimo_erro}")
+
+    def _autocorrigir(self, config: dict) -> dict:
+        """
+        Corrige determinísticamente problemas comuns e recorrentes que o modelo
+        às vezes deixa passar apesar das instruções do prompt (ex: icon vazio).
+        Falhas que exigem regenerar conteúdo (campos curtos/longos demais) não
+        são adivinhadas aqui — o laço de retry em gerar_config_site tenta de novo.
+        """
+        for i, servico in enumerate(config.get("services", []) or []):
+            icon = (servico.get("icon") or "").strip()
+            if not (1 <= len(icon) <= 2):
+                servico["icon"] = ICONES_FALLBACK[i % len(ICONES_FALLBACK)]
         return config
 
     def _montar_instrucoes_seo(self, nicho: str, localizacao: Optional[str]) -> str:
@@ -378,6 +407,8 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         print(f"\n{'='*60}\n")
 
         try:
+            # gerar_config_site já tenta até MAX_TENTATIVAS_GERACAO vezes
+            # internamente (com autocorreção) antes de desistir.
             config = self.gerar_config_site(
                 nome_empresa, nicho, cor_primaria,
                 localizacao=localizacao,
@@ -385,7 +416,8 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 logo_url=logo_url,
             )
 
-            # Validar schema
+            # Validação final (config já passou por isso dentro de gerar_config_site,
+            # mas repetimos aqui, sem custo de API, para obter o objeto Pydantic)
             print("🔍 Validando schema...")
             valido, erro, config_obj = ValidadorSchema.validar_json(config)
 

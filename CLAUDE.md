@@ -17,7 +17,41 @@ Plataforma SaaS automatizada baseada em IA Multi-Agente. O sistema gera e public
 - Dados de cliente (nome, contato, logo) são sensíveis: tratar com validação estrita na entrada (`app.py`/`schema_validator.py`) e nunca logar em texto plano.
 - Para tarefas simples (formatação de JSON, ajustes pontuais de template), prefira soluções diretas — evite over-engineering ou abstrações não pedidas.
 
+## Status Congelado: Agente Construtor (Builder Engine)
+
+**Fase 1/2 de estabilidade CONCLUÍDA.** `agent_construtor.py` está estável e não deve
+receber refatoração adicional sem necessidade explícita — é a base sobre a qual os
+novos agentes especializados (`agents/`) vão se apoiar.
+
+Correção aplicada (commit "feat: builder engine stability fix 100% success rate"):
+- `_autocorrigir()` — corrige deterministicamente `icon` vazio/inválido (fallback de
+  emoji), sem custo de API.
+- Retry automático (`MAX_TENTATIVAS_GERACAO = 3`) implementado **dentro de
+  `gerar_config_site()`** (não em `executar()`), porque `test_agentes.py` chama
+  `gerar_config_site()` diretamente, ignorando `executar()`. Qualquer nova lógica de
+  confiabilidade/retry do pipeline de geração deve ser adicionada nesse mesmo nível.
+
+Resultado da verificação (`python test_agentes.py 10`, chamadas reais via Ollama
+local): taxa de sucesso subiu de 50% (sem o fix) para **100%** — acima da meta de
+>95% da Fase 1. Falhas resolvidas pelo retry: `siteTitle`/`siteDescription`/`ctaText`
+longos demais e `subtitle` vazio (o modelo local às vezes não respeita os limites de
+caracteres do prompt na primeira tentativa).
+
+## Próxima Fase: Agentes Especializados
+
+Em construção em `agents/` — esqueleto inicial com classes e interfaces, ainda sem
+lógica de negócio:
+1. **`agents/hunter.py`** — captura e limpeza de leads recebidos via WhatsApp.
+2. **`agents/vendedor.py`** — conecta com o Lovable e envia o link de demonstração ao lead.
+3. **`agents/financeiro.py`** — monitoramento e conciliação de pagamentos via PIX.
+
+Esses agentes devem se comunicar via o mesmo contrato JSON (`site-config.json` /
+payload de lead), seguindo o princípio de "JSON Schema Driven" já usado pelo Agente
+Construtor (ver `ROADMAP.md`, Fase 8 — Agentes Especializados).
+
 ## Roadmap de Desenvolvimento
 - [ ] Consolidar `app.py` como gateway fino, delegando processamento pesado ao workflow do n8n.
 - [ ] Configurar o workflow no n8n (recebimento do webhook → Agente Construtor → deploy Vercel).
 - [x] Normalização de logo via Pillow (`image_utils.py`) — concluído.
+- [x] Estabilizar Agente Construtor (retry + autocorreção, taxa de sucesso >95%) — concluído.
+- [ ] Esqueleto dos 3 agentes especializados (`agents/hunter.py`, `agents/vendedor.py`, `agents/financeiro.py`) — em andamento.
