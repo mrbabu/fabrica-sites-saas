@@ -12,10 +12,10 @@ try:
 except ImportError:
     pass  # Se não tiver python-dotenv instalado, continua sem .env
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Header, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, HttpUrl
 from contextlib import asynccontextmanager
 import os
 import sys
@@ -29,6 +29,7 @@ try:
     from agent_construtor import AgenteConstrutor
     from schema_validator import ValidadorSchema
     from metrics import obter_metricas
+    from image_utils import normalizar_logo, ErroNormalizacaoLogo
 except ImportError as e:
     print(f"❌ Erro ao importar módulos locais: {e}")
     sys.exit(1)
@@ -88,6 +89,24 @@ except Exception as e:
 
 metricas = obter_metricas()
 
+# Chave usada para proteger endpoints de recebimento de leads (ex: webhook do WhatsApp)
+WEBHOOK_API_KEY = os.getenv("WEBHOOK_API_KEY")
+
+
+def verificar_api_key(x_api_key: Optional[str] = Header(default=None, alias="X-API-Key")) -> None:
+    """
+    Protege endpoints de captura de leads contra acesso público.
+    Exige o header `X-API-Key` batendo com WEBHOOK_API_KEY do ambiente.
+    """
+    if not WEBHOOK_API_KEY:
+        logger.error("❌ WEBHOOK_API_KEY não configurada — endpoint protegido está bloqueado até configurar")
+        raise HTTPException(
+            status_code=503,
+            detail="Webhook não configurado: defina WEBHOOK_API_KEY no ambiente do servidor"
+        )
+    if not x_api_key or x_api_key != WEBHOOK_API_KEY:
+        raise HTTPException(status_code=401, detail="API key ausente ou inválida")
+
 
 # ============================================================================
 # MODELOS PYDANTIC (Request/Response)
@@ -134,6 +153,37 @@ class SiteRequest(BaseModel):
         if not re.match(r'^#[0-9a-fA-F]{6}$', v):
             raise ValueError('Cor deve estar em formato hex válido: #RRGGBB')
         return v.lower()
+
+
+class OnboardingWhatsApp(BaseModel):
+    """Payload de captura de lead vindo do fluxo n8n/WhatsApp"""
+    nome_empresa: str = Field(..., min_length=2, max_length=100, description="Nome da empresa/negócio")
+    ramo_atividade: str = Field(..., min_length=3, max_length=100, description="Ramo de atividade do cliente")
+    logo_url: HttpUrl = Field(..., description="URL pública do logo enviado pelo cliente")
+    localizacao: str = Field(..., min_length=2, max_length=150, description="Cidade/região do negócio")
+    whatsapp_contato: str = Field(..., min_length=10, max_length=20, description="WhatsApp de contato do cliente")
+    cor_preferida: Optional[str] = Field(default="#6366f1", description="Cor primária em hexadecimal (opcional)")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [{
+                "nome_empresa": "Padaria Sabor Dourado",
+                "ramo_atividade": "Padaria Artesanal",
+                "logo_url": "https://exemplo.com/logo.png",
+                "localizacao": "Curitiba, PR",
+                "whatsapp_contato": "+5541999998888",
+                "cor_preferida": "#D2691E"
+            }]
+        }
+    )
+
+    @field_validator('cor_preferida')
+    @classmethod
+    def validar_cor_hex(cls, v: Optional[str]) -> Optional[str]:
+        """Valida formato hexadecimal, se informado"""
+        if v and not re.match(r'^#[0-9a-fA-F]{6}$', v):
+            raise ValueError('Cor deve estar em formato hex válido: #RRGGBB')
+        return v.lower() if v else v
 
 
 class SiteResponse(BaseModel):
@@ -349,6 +399,133 @@ async def generate_site(
         )
 
 
+@app.post(
+    "/webhook/whatsapp",
+    response_model=SiteResponse,
+    tags=["Onboarding"],
+    dependencies=[Depends(verificar_api_key)],
+)
+async def webhook_whatsapp(
+    payload: OnboardingWhatsApp,
+    background_tasks: BackgroundTasks
+):
+    """
+    Recebe um lead capturado via WhatsApp (simulando o n8n) e gera o site
+    completo automaticamente: normaliza o logo, roda o Agente Construtor com
+    SEO by design (palavra-chave + localização) e salva o site-config.json.
+
+    **Protegido**: exige o header `X-API-Key` igual a WEBHOOK_API_KEY do
+    ambiente do servidor — não é um endpoint público.
+
+    **Exemplo de uso:**
+    ```bash
+    curl -X POST "http://localhost:8000/webhook/whatsapp" \\
+      -H "Content-Type: application/json" \\
+      -H "X-API-Key: sua-chave-aqui" \\
+      -d '{
+        "nome_empresa": "Padaria Sabor Dourado",
+        "ramo_atividade": "Padaria Artesanal",
+        "logo_url": "https://exemplo.com/logo.png",
+        "localizacao": "Curitiba, PR",
+        "whatsapp_contato": "+5541999998888",
+        "cor_preferida": "#D2691E"
+      }'
+    ```
+    """
+    import time
+
+    if not agente:
+        logger.error("❌ Agente não inicializado")
+        raise HTTPException(
+            status_code=503,
+            detail="Agente Construtor não inicializado. Reinicie a API."
+        )
+
+    tempo_inicio = time.time()
+
+    try:
+        logger.info(f"📲 Lead recebido via WhatsApp: {payload.nome_empresa} ({payload.ramo_atividade})")
+
+        # Normalizar logo (não bloqueia a geração do site se falhar)
+        logo_normalizado = None
+        try:
+            logo_normalizado = normalizar_logo(str(payload.logo_url), payload.nome_empresa)
+            logger.info(f"🖼️  Logo normalizado: {logo_normalizado}")
+        except ErroNormalizacaoLogo as e:
+            logger.warning(f"⚠️  Falha ao normalizar logo, seguindo sem logo customizado: {e}")
+
+        # Gerar config com SEO by design (palavra-chave + localização)
+        config = agente.gerar_config_site(
+            payload.nome_empresa,
+            payload.ramo_atividade,
+            payload.cor_preferida,
+            localizacao=payload.localizacao,
+            whatsapp_contato=payload.whatsapp_contato,
+            logo_url=logo_normalizado,
+        )
+
+        # Validar schema
+        valido, erro, config_obj = ValidadorSchema.validar_json(config)
+
+        if not valido:
+            logger.error(f"❌ Schema inválido: {erro}")
+            metricas.registrar_geracao(
+                payload.nome_empresa,
+                payload.ramo_atividade,
+                False,
+                time.time() - tempo_inicio,
+                erro=erro
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Schema inválido: {erro}"
+            )
+
+        # Salvar arquivo em background
+        background_tasks.add_task(
+            _salvar_config_background,
+            config,
+            payload.nome_empresa
+        )
+
+        tempo_total = time.time() - tempo_inicio
+
+        metricas.registrar_geracao(
+            payload.nome_empresa,
+            payload.ramo_atividade,
+            True,
+            tempo_total
+        )
+
+        logger.info(f"✅ Site gerado via WhatsApp em {tempo_total:.2f}s")
+
+        return SiteResponse(
+            status="success",
+            data=config,
+            timestamp=datetime.now().isoformat(),
+            tempo_geracao_segundos=round(tempo_total, 3)
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        tempo_total = time.time() - tempo_inicio
+        logger.error(f"❌ Erro ao gerar site via WhatsApp: {e}")
+
+        metricas.registrar_geracao(
+            payload.nome_empresa,
+            payload.ramo_atividade,
+            False,
+            tempo_total,
+            erro=str(e)
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao gerar site: {str(e)}"
+        )
+
+
 @app.get("/api/v1/metrics", tags=["Monitoring"])
 async def obter_metricas_endpoint():
     """Retorna métricas de uso da API"""
@@ -398,21 +575,28 @@ async def value_error_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
-    
-    # Configurar API key se não estiver setada
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        print("❌ ANTHROPIC_API_KEY não configurada!")
-        print("Configure com: $env:ANTHROPIC_API_KEY='sua-chave'")
-        sys.exit(1)
-    
+
+    # Verificar se pelo menos um provedor de IA está configurado
+    if not any([
+        os.getenv("NVIDIA_NIM_API_KEY"),
+        os.getenv("ANTHROPIC_API_KEY"),
+        os.getenv("OLLAMA_URL"),
+    ]):
+        print("⚠️  Nenhum provedor de IA configurado (NVIDIA_NIM_API_KEY / ANTHROPIC_API_KEY / OLLAMA_URL).")
+        print("   Configure ao menos um em .env antes de gerar sites.")
+
+    if not WEBHOOK_API_KEY:
+        print("⚠️  WEBHOOK_API_KEY não configurada — POST /webhook/whatsapp ficará bloqueado (503).")
+
     # Rodar servidor
     print("\n" + "="*60)
     print("🚀 Iniciando Fábrica de Sites SaaS - API")
     print("="*60)
     print("\n📚 Documentação interativa:")
     print("   http://localhost:8000/docs")
-    print("\n🔌 Endpoint principal:")
+    print("\n🔌 Endpoints principais:")
     print("   POST http://localhost:8000/api/v1/generate-site")
+    print("   POST http://localhost:8000/webhook/whatsapp  (requer header X-API-Key)")
     print("\n✨ Pressione Ctrl+C para parar\n")
     
     uvicorn.run(

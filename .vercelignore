@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.env
+.env.local
+site-config.json
+relatorio_testes.json
+metrics.json
+metrics.log
+test_agentes.py
+test_api.py
+quickstart.py
+exemplo_uso.py
+*.md

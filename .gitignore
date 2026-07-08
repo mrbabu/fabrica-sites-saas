@@ -57,3 +57,7 @@ site-configs/
 # Métricas e dados
 metrics.json
 relatorio_testes.json
+
+# Logos de clientes gerados via onboarding (dados por cliente, não versionados)
+assets/logos/*
+!assets/logos/.gitkeep
