@@ -4,9 +4,10 @@ Provedor de IA - Fábrica de Sites SaaS
 Abstrai a chamada ao modelo de linguagem por trás de uma interface única
 (gerar_json), com troca modular de fonte:
 
-  1. NVIDIA NIM (padrão)   - via SDK OpenAI-compatível
-  2. Anthropic (fallback)  - via SDK oficial
-  3. Ollama local (fallback de dev, opcional) - via requests
+  1. Gemini (padrão)       - via SDK google-generativeai (Google AI Studio)
+  2. NVIDIA NIM (fallback) - via SDK OpenAI-compatível
+  3. Anthropic (fallback)  - via SDK oficial
+  4. Ollama local (fallback de dev, opcional) - via requests
 
 A ordem é escolhida por AI_PROVIDER (provedor preferido) e, se ele falhar,
 cai automaticamente para o próximo da cadeia.
@@ -61,12 +62,17 @@ class ProvedorNvidiaNIM:
 
         self.api_key = os.getenv("NVIDIA_NIM_API_KEY")
         self.base_url = os.getenv("NVIDIA_NIM_BASE_URL", "https://integrate.api.nvidia.com/v1")
-        self.model = os.getenv("NVIDIA_NIM_MODEL", "meta/llama3-70b-instruct")
+        self.model = os.getenv("NVIDIA_NIM_MODEL", "meta/llama-3.1-8b-instruct")
 
         if not self.api_key:
             raise ErroProvedorIA("NVIDIA_NIM_API_KEY não configurada")
 
-        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        self.client = OpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            timeout=30.0,
+            max_retries=1,
+        )
 
     def gerar_json(self, prompt: str, max_tokens: int = 4096) -> dict:
         response = self.client.chat.completions.create(
@@ -82,6 +88,44 @@ class ProvedorNvidiaNIM:
             temperature=0.7,
         )
         texto = response.choices[0].message.content.strip()
+        return _extrair_json(texto)
+
+
+class ProvedorGemini:
+    """Chama modelos Gemini via Google AI Studio (SDK google-generativeai)"""
+
+    nome = "gemini"
+
+    def __init__(self):
+        try:
+            import google.generativeai as genai
+        except ImportError as e:
+            raise ErroProvedorIA("Pacote 'google-generativeai' não instalado") from e
+
+        self.api_key = os.getenv("GEMINI_API_KEY")
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+
+        if not self.api_key:
+            raise ErroProvedorIA("GEMINI_API_KEY não configurada")
+
+        genai.configure(api_key=self.api_key)
+        self._genai = genai
+        self.client = genai.GenerativeModel(
+            self.model_name,
+            system_instruction="Você retorna exclusivamente JSON válido, sem markdown e sem texto adicional.",
+        )
+
+    def gerar_json(self, prompt: str, max_tokens: int = 4096) -> dict:
+        response = self.client.generate_content(
+            prompt,
+            generation_config=self._genai.GenerationConfig(
+                response_mime_type="application/json",
+                max_output_tokens=max_tokens,
+                temperature=0.7,
+            ),
+            request_options={"timeout": 30},
+        )
+        texto = response.text.strip()
         return _extrair_json(texto)
 
 
@@ -153,12 +197,13 @@ class ProvedorOllama:
 
 
 _PROVEDORES = {
+    "gemini": ProvedorGemini,
     "nvidia_nim": ProvedorNvidiaNIM,
     "anthropic": ProvedorAnthropic,
     "ollama": ProvedorOllama,
 }
 
-_ORDEM_PADRAO = ["nvidia_nim", "anthropic", "ollama"]
+_ORDEM_PADRAO = ["gemini", "nvidia_nim", "anthropic", "ollama"]
 
 
 class AIProvider:
@@ -171,7 +216,7 @@ class AIProvider:
     """
 
     def __init__(self):
-        preferido = os.getenv("AI_PROVIDER", "nvidia_nim").strip().lower()
+        preferido = os.getenv("AI_PROVIDER", "gemini").strip().lower()
         ordem_env = os.getenv("AI_PROVIDER_FALLBACK_ORDER")
 
         if ordem_env:
