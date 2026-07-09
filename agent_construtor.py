@@ -9,6 +9,7 @@ import json
 import sys
 import os
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 import re
@@ -23,6 +24,7 @@ except ImportError:
 from schema_validator import ValidadorSchema
 from metrics import obter_metricas
 from ai_provider import obter_ai_provider, ErroProvedorIA
+from image_utils import _slugify
 
 
 MAX_TENTATIVAS_GERACAO = 3
@@ -143,7 +145,8 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
   "metadata": {{
     "siteTitle": "string (mínimo 5, MÁXIMO 60 caracteres) - Título SEO do site, com palavra-chave do nicho{' e localização' if localizacao else ''}",
     "siteDescription": "string (mínimo 10, MÁXIMO 160 caracteres) - Meta description focada em conversão",
-    "favicon": "emoji"
+    "favicon": "emoji",
+    "keywords": ["5 a 8 palavras-chave de SEO relacionadas ao nicho, cada uma uma string curta"]
   }},
   "company": {{
     "name": "string (máximo 100 caracteres)",
@@ -197,6 +200,29 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
       "enabled": true
     }}
   ],
+  "features": [
+    {{
+      "id": 1,
+      "title": "string (mínimo 5, máximo 80 caracteres) - Nome do diferencial competitivo",
+      "description": "string (mínimo 20, máximo 200 caracteres) - Por que isso é um diferencial",
+      "icon": "string OBRIGATÓRIO (1-2 de tamanho) - um único emoji relacionado, ex: \"⚡\"",
+      "enabled": true
+    }},
+    {{
+      "id": 2,
+      "title": "string (mínimo 5, máximo 80 caracteres)",
+      "description": "string (mínimo 20, máximo 200 caracteres)",
+      "icon": "string OBRIGATÓRIO (1-2 de tamanho) - emoji, ex: \"✅\"",
+      "enabled": true
+    }},
+    {{
+      "id": 3,
+      "title": "string (mínimo 5, máximo 80 caracteres)",
+      "description": "string (mínimo 20, máximo 200 caracteres)",
+      "icon": "string OBRIGATÓRIO (1-2 de tamanho) - emoji, ex: \"🎯\"",
+      "enabled": true
+    }}
+  ],
   "testimonials": [
     {{
       "id": 1,
@@ -226,6 +252,32 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
       "enabled": true
     }}
   ],
+  "faq": [
+    {{
+      "id": 1,
+      "question": "string (mínimo 10, máximo 150 caracteres) - Pergunta frequente realista do nicho \"{nicho}\"",
+      "answer": "string (mínimo 10, máximo 400 caracteres) - Resposta persuasiva e curta",
+      "enabled": true
+    }},
+    {{
+      "id": 2,
+      "question": "string (mínimo 10, máximo 150 caracteres)",
+      "answer": "string (mínimo 10, máximo 400 caracteres)",
+      "enabled": true
+    }},
+    {{
+      "id": 3,
+      "question": "string (mínimo 10, máximo 150 caracteres)",
+      "answer": "string (mínimo 10, máximo 400 caracteres)",
+      "enabled": true
+    }},
+    {{
+      "id": 4,
+      "question": "string (mínimo 10, máximo 150 caracteres)",
+      "answer": "string (mínimo 10, máximo 400 caracteres)",
+      "enabled": true
+    }}
+  ],
   "contact": {{
     "email": "contato@{nome_empresa.lower().replace(' ', '')}.com",
     "phone": "+55 11 98765-4321",
@@ -250,7 +302,9 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
 Instruções de copywriting para o nicho "{nicho}":
 - Hero: Crie urgência e prometa resultados mensuráveis
 - Serviços: Descreva benefícios, não apenas features
+- Diferenciais (features): Destaque o que torna o negócio diferente da concorrência
 - Depoimentos: Inclua números/resultados específicos
+- FAQ: Antecipe as dúvidas mais comuns de quem procura "{nicho}" antes de comprar/contratar
 - CTA: Use linguagem ativa e persuasiva
 - Todos os textos devem ser concisos mas impactantes
 
@@ -271,6 +325,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 config.setdefault("company", {})["logo"] = logo_url
 
             config = self._autocorrigir(config)
+            config = self._preencher_fallbacks(config, nicho, nome_empresa, tem_logo_explicito=bool(logo_url))
 
             # Validar schema básico (campos obrigatórios presentes)
             self._validar_schema(config)
@@ -296,6 +351,72 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
             icon = (servico.get("icon") or "").strip()
             if not (1 <= len(icon) <= 2):
                 servico["icon"] = ICONES_FALLBACK[i % len(ICONES_FALLBACK)]
+
+        for i, diferencial in enumerate(config.get("features", []) or []):
+            icon = (diferencial.get("icon") or "").strip()
+            if not (1 <= len(icon) <= 2):
+                diferencial["icon"] = ICONES_FALLBACK[i % len(ICONES_FALLBACK)]
+
+        return config
+
+    def _preencher_fallbacks(
+        self,
+        config: dict,
+        nicho: str,
+        nome_empresa: str,
+        tem_logo_explicito: bool = False,
+    ) -> dict:
+        """
+        Garante que nenhum campo de imagem/SEO derivado fique vazio no JSON final.
+        A IA às vezes retorna "" para favicon/logo/backgroundImage/image/avatar;
+        aqui aplicamos fallbacks determinísticos (sem custo de API), usando
+        LoremFlickr (fotos reais por palavra-chave, sem API key) e pravatar.cc
+        (avatares de pessoa para depoimentos). Os campos ogTitle/ogDescription/
+        ogImage e o objeto footer são sempre derivados aqui, nunca pedidos à IA.
+        """
+        nicho_slug = _slugify(nicho) or "negocio"
+        empresa_slug = _slugify(nome_empresa) or "empresa"
+
+        metadata = config.setdefault("metadata", {})
+        if not (metadata.get("favicon") or "").strip():
+            metadata["favicon"] = "🚀"
+
+        hero = config.setdefault("hero", {})
+        if not (hero.get("backgroundImage") or "").strip():
+            hero["backgroundImage"] = f"https://loremflickr.com/1920/600/{nicho_slug}"
+
+        company = config.setdefault("company", {})
+        if not tem_logo_explicito and not (company.get("logo") or "").strip():
+            company["logo"] = f"https://loremflickr.com/400/400/{nicho_slug},logo"
+
+        for i, secao in enumerate(config.get("sections", []) or []):
+            if not (secao.get("image") or "").strip():
+                secao["image"] = f"https://loremflickr.com/500/400/{nicho_slug}?lock={i}"
+
+        for i, depoimento in enumerate(config.get("testimonials", []) or []):
+            if not (depoimento.get("avatar") or "").strip():
+                depoimento["avatar"] = f"https://i.pravatar.cc/150?u={empresa_slug}-{i}"
+
+        # SEO/OG derivados sempre de metadata/hero já preenchidos acima
+        metadata["ogTitle"] = metadata.get("siteTitle", "")
+        metadata["ogDescription"] = metadata.get("siteDescription", "")
+        metadata["ogImage"] = hero.get("backgroundImage", "")
+
+        # Rodapé é 100% derivado (nunca pedido à IA) para evitar mais uma
+        # superfície de falha/retry no modelo
+        links_footer = [
+            {"label": secao.get("title", ""), "url": f"#{secao.get('id', '')}"}
+            for secao in (config.get("sections", []) or [])
+            if secao.get("enabled", True) and secao.get("title") and secao.get("id")
+        ]
+        links_footer.append({"label": "Contato", "url": "#contato"})
+
+        config["footer"] = {
+            "description": company.get("description", "") or f"{nome_empresa} - {nicho}",
+            "links": links_footer,
+            "copyrightText": f"© {datetime.now().year} {nome_empresa}. Todos os direitos reservados.",
+        }
+
         return config
 
     def _montar_instrucoes_seo(self, nicho: str, localizacao: Optional[str]) -> str:
@@ -334,7 +455,8 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         """
         campos_obrigatorios = [
             "metadata", "company", "colors", "hero",
-            "sections", "services", "testimonials", "contact", "cta"
+            "sections", "services", "features", "testimonials", "faq",
+            "contact", "cta", "footer"
         ]
 
         for campo in campos_obrigatorios:
@@ -362,6 +484,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
             Caminho do arquivo salvo
         """
         caminho_abs = Path(caminho).absolute()
+        caminho_abs.parent.mkdir(parents=True, exist_ok=True)
 
         with open(caminho_abs, 'w', encoding='utf-8') as f:
             json.dump(config, f, ensure_ascii=False, indent=2)

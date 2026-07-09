@@ -19,12 +19,20 @@ class Metadata(BaseModel):
     siteTitle: str = Field(..., min_length=5, max_length=60, description="Título SEO")
     siteDescription: str = Field(..., min_length=10, max_length=160, description="Meta description")
     favicon: str = Field(default="🚀", description="Emoji ou URL")
+    keywords: List[str] = Field(default_factory=list, max_items=10, description="Palavras-chave de SEO")
+    ogTitle: str = Field(default="", description="Título Open Graph (derivado de siteTitle)")
+    ogDescription: str = Field(default="", description="Descrição Open Graph (derivada de siteDescription)")
+    ogImage: str = Field(default="", description="Imagem Open Graph (derivada de hero.backgroundImage)")
 
     class Config:
         examples = [{
             "siteTitle": "Meu Negócio Profissional",
             "siteDescription": "Descrição breve do seu negócio",
-            "favicon": "🚀"
+            "favicon": "🚀",
+            "keywords": ["negócio", "profissional"],
+            "ogTitle": "Meu Negócio Profissional",
+            "ogDescription": "Descrição breve do seu negócio",
+            "ogImage": "https://loremflickr.com/1920/600/negocio"
         }]
 
 
@@ -166,6 +174,60 @@ class Testimonial(BaseModel):
         }]
 
 
+class Feature(BaseModel):
+    """Diferencial competitivo"""
+    id: int = Field(..., description="ID único")
+    title: str = Field(..., min_length=5, max_length=80, description="Nome do diferencial")
+    description: str = Field(..., min_length=20, max_length=200, description="Descrição breve")
+    icon: str = Field(..., min_length=1, max_length=2, description="Emoji do diferencial")
+    enabled: bool = Field(default=True, description="Ativar/desativar")
+
+    class Config:
+        examples = [{
+            "id": 1,
+            "title": "Atendimento Rápido",
+            "description": "Respondemos em menos de 1 hora",
+            "icon": "⚡",
+            "enabled": True
+        }]
+
+
+class FAQItem(BaseModel):
+    """Pergunta frequente"""
+    id: int = Field(..., description="ID único")
+    question: str = Field(..., min_length=10, max_length=150, description="Pergunta")
+    answer: str = Field(..., min_length=10, max_length=400, description="Resposta")
+    enabled: bool = Field(default=True, description="Ativar/desativar")
+
+    class Config:
+        examples = [{
+            "id": 1,
+            "question": "Como funciona o atendimento?",
+            "answer": "Atendemos via WhatsApp em horário comercial.",
+            "enabled": True
+        }]
+
+
+class FooterLink(BaseModel):
+    """Link do rodapé"""
+    label: str = Field(..., min_length=2, max_length=40, description="Texto do link")
+    url: str = Field(..., description="URL/âncora do link")
+
+
+class Footer(BaseModel):
+    """Rodapé dinâmico do site"""
+    description: str = Field(..., min_length=20, max_length=500, description="Descrição curta da empresa")
+    links: List[FooterLink] = Field(default_factory=list, description="Links de navegação")
+    copyrightText: str = Field(..., min_length=5, max_length=150, description="Texto de copyright")
+
+    class Config:
+        examples = [{
+            "description": "Somos especializados em inovação...",
+            "links": [{"label": "Sobre", "url": "#sobre"}, {"label": "Contato", "url": "#contato"}],
+            "copyrightText": "© 2026 Minha Empresa. Todos os direitos reservados."
+        }]
+
+
 class Social(BaseModel):
     """Redes sociais"""
     instagram: Optional[str] = Field(default=None, description="URL Instagram")
@@ -230,9 +292,12 @@ class SiteConfig(BaseModel):
     hero: Hero
     sections: List[Section] = Field(default_factory=list, max_items=10, description="Seções de conteúdo")
     services: List[Service] = Field(..., min_items=1, max_items=10, description="Serviços")
+    features: List[Feature] = Field(..., min_items=3, max_items=6, description="Diferenciais competitivos")
     testimonials: List[Testimonial] = Field(..., min_items=1, max_items=20, description="Depoimentos")
+    faq: List[FAQItem] = Field(..., min_items=3, max_items=8, description="Perguntas frequentes")
     contact: Contact
     cta: CTA
+    footer: Footer
 
     @validator('services')
     def validate_services(cls, v):
@@ -250,15 +315,18 @@ class SiteConfig(BaseModel):
 
     class Config:
         examples = [{
-            "metadata": {"siteTitle": "Empresa", "siteDescription": "Descrição", "favicon": "🚀"},
+            "metadata": {"siteTitle": "Empresa", "siteDescription": "Descrição", "favicon": "🚀", "keywords": ["empresa"], "ogTitle": "Empresa", "ogDescription": "Descrição", "ogImage": "url"},
             "company": {"name": "Empresa", "tagline": "Slogan", "description": "Descrição", "logo": "url"},
             "colors": {"primary": "#6366f1", "primaryDark": "#4f46e5", "secondary": "#ec4899", "accent": "#f59e0b", "background": "#ffffff", "text": "#1f2937", "textLight": "#6b7280", "border": "#e5e7eb"},
             "hero": {"title": "Título", "subtitle": "Subtítulo", "ctaText": "CTA", "ctaLink": "#", "backgroundImage": "url", "enabled": True},
             "sections": [],
             "services": [{"id": 1, "title": "Serviço", "description": "Desc", "icon": "⚡", "features": ["F1"], "enabled": True}],
+            "features": [{"id": 1, "title": "Diferencial", "description": "Desc", "icon": "⚡", "enabled": True}],
             "testimonials": [{"id": 1, "name": "Nome", "role": "Profissão", "content": "Depoimento", "avatar": "url", "rating": 5, "enabled": True}],
+            "faq": [{"id": 1, "question": "Pergunta?", "answer": "Resposta.", "enabled": True}],
             "contact": {"email": "email@test.com", "phone": "+55", "whatsapp": "+55", "address": "Endereço", "social": {}},
-            "cta": {"title": "Título", "description": "Descrição", "buttonText": "Botão", "buttonLink": "url", "enabled": True}
+            "cta": {"title": "Título", "description": "Descrição", "buttonText": "Botão", "buttonLink": "url", "enabled": True},
+            "footer": {"description": "Descrição", "links": [{"label": "Contato", "url": "#contato"}], "copyrightText": "© 2026 Empresa"}
         }]
 
 
@@ -321,7 +389,11 @@ class ValidadorSchema:
             "metadata": {
                 "siteTitle": "Título do Site",
                 "siteDescription": "Descrição meta",
-                "favicon": "🚀"
+                "favicon": "🚀",
+                "keywords": ["negócio", "serviço"],
+                "ogTitle": "Título do Site",
+                "ogDescription": "Descrição meta",
+                "ogImage": "https://loremflickr.com/1920/600/negocio"
             },
             "company": {
                 "name": "Nome Empresa",
@@ -353,7 +425,7 @@ class ValidadorSchema:
                     "type": "content",
                     "title": "Sobre",
                     "subtitle": "Conheça nossa história",
-                    "content": "Descrição completa",
+                    "content": "Descrição completa da empresa e sua história",
                     "image": "https://via.placeholder.com/500x400?text=About",
                     "enabled": True
                 }
@@ -362,9 +434,32 @@ class ValidadorSchema:
                 {
                     "id": 1,
                     "title": "Serviço 1",
-                    "description": "Descrição breve",
+                    "description": "Descrição breve e objetiva do serviço",
                     "icon": "⚡",
                     "features": ["Feature 1", "Feature 2", "Feature 3"],
+                    "enabled": True
+                }
+            ],
+            "features": [
+                {
+                    "id": 1,
+                    "title": "Diferencial 1",
+                    "description": "Descrição breve do diferencial",
+                    "icon": "⭐",
+                    "enabled": True
+                },
+                {
+                    "id": 2,
+                    "title": "Diferencial 2",
+                    "description": "Descrição breve do diferencial",
+                    "icon": "✅",
+                    "enabled": True
+                },
+                {
+                    "id": 3,
+                    "title": "Diferencial 3",
+                    "description": "Descrição breve do diferencial",
+                    "icon": "🎯",
                     "enabled": True
                 }
             ],
@@ -373,9 +468,29 @@ class ValidadorSchema:
                     "id": 1,
                     "name": "Cliente",
                     "role": "Profissão",
-                    "content": "Depoimento positivo",
-                    "avatar": "https://via.placeholder.com/100x100?text=Avatar",
+                    "content": "Depoimento positivo e muito satisfeito com o resultado",
+                    "avatar": "https://i.pravatar.cc/150?u=cliente-1",
                     "rating": 5,
+                    "enabled": True
+                }
+            ],
+            "faq": [
+                {
+                    "id": 1,
+                    "question": "Como funciona o atendimento?",
+                    "answer": "Atendemos via WhatsApp em horário comercial.",
+                    "enabled": True
+                },
+                {
+                    "id": 2,
+                    "question": "Quais formas de pagamento vocês aceitam?",
+                    "answer": "Aceitamos PIX, cartão e boleto.",
+                    "enabled": True
+                },
+                {
+                    "id": 3,
+                    "question": "Qual o prazo de entrega/atendimento?",
+                    "answer": "O prazo varia conforme a demanda, entre em contato para detalhes.",
                     "enabled": True
                 }
             ],
@@ -397,6 +512,14 @@ class ValidadorSchema:
                 "buttonText": "Agir Agora",
                 "buttonLink": "mailto:contato@empresa.com",
                 "enabled": True
+            },
+            "footer": {
+                "description": "Descrição da empresa",
+                "links": [
+                    {"label": "Sobre", "url": "#sobre"},
+                    {"label": "Contato", "url": "#contato"}
+                ],
+                "copyrightText": "© 2026 Nome Empresa. Todos os direitos reservados."
             }
         }
 

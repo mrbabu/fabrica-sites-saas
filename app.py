@@ -19,8 +19,10 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict, HttpUrl
 from contextlib import asynccontextmanager
 import os
 import sys
+import json
 import logging
 import re
+from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
@@ -29,7 +31,7 @@ try:
     from agent_construtor import AgenteConstrutor
     from schema_validator import ValidadorSchema
     from metrics import obter_metricas
-    from image_utils import normalizar_logo, ErroNormalizacaoLogo
+    from image_utils import normalizar_logo, ErroNormalizacaoLogo, _slugify
 except ImportError as e:
     print(f"❌ Erro ao importar módulos locais: {e}")
     sys.exit(1)
@@ -532,6 +534,25 @@ async def obter_metricas_endpoint():
     return metricas.obter_estatisticas()
 
 
+@app.get("/api/v1/site-config/{slug}", tags=["Generation"])
+async def obter_site_config(slug: str):
+    """
+    Recupera um site-config.json previamente gerado e salvo pelo `slug`
+    (nome da empresa "slugificado", ex: "padaria-sao-jose"). Permite que um
+    frontend hospedado na Vercel (ex: Lovable) busque a config depois da
+    geração inicial, sem depender apenas da resposta síncrona do POST.
+    """
+    if not re.match(r'^[a-z0-9-]+$', slug):
+        raise HTTPException(status_code=400, detail="Slug inválido")
+
+    caminho = Path("configs") / f"{slug}-config.json"
+    if not caminho.is_file():
+        raise HTTPException(status_code=404, detail=f"Config não encontrada para '{slug}'")
+
+    with open(caminho, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 # ============================================================================
 # FUNÇÕES AUXILIARES
 # ============================================================================
@@ -539,7 +560,8 @@ async def obter_metricas_endpoint():
 def _salvar_config_background(config: dict, nome_empresa: str) -> None:
     """Salva config em arquivo (tarefa background)"""
     try:
-        nome_arquivo = f"configs/{nome_empresa.lower().replace(' ', '-')}-config.json"
+        slug = _slugify(nome_empresa)
+        nome_arquivo = f"configs/{slug}-config.json"
         agente.salvar_config(config, nome_arquivo)
         logger.info(f"💾 Config salva: {nome_arquivo}")
     except Exception as e:
