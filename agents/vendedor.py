@@ -14,7 +14,9 @@ import re
 from typing import Any, Dict
 
 LOVABLE_WEBHOOK_URL_MOCK = "https://api.lovable.dev/mock/webhook"
-WHATSAPP_API_URL_MOCK = "https://api.whatsapp.com/mock/send"
+# Endpoint mockado no padrão de disparo usado por Z-API/Evolution API
+# (POST {instancia}/message/sendText — corpo {"number", "text"}).
+WHATSAPP_DISPATCH_API_URL_MOCK = "https://api.z-api.io/mock/instances/instance/token/token/send-text"
 
 
 def _slugificar(texto: str) -> str:
@@ -23,9 +25,15 @@ def _slugificar(texto: str) -> str:
     return slug or "site"
 
 
+def _formatar_numero_whatsapp(numero: str) -> str:
+    """Normaliza o contato para o formato somente-dígitos (DDI+DDD+número)
+    exigido pelo corpo de requisição de Z-API/Evolution API — remove
+    símbolos como '+', espaços, parênteses e hífens."""
+    return re.sub(r"\D", "", numero or "")
+
+
 class ErroEnvioDemo(Exception):
-    """Lead sem contato de WhatsApp válido, ou payload de demo incompleto,
-    para o envio do link de demonstração"""
+    """Lead sem contato de WhatsApp válido para o envio do link de demonstração"""
 
 
 class AgenteVendedor:
@@ -67,50 +75,52 @@ class AgenteVendedor:
         }
 
     def enviar_link_demonstracao(
-        self, lead: Dict[str, Any], demo: Dict[str, Any]
+        self, link_demonstracao: str, whatsapp_contato: str
     ) -> Dict[str, Any]:
         """
-        Monta (mock) o payload que seria enviado à API do WhatsApp para
-        entregar o link de demonstração ao lead — ainda não é uma chamada
-        HTTP real, mesmo padrão de conectar_lovable().
+        Monta (mock) o payload de disparo que seria enviado a uma API de
+        WhatsApp (Z-API/Evolution API) para entregar o link de demonstração
+        ao lead — ainda não é uma chamada HTTP real, mesmo padrão de
+        conectar_lovable(). Contrato estrito: recebe só o link gerado pelo
+        Lovable e o contato extraído pelo AgenteHunter, não os dicts inteiros
+        de onde vêm.
 
         Args:
-            lead: payload do lead ("DadosLead"), já limpo/validado pelo
-                AgenteHunter (deve conter `whatsapp_contato`).
-            demo: payload retornado por conectar_lovable() (deve conter
+            link_demonstracao: URL da demo (ex: `conectar_lovable()`'s
                 `url_demo_prevista`).
+            whatsapp_contato: número de contato do lead, extraído pelo
+                AgenteHunter (`DadosLead["whatsapp_contato"]`).
 
         Returns:
-            Payload do lead atualizado com o status de envio e o link
-            enviado — contrato de entrada do AgenteFinanceiro após a venda.
+            {"sucesso": bool, "numero_formatado": str,
+            "payload_envio": {"number", "text"}, "endpoint": str} — o
+            payload final pronto para ser enviado à API de disparo real.
 
         Raises:
-            ErroEnvioDemo: se o lead não tiver `whatsapp_contato` ou o
-                payload de demo não tiver `url_demo_prevista` — nunca falha
-                silenciosamente, dado que dados de contato são sensíveis.
+            ErroEnvioDemo: se o número de contato estiver vazio — nunca
+                falha silenciosamente, dado que dados de contato são
+                sensíveis.
         """
-        whatsapp_contato = str(lead.get("whatsapp_contato") or "").strip()
-        if not whatsapp_contato:
-            raise ErroEnvioDemo("Lead sem whatsapp_contato: impossível enviar link de demonstração")
-
-        url_demo = demo.get("url_demo_prevista")
-        if not url_demo:
-            raise ErroEnvioDemo(
-                "Payload de demo sem url_demo_prevista: conectar_lovable() não foi executado corretamente"
-            )
+        numero_formatado = _formatar_numero_whatsapp(whatsapp_contato)
+        if not numero_formatado:
+            raise ErroEnvioDemo("Contato de WhatsApp vazio: impossível enviar link de demonstração")
 
         mensagem = (
-            f"Olá! Seu site de demonstração já está pronto: {url_demo}\n"
-            "Responda esta mensagem para ativarmos o pagamento e publicarmos o site oficial."
+            "🚀 *Seu site profissional já está pronto!*\n\n"
+            f"Preparamos uma demonstração exclusiva para o seu negócio: {link_demonstracao}\n\n"
+            "Esse layout foi pensado para transformar visitantes em clientes já na primeira "
+            "impressão. Estamos com poucas vagas de ativação esta semana — responda agora "
+            "e coloque seu site oficial no ar ainda hoje! 💼✨"
         )
 
+        payload_envio = {
+            "number": numero_formatado,
+            "text": mensagem,
+        }
+
         return {
-            **lead,
-            "status_envio": "mock_enviado",
-            "url_demo_enviada": url_demo,
-            "corpo_requisicao_whatsapp": {
-                "webhook_url": WHATSAPP_API_URL_MOCK,
-                "to": whatsapp_contato,
-                "mensagem": mensagem,
-            },
+            "sucesso": True,
+            "numero_formatado": numero_formatado,
+            "payload_envio": payload_envio,
+            "endpoint": WHATSAPP_DISPATCH_API_URL_MOCK,
         }

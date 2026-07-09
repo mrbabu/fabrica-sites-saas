@@ -66,8 +66,10 @@ def main():
     print("=" * 70)
 
     try:
-        lead_atualizado = vendedor.enviar_link_demonstracao(dados_lead, payload_lovable)
-        print(f"Lead atualizado após envio:\n{json.dumps(lead_atualizado, ensure_ascii=False, indent=2)}\n")
+        resultado_envio = vendedor.enviar_link_demonstracao(
+            payload_lovable["url_demo_prevista"], dados_lead.get("whatsapp_contato")
+        )
+        print(f"Resultado do envio (mock Z-API/Evolution API):\n{json.dumps(resultado_envio, ensure_ascii=False, indent=2)}\n")
     except ErroEnvioDemo as e:
         print(f"⚠️  Envio não realizado: {e}\n")
 
