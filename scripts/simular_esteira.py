@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from agents.hunter import AgenteHunter
-from agents.vendedor import AgenteVendedor
+from agents.vendedor import AgenteVendedor, ErroEnvioDemo
 from agent_construtor import AgenteConstrutor
 
 MENSAGEM_EXEMPLO = (
@@ -60,6 +60,16 @@ def main():
     vendedor = AgenteVendedor()
     payload_lovable = vendedor.conectar_lovable(site_config)
     print(f"Payload simulado para o Lovable:\n{json.dumps(payload_lovable, ensure_ascii=False, indent=2)}\n")
+
+    print("=" * 70)
+    print("ETAPA 4 — Vendedor: envio do link de demonstração ao lead (mock)")
+    print("=" * 70)
+
+    try:
+        lead_atualizado = vendedor.enviar_link_demonstracao(dados_lead, payload_lovable)
+        print(f"Lead atualizado após envio:\n{json.dumps(lead_atualizado, ensure_ascii=False, indent=2)}\n")
+    except ErroEnvioDemo as e:
+        print(f"⚠️  Envio não realizado: {e}\n")
 
     print("=" * 70)
     print("Esteira simulada concluída: Hunter -> Agente Construtor -> Vendedor")
