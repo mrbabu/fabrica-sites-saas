@@ -3,16 +3,16 @@
 Gera o portfólio semente de demos para o Lovable (ROADMAP.md, Fase 0:
 "Portfólio semente: 3-5 sites demo do nicho escolhido").
 
-Para cada seed (nome, nicho, cor[, localização]) roda o Agente Construtor de
-verdade (chamada real de IA) e o AgenteVendedor.conectar_lovable() para
-produzir um prompt pronto para colar no chat do Lovable. Salva cada prompt em
-lovable_prompts/<slug>.txt, junto com o site-config.json correspondente
-(lovable_prompts/<slug>.json) para auditoria/consistência entre a demo e o
-site de produção.
+Para cada seed roda o Agente Construtor de verdade (chamada real de IA,
+inclusive para derivar a paleta de cores completa a partir de
+`cor_primaria` — ver `gerar_paleta_cores()`) e o
+AgenteVendedor.conectar_lovable() para produzir um prompt pronto para
+colar no chat do Lovable. Salva cada prompt em lovable_prompts/<slug>.txt,
+junto com o site-config.json correspondente (lovable_prompts/<slug>.json)
+para auditoria/consistência entre a demo e o site de produção.
 
-Os SEEDS abaixo são só exemplos de nichos variados para validar o gerador —
-troque pelo nicho + região definidos na Fase 0 do ROADMAP.md antes de usar
-isto como portfólio de vendas real.
+Nicho definido na Fase 0 do ROADMAP.md: Clínicas Médicas/Saúde (Grande
+Vitória-ES) — Odontologia, Fisioterapia e Dermatologia, um por bairro.
 """
 
 import json
@@ -24,10 +24,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from agent_construtor import AgenteConstrutor
 from agents.vendedor import AgenteVendedor
 
-SEEDS = [
-    ("Mecânica do Raphinha", "Oficina Mecânica", "#1E3A8A", "Vitória, ES"),
-    ("Salão Beleza Rara", "Salão de Beleza", "#BE185D", "Curitiba, PR"),
-    ("Padaria Sabor Dourado", "Padaria Artesanal", "#D97706", "Belo Horizonte, MG"),
+SEEDS_PORTFOLIO = [
+    {
+        "nome_empresa": "Alumi Odontologia Integrada",
+        # nicho + regiao curtos de propósito: o siteTitle (H1/SEO) combina os
+        # dois e tem limite de 60 caracteres — "Odontologia Estética e
+        # Implantes" + "Jardim da Penha, Vitória - ES" originais estouravam
+        # esse limite em toda tentativa, não só por azar do retry.
+        "nicho": "Odontologia Estética",
+        "regiao": "Jardim da Penha, Vitória",
+        "cor_primaria": "#0D9488",  # Verde Teal (Saúde e modernidade)
+    },
+    {
+        "nome_empresa": "Studio Vértice Fisioterapia",
+        "nicho": "Fisioterapia e Pilates",
+        "regiao": "Praia do Canto, Vitória",
+        "cor_primaria": "#4F46E5",  # Índigo (Confiança e solidez técnica)
+    },
+    {
+        "nome_empresa": "Clínica Pele & Art",
+        "nicho": "Dermatologia Estética",
+        "regiao": "Enseada do Suá, Vitória",
+        "cor_primaria": "#BE185D",  # Rosa Escuro/Borgonha (Estética premium)
+    },
 ]
 
 PASTA_SAIDA = Path(__file__).resolve().parent.parent.parent / "lovable_prompts"
@@ -35,7 +54,7 @@ PASTA_SAIDA = Path(__file__).resolve().parent.parent.parent / "lovable_prompts"
 
 def main():
     limite = int(sys.argv[1]) if len(sys.argv) > 1 else None
-    seeds = SEEDS[:limite] if limite else SEEDS
+    seeds = SEEDS_PORTFOLIO[:limite] if limite else SEEDS_PORTFOLIO
 
     construtor = AgenteConstrutor()
     vendedor = AgenteVendedor()
@@ -43,14 +62,14 @@ def main():
 
     print(f"Gerando {len(seeds)} demo(s) para o portfólio do Lovable...\n")
 
-    for i, (nome, nicho, cor, localizacao) in enumerate(seeds, 1):
-        print(f"[{i}/{len(seeds)}] {nome} ({nicho})...")
+    for i, seed in enumerate(seeds, 1):
+        print(f"[{i}/{len(seeds)}] {seed['nome_empresa']} ({seed['nicho']})...")
 
         site_config = construtor.gerar_config_site(
-            nome_empresa=nome,
-            nicho=nicho,
-            cor_primaria=cor,
-            localizacao=localizacao,
+            nome_empresa=seed["nome_empresa"],
+            nicho=seed["nicho"],
+            cor_primaria=seed["cor_primaria"],
+            localizacao=seed["regiao"],
         )
         payload = vendedor.conectar_lovable(site_config)
         slug = payload["slug"]

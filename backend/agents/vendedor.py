@@ -15,16 +15,17 @@ o contrato de dados antes de existir uma integração HTTP real.
 import re
 from typing import Any, Dict
 
+# Reaproveita a mesma transliteração de acentos (unicodedata) usada para os
+# arquivos de logo, em vez de manter uma segunda implementação de slug que só
+# removia caracteres não ASCII sem primeiro convertê-los (ex.: "Vértice"
+# virava "v-rtice"). Assume que quem importa agents.vendedor já deixou
+# backend/ em sys.path (mesma convenção de app.py e scripts/*.py).
+from image_utils import _slugify as _slugificar
+
 LOVABLE_WEBHOOK_URL_MOCK = "https://api.lovable.dev/mock/webhook"
 # Endpoint mockado no padrão de disparo usado por Z-API/Evolution API
 # (POST {instancia}/message/sendText — corpo {"number", "text"}).
 WHATSAPP_DISPATCH_API_URL_MOCK = "https://api.z-api.io/mock/instances/instance/token/token/send-text"
-
-
-def _slugificar(texto: str) -> str:
-    """Gera um slug simples (minúsculo, hífens) a partir do nome da empresa"""
-    slug = re.sub(r"[^a-zA-Z0-9]+", "-", texto.strip().lower()).strip("-")
-    return slug or "site"
 
 
 def _formatar_numero_whatsapp(numero: str) -> str:
