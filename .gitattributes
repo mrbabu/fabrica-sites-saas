@@ -1,0 +1,3 @@
+# Scripts que rodam em servidor Linux remoto (ex: infra/) não podem virar
+# CRLF nunca, independente do ambiente de quem edita/commita.
+*.sh text eol=lf
