@@ -51,6 +51,7 @@ logs/
 # Configs gerados
 configs/
 site-configs/
+lovable_prompts/
 *.json
 !site-config-example.json
 !site-config.json
