@@ -17,12 +17,11 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator, ConfigDict, HttpUrl
 from contextlib import asynccontextmanager
+from sqlalchemy.orm import Session
 import os
 import sys
-import json
 import logging
 import re
-from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
@@ -32,6 +31,8 @@ try:
     from schema_validator import ValidadorSchema
     from metrics import obter_metricas
     from image_utils import normalizar_logo, ErroNormalizacaoLogo, _slugify
+    from db import get_db, DATABASE_URL
+    import repository
 except ImportError as e:
     print(f"❌ Erro ao importar módulos locais: {e}")
     sys.exit(1)
@@ -359,7 +360,8 @@ async def generate_site(
             background_tasks.add_task(
                 _salvar_config_background,
                 config,
-                request.nome_empresa
+                request.nome_empresa,
+                request.nicho
             )
         
         tempo_total = time.time() - tempo_inicio
@@ -483,11 +485,12 @@ async def webhook_whatsapp(
                 detail=f"Schema inválido: {erro}"
             )
 
-        # Salvar arquivo em background
+        # Salvar no banco em background
         background_tasks.add_task(
             _salvar_config_background,
             config,
-            payload.nome_empresa
+            payload.nome_empresa,
+            payload.ramo_atividade
         )
 
         tempo_total = time.time() - tempo_inicio
@@ -535,9 +538,9 @@ async def obter_metricas_endpoint():
 
 
 @app.get("/api/v1/site-config/{slug}", tags=["Generation"])
-async def obter_site_config(slug: str):
+async def obter_site_config(slug: str, db: Session = Depends(get_db)):
     """
-    Recupera um site-config.json previamente gerado e salvo pelo `slug`
+    Recupera um site-config previamente gerado e salvo no banco pelo `slug`
     (nome da empresa "slugificado", ex: "padaria-sao-jose"). Permite que um
     frontend hospedado na Vercel (ex: Lovable) busque a config depois da
     geração inicial, sem depender apenas da resposta síncrona do POST.
@@ -545,25 +548,27 @@ async def obter_site_config(slug: str):
     if not re.match(r'^[a-z0-9-]+$', slug):
         raise HTTPException(status_code=400, detail="Slug inválido")
 
-    caminho = Path("configs") / f"{slug}-config.json"
-    if not caminho.is_file():
+    site = repository.obter_site(db, slug)
+    if site is None:
         raise HTTPException(status_code=404, detail=f"Config não encontrada para '{slug}'")
 
-    with open(caminho, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return site.config
 
 
 # ============================================================================
 # FUNÇÕES AUXILIARES
 # ============================================================================
 
-def _salvar_config_background(config: dict, nome_empresa: str) -> None:
-    """Salva config em arquivo (tarefa background)"""
+def _salvar_config_background(config: dict, nome_empresa: str, nicho: str) -> None:
+    """Salva config no Postgres (tarefa background)"""
     try:
         slug = _slugify(nome_empresa)
-        nome_arquivo = f"configs/{slug}-config.json"
-        agente.salvar_config(config, nome_arquivo)
-        logger.info(f"💾 Config salva: {nome_arquivo}")
+        db = next(get_db())
+        try:
+            repository.upsert_site(db, slug, nome_empresa, nicho, config)
+        finally:
+            db.close()
+        logger.info(f"💾 Config salva no banco: slug={slug}")
     except Exception as e:
         logger.error(f"❌ Erro ao salvar config: {e}")
 
@@ -609,6 +614,9 @@ if __name__ == "__main__":
 
     if not WEBHOOK_API_KEY:
         print("⚠️  WEBHOOK_API_KEY não configurada — POST /webhook/whatsapp ficará bloqueado (503).")
+
+    if not DATABASE_URL:
+        print("⚠️  DATABASE_URL não configurada — salvar/consultar site-config via API vai falhar.")
 
     # Rodar servidor
     print("\n" + "="*60)
