@@ -11,8 +11,21 @@ echo "== Atualizando o sistema =="
 sudo apt-get update -y
 sudo apt-get upgrade -y
 
-echo "== Instalando Docker Engine (inclui o plugin 'docker compose') =="
-curl -fsSL https://get.docker.com | sudo sh
+echo "== Instalando Docker Engine via repositório oficial apt (arm64) =="
+# Repositório assinado em vez de curl | sh - evita pipe-to-root-shell num
+# host de produção, alinhado com a postura Zero Trust do resto do setup.
+sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt-get update -y
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo usermod -aG docker "$USER"
 
 echo "== Instalando Tailscale =="

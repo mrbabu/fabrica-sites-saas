@@ -9,7 +9,7 @@
 
 services:
   db:
-    image: postgres:16
+    image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -22,7 +22,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    # sem "ports:" - só acessível pelo backend, dentro da rede do compose
+    networks:
+      - internal_net
+    # sem "ports:" - só acessível pelo backend, dentro da internal_net
 
   backend:
     build:
@@ -36,18 +38,27 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - internal_net
     # sem "ports:" - só o cloudflare_tunnel fala com ele (http://backend:8000)
 
   cloudflare_tunnel:
-    image: cloudflare/cloudflared:latest  # multi-arch, suporta linux/arm64
+    image: cloudflare/cloudflared:latest
+    platform: linux/arm64
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?defina CLOUDFLARE_TUNNEL_TOKEN no .env}
     depends_on:
       - backend
+    networks:
+      - internal_net
     # sem "ports:" - o túnel é 100% outbound (cloudflared conecta na borda
     # da Cloudflare, a Cloudflare nunca conecta de volta na sua VM)
+
+networks:
+  internal_net:
+    driver: bridge
 
 volumes:
   postgres_data:
