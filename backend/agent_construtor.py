@@ -387,6 +387,10 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         metadata = config.setdefault("metadata", {})
         if not (metadata.get("favicon") or "").strip():
             metadata["favicon"] = "🚀"
+        if not metadata.get("keywords"):
+            metadata["keywords"] = [
+                palavra for palavra in re.split(r"\s+", nicho.strip().lower()) if palavra
+            ]
 
         hero = config.setdefault("hero", {})
         if _url_invalida(hero.get("backgroundImage")):

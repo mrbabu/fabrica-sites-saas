@@ -52,6 +52,7 @@ logs/
 configs/
 site-configs/
 lovable_prompts/
+prompt_teste_lovable.txt
 *.json
 !site-config-example.json
 !site-config.json
