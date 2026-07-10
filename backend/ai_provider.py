@@ -70,8 +70,14 @@ class ProvedorNvidiaNIM:
         self.client = OpenAI(
             api_key=self.api_key,
             base_url=self.base_url,
-            timeout=30.0,
-            max_retries=1,
+            # NVIDIA NIM gera o JSON completo do site (SEO, seções, serviços,
+            # depoimentos, FAQ) em uma única resposta - 30s+max_retries=1 do
+            # SDK estourava constantemente (~60-70s até desistir, sempre pelo
+            # mesmo motivo: timeout, não erro real). max_retries=0 porque o
+            # retry de verdade já é feito um nível acima, no fallback entre
+            # provedores (gemini -> nvidia_nim -> anthropic -> ollama).
+            timeout=float(os.getenv("NVIDIA_NIM_TIMEOUT", "60")),
+            max_retries=0,
         )
 
     def gerar_json(self, prompt: str, max_tokens: int = 4096) -> dict:
