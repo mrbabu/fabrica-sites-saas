@@ -1,0 +1,53 @@
+# Stack de produção Zero Trust (instância Ampere A1.Flex, ARM64).
+# Nenhum serviço publica porta pro host: backend e db só existem na rede
+# interna do Docker; o único jeito de alcançar o backend de fora é via
+# cloudflare_tunnel (saída), e a única forma de acessar a máquina em si é
+# via Tailscale (ver infra/zero_trust_deploy.md). NSG da Oracle Cloud fica
+# 100% fechado em Ingress.
+#
+# Deploy: docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-fabrica}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # sem "ports:" - só acessível pelo backend, dentro da rede do compose
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-fabrica}
+    depends_on:
+      db:
+        condition: service_healthy
+    # sem "ports:" - só o cloudflare_tunnel fala com ele (http://backend:8000)
+
+  cloudflare_tunnel:
+    image: cloudflare/cloudflared:latest  # multi-arch, suporta linux/arm64
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?defina CLOUDFLARE_TUNNEL_TOKEN no .env}
+    depends_on:
+      - backend
+    # sem "ports:" - o túnel é 100% outbound (cloudflared conecta na borda
+    # da Cloudflare, a Cloudflare nunca conecta de volta na sua VM)
+
+volumes:
+  postgres_data:
