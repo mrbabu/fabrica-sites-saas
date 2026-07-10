@@ -35,8 +35,8 @@ ANTHROPIC_API_KEY=sk-ant-v8p7q9x2j4k1m5n8...
 
 ```bash
 # Pare o servidor atual (Ctrl+C)
-# Depois rode novamente:
-python app.py
+# Depois rode novamente (a partir da raiz do repo):
+python backend/app.py
 ```
 
 Esperado: 
@@ -54,7 +54,7 @@ No navegador, acesse:
 
 Ou via terminal:
 ```bash
-python test_api.py
+python backend/test_api.py
 ```
 
 ---

@@ -18,7 +18,10 @@ try:
 except AttributeError:
     _RESAMPLE = Image.LANCZOS
 
-PASTA_LOGOS = Path(__file__).parent / "assets" / "logos"
+# assets/logos vive na raiz do repo (é servido pelo frontend estático junto
+# com o index.html), não dentro de backend/ — por isso sobe um nível a partir
+# deste arquivo em vez de usar Path(__file__).parent diretamente.
+PASTA_LOGOS = Path(__file__).parent.parent / "assets" / "logos"
 TAMANHO_PADRAO = (512, 512)
 
 

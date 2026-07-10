@@ -30,7 +30,7 @@ $env:ANTHROPIC_API_KEY='sk-ant-api03-xxxxxxxxxxxxxxxx'
 ### 3. Rodar o Servidor
 
 ```bash
-python app.py
+python backend/app.py
 ```
 
 Saída esperada:
@@ -278,19 +278,19 @@ Permite testar todos os endpoints diretamente no navegador com interface visual.
 ### Teste Rápido (Health Check)
 
 ```bash
-python test_api.py health
+python backend/test_api.py health
 ```
 
 ### Teste Único
 
 ```bash
-python test_api.py single "Minha Empresa" "Software" "#6366f1"
+python backend/test_api.py single "Minha Empresa" "Software" "#6366f1"
 ```
 
 ### Testar 5 Nichos
 
 ```bash
-python test_api.py
+python backend/test_api.py
 ```
 
 Vai testar:
@@ -303,7 +303,7 @@ Vai testar:
 ### Ver Métricas
 
 ```bash
-python test_api.py metrics
+python backend/test_api.py metrics
 ```
 
 ---
@@ -381,7 +381,7 @@ if __name__ == "__main__":
     )
 ```
 
-Depois rodar: `python app.py`
+Depois rodar: `python backend/app.py`
 
 ### Desabilitar Reload
 
@@ -487,7 +487,7 @@ Para produção, considere:
 
 ## 📈 Próximos Passos
 
-1. **Testar localmente** com `python test_api.py`
+1. **Testar localmente** com `python backend/test_api.py`
 2. **Integrar no n8n** usando endpoint principal
 3. **Monitorar métricas** em `/api/v1/metrics`
 4. **Containerizar** em Docker
@@ -499,7 +499,7 @@ Para produção, considere:
 
 ### "Connection refused on localhost:8000"
 ```
-✅ Solução: Certificar que rodou python app.py
+✅ Solução: Certificar que rodou python backend/app.py
 ```
 
 ### "ANTHROPIC_API_KEY not configured"
