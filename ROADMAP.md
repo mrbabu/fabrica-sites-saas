@@ -27,14 +27,20 @@ correspondentes. Ver também `CLAUDE.md` para o estado atual do código.
 
 ## Fase 0 — Fundação do negócio
 
-- [ ] Nicho + região definidos (1 segmento + 1 cidade/região, não o Brasil
-      inteiro de uma vez)
+- [x] Nicho + região definidos (2026-07-10): **Clínicas Médicas/Saúde na
+      Grande Vitória-ES** (odontologia, fisioterapia, dermatologia) — forte
+      dependência de SEO local pra atrair paciente novo, o diferencial
+      central do produto, e ticket/recorrência mais estável que nichos
+      sazonais
 - [ ] Estrutura jurídica: MEI para começar, plano de migração para ME/Simples
       antes de estourar o teto
 - [ ] Preço definido — planilha de cenários aponta **R$149/mês** como ponto
       ideal (R$99 exige mais que o dobro de assinantes pra bater a meta de
       lucro; R$199 reduz a base potencial)
-- [ ] Portfólio semente: 3-5 sites demo do nicho escolhido
+- [x] Portfólio semente: 3 sites demo do nicho escolhido (Jardim da Penha,
+      Praia do Canto, Enseada do Suá), gerados via
+      `backend/scripts/gerar_portfolio_lovable.py` — prompts prontos pro
+      Lovable + JSON de auditoria em `lovable_prompts/` (gitignored)
 
 ---
 
