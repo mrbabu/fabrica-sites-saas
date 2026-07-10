@@ -82,8 +82,7 @@ script de telemarketing) e dá à recepcionista uma resposta fácil de dar.
 ## Demos disponíveis para envio
 
 - Alumi Odontologia Integrada — https://alumi-sparkle-site.lovable.app
-- Studio Vértice Fisioterapia — link de preview gerado no Lovable (projeto
-  "Vértice Landing"), publicar quando for usar em campo
+- Studio Vértice Fisioterapia — https://studio-vertice-flow.lovable.app
 
 ## Próximo passo
 
