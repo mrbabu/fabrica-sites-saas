@@ -19,7 +19,8 @@ Plataforma SaaS automatizada baseada em IA Multi-Agente. O sistema gera e public
 
 ## Status Congelado: Agente Construtor (Builder Engine)
 
-**Fase 1/2 de estabilidade CONCLUÍDA.** `backend/agent_construtor.py` está estável e não
+**Estabilidade do motor CONCLUÍDA (parte técnica da Fase 1 do `ROADMAP.md`).**
+`backend/agent_construtor.py` está estável e não
 deve receber refatoração adicional sem necessidade explícita — é a base sobre a qual os
 novos agentes especializados (`backend/agents/`) vão se apoiar.
 
@@ -33,7 +34,7 @@ Correção aplicada (commit "feat: builder engine stability fix 100% success rat
 
 Resultado da verificação (`python backend/test_agentes.py 10`, chamadas reais via Ollama
 local): taxa de sucesso subiu de 50% (sem o fix) para **100%** — acima da meta de
->95% da Fase 1. Falhas resolvidas pelo retry: `siteTitle`/`siteDescription`/`ctaText`
+>95%. Falhas resolvidas pelo retry: `siteTitle`/`siteDescription`/`ctaText`
 longos demais e `subtitle` vazio (o modelo local às vezes não respeita os limites de
 caracteres do prompt na primeira tentativa).
 
@@ -47,11 +48,17 @@ lógica de negócio:
 
 Esses agentes devem se comunicar via o mesmo contrato JSON (`site-config.json` /
 payload de lead), seguindo o princípio de "JSON Schema Driven" já usado pelo Agente
-Construtor (ver `ROADMAP.md`, Fase 8 — Agentes Especializados).
+Construtor (ver `ROADMAP.md`, Fase 3 — Automação por Agentes de IA).
+
+**Antes de mexer em qualquer um desses três agentes, ler os guardrails no topo do
+`ROADMAP.md`** — em especial: `vendedor.py` só pode responder conversas iniciadas
+pelo lead (nunca disparar outbound frio, sob risco de banimento do WhatsApp), e a
+automação de vendas em si não deve substituir o processo manual antes de 15-20
+vendas fechadas (Fase 2 do plano de negócio).
 
 ## Roadmap de Desenvolvimento
-- [ ] Consolidar `backend/app.py` como gateway fino, delegando processamento pesado ao workflow do n8n.
-- [ ] Configurar o workflow no n8n (recebimento do webhook → Agente Construtor → deploy Vercel).
-- [x] Normalização de logo via Pillow (`image_utils.py`) — concluído.
-- [x] Estabilizar Agente Construtor (retry + autocorreção, taxa de sucesso >95%) — concluído.
-- [ ] Esqueleto dos 3 agentes especializados (`backend/agents/hunter.py`, `backend/agents/vendedor.py`, `backend/agents/financeiro.py`) — em andamento.
+
+Ver `ROADMAP.md` — fases alinhadas ao plano de negócio (Fase 0 a 4), com
+checklist de status atual e os guardrails de segurança (WhatsApp, gate de
+vendas manuais, teto do MEI) que qualquer trabalho nos agentes especializados
+precisa respeitar.

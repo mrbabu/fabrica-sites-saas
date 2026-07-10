@@ -1,413 +1,125 @@
 # 🏗️ ROADMAP - Fábrica de Sites SaaS
 
-## Visão de Longo Prazo
+## Contexto
 
-Transformar de um agente isolado para uma fábrica capaz de produzir centenas/milhares de sites com intervenção humana mínima.
+Este roadmap segue as fases do **plano de negócio** (WaaS para MEIs/pequenos
+negócios, venda ativa por WhatsApp com agentes de IA) — não é mais uma lista
+técnica isolada. Cada fase de negócio tem suas tarefas de engenharia
+correspondentes. Ver também `CLAUDE.md` para o estado atual do código.
 
-```
-├─ Fase 1: Validar o Motor (AGORA)
-├─ Fase 2: Melhorar Confiabilidade  
-├─ Fase 3: Separar Responsabilidades
-├─ Fase 4: Template Único & Imutável
-├─ Fase 5: Deploy Automático (n8n)
-├─ Fase 6: Banco de Dados de Clientes
-├─ Fase 7: Múltiplos Templates
-├─ Fase 8: Agentes Especializados
-└─ Fase 9: Escala em Produção
-```
+## ⚠️ Guardrails (não pular, mesmo sob pressão de prazo)
 
----
-
-## 📊 FASE 1 — Validar o Construtor (FOCO ATUAL)
-
-**Objetivo**: Garantir que o agente sempre produz JSON válido em qualquer nicho.
-
-### Tarefas
-
-- [x] ✅ Criar agent_construtor.py funcional
-- [ ] Criar schema validator com Pydantic
-- [ ] Criar suite de testes com 50 nichos
-- [ ] Adicionar retry automático em falhas
-- [ ] Registrar métricas de qualidade
-- [ ] Documentar problemas encontrados
-
-### Nichos para Testar (Prioridade)
-
-```
-1. Auto Elétrica
-2. Academia
-3. Consultoria Jurídica
-4. Consultório Odontológico
-5. Pet Shop
-6. Pizzaria
-7. Loja de Roupas
-8. Clínica Médica
-9. Agência de Marketing
-10. Software/SaaS
-... (40+ mais)
-```
-
-### Métricas a Acompanhar
-
-- ✅ JSON válido (0 erros)
-- ✅ Todos os campos preenchidos
-- ✅ Paleta de cores harmônica
-- ✅ Copys sem repetição
-- ✅ Tempo de geração
-- ✅ Custo por chamada API
-- ✅ Taxa de sucesso/erro
+1. **Não automatizar outreach frio no WhatsApp.** Disparo em massa por
+   números comuns = risco de banimento pela Meta em dias. A API oficial exige
+   opt-in do destinatário. Agentes de IA só podem responder conversas
+   **iniciadas pelo lead** (inbound) até existir um canal de entrada seguro
+   (ex.: anúncio pago levando o lead a chamar primeiro).
+2. **Não automatizar vendas antes de 15-20 assinaturas fechadas
+   manualmente** (Fase 2). O agente de vendas precisa ser treinado com
+   objeções e scripts reais, não hipotéticos.
+3. **Acompanhar o teto do MEI** (R$81 mil/ano) — a meta de 100 assinantes
+   estoura esse teto rápido. Migrar para ME/Simples Nacional proativamente.
+4. **Métricas de negócio, não só técnicas**, assim que houver assinantes
+   reais: CAC, churn mensal (>5%/mês quebra a meta de 100 assinantes), horas
+   de produção por site.
 
 ---
 
-## 🔧 FASE 2 — Melhorar Confiabilidade
+## Fase 0 — Fundação do negócio
 
-**Objetivo**: Sistema de auto-correção que elimina falhas humanas.
-
-### Arquitetura
-
-```
-Input
-  ↓
-Validação (Schema)
-  ↓
-Claude Gera
-  ↓
-Validação do Output
-  ├─ Se OK → Salvar ✅
-  └─ Se ERRO → Tentar Correção Automática
-      ↓
-      Claude Corrige
-      ↓
-      Validação 2x
-      ├─ Se OK → Salvar ✅
-      └─ Se ERRO → Log + Falha
-```
-
-### Implementar
-
-- Validador com Pydantic Schema
-- Retry automático (até 3x)
-- Fallback para valores padrão
-- Logging completo
+- [ ] Nicho + região definidos (1 segmento + 1 cidade/região, não o Brasil
+      inteiro de uma vez)
+- [ ] Estrutura jurídica: MEI para começar, plano de migração para ME/Simples
+      antes de estourar o teto
+- [ ] Preço definido — planilha de cenários aponta **R$149/mês** como ponto
+      ideal (R$99 exige mais que o dobro de assinantes pra bater a meta de
+      lucro; R$199 reduz a base potencial)
+- [ ] Portfólio semente: 3-5 sites demo do nicho escolhido
 
 ---
 
-## 📦 FASE 3 — Separar Responsabilidades
+## Fase 1 — MVP de produto (técnico) — maior parte CONCLUÍDA
 
-**Objetivo**: Modularizar para facilitar manutenção e trocar modelos IA.
-
-### Nova Estrutura
-
-```
-/agentes/
-├── agent_paleta.py       # Gera 8 cores hex
-├── agent_copy.py         # Cria conteúdo persuasivo
-├── agent_json.py         # Estrutura JSON final
-├── agent_validator.py    # Valida schema
-└── agent_builder.py      # Orquestra tudo
-```
-
-### Benefício
-
-- Trocar Claude por GPT/Gemini em uma seção
-- Testar agentes isoladamente
-- Versionar cada componente
-- Facilitar debug
+- [x] `backend/agent_construtor.py` estável: retry + autocorreção,
+      100% de sucesso em teste de 10 nichos (frozen, ver `CLAUDE.md`)
+- [x] `backend/schema_validator.py` (Pydantic) com schema expandido: SEO/OG,
+      diferenciais, FAQ, rodapé dinâmico
+- [x] Fallbacks determinísticos de imagem — nenhum campo de logo/avatar/
+      background fica vazio (LoremFlickr + pravatar.cc)
+- [x] Persistência em Postgres (tabela `sites`, SQLAlchemy + Alembic)
+      substituindo `configs/*.json`
+- [x] Frontend estático (`index.html` + `site-config.json`) no ar via Vercel
+- [ ] Backend FastAPI hospedado em produção (Render/Railway) — hoje só roda
+      local
+- [ ] **Cobrança recorrente + régua de inadimplência + auto-suspensão**
+      (Asaas ou Mercado Pago Assinaturas) — ainda não iniciado. Segundo o
+      plano de negócio, isso resolve ~80% do "agente financeiro" sem
+      código próprio e é a peça que falta pro MVP de produto fechar
+- [ ] Campos de assinatura na tabela `sites` (plano, status de pagamento,
+      domínio do cliente) quando a cobrança acima existir
 
 ---
 
-## 🎨 FASE 4 — Template Único & Imutável
+## Fase 2 — Vendas manuais (GATE — ver guardrail #2)
 
-**Objetivo**: HTML NUNCA muda após lançamento.
-
-### Contrato
-
-```
-Se o JSON segue o schema → HTML renderiza perfeito
-Se faltar campo no JSON → Usa fallback padrão
-Se campo errado → Ignora com log
-```
-
-### Implementar
-
-- Testes de compatibilidade template ↔ JSON
-- Versionamento de schema
-- Documentação de breaking changes
-- Testes de regressão
+- [ ] Geração de leads (Google Maps scraping — Outscraper/PhantomBuster) do
+      nicho/região escolhidos, filtrando quem não tem site
+- [ ] 15-20 vendas fechadas manualmente, idealmente mostrando um mockup do
+      site pronto na primeira mensagem
+- [ ] Documentar objeções e scripts reais — vira o material de treino dos
+      agentes da Fase 3
+- **Critério de saída**: 15-20 clientes pagantes, churn baixo nos 2
+  primeiros meses, produção < 5h/site
 
 ---
 
-## 🚀 FASE 5 — Deploy Automático (n8n)
+## Fase 3 — Automação por agentes de IA (ordem por segurança, não conveniência)
 
-**Objetivo**: Do input até URL pronta sem abrir VSCode.
-
-### Fluxo n8n
-
-```
-WhatsApp Input
-  ↓
-Validar Dados
-  ↓
-Webhook → Python
-  ↓
-Gerar site-config.json
-  ↓
-Atualizar Arquivos
-  ↓
-Git Commit + Push
-  ↓
-Deploy Vercel (Automático)
-  ↓
-Receber URL
-  ↓
-Mensagem WhatsApp ✅
-```
-
-### Componentes
-
-- Webhook n8n recebendo dados
-- Integração Vercel API
-- GitHub Actions trigger
-- Notificação automática
+- [~] `backend/agents/hunter.py` — extração de lead via regex a partir de
+      texto de WhatsApp (lógica real; sem integração de webhook real ainda)
+- [~] `backend/agents/vendedor.py` — `conectar_lovable()` e
+      `enviar_link_demonstracao()` implementados, porém mockados (sem
+      chamada real ao WhatsApp Business API). **Só pode operar em
+      conversas iniciadas pelo lead** (guardrail #1)
+- [~] `backend/agents/financeiro.py` — conciliação PIX real e testada;
+      `monitorar_pagamento()` só parseia webhook recebido, sem chamada a
+      gateway real ainda
+- [ ] Integração com BSP **oficial** do WhatsApp (360dialog/Twilio/Gupshup)
+      — não Z-API nem outras soluções não-oficiais
+- [ ] Fechar o gap de contrato `referencia_id` entre Hunter → Vendedor →
+      Financeiro (hoje nenhum dos dois primeiros produz esse campo, o que
+      bloqueia o pipeline ponta a ponta)
+- [ ] Wiring n8n dos 3 agentes
 
 ---
 
-## 💾 FASE 6 — Banco de Dados de Clientes
+## Fase 4 — Escala
 
-**Objetivo**: Persistência + Histórico.
-
-### Schema Banco
-
-```sql
-clientes:
-├── id (UUID)
-├── nome
-├── nicho
-├── cor_primaria
-├── dominio
-├── subdominio
-├── config_json (JSONB)
-├── status (ativo/inativo)
-├── plano (básico/pro/enterprise)
-├── pagamento_status
-├── created_at
-├── updated_at
-└── deploy_url
-```
-
-### Benefício
-
-- Rastrear clientes
-- Histórico de alterações
-- Analytics
-- Regenerar sites facilmente
+- [ ] Métricas de negócio visíveis (CAC, churn, receita/assinante) — não
+      só métricas técnicas de geração de site
+- [ ] Relatórios mensais de valor pro cliente (visitas, cliques no
+      WhatsApp) — reduz churn mostrando resultado
+- [ ] Replicar o playbook para novo nicho/cidade
 
 ---
 
-## 🎭 FASE 7 — Múltiplos Templates
+## Princípios arquiteturais (mantidos)
 
-**Objetivo**: Diferentes layouts, mesmo schema JSON.
+1. **JSON Schema Driven** — o template HTML depende só do `site-config.json`;
+   toda customização de cliente vive no JSON, nunca hardcoded.
+2. **Validação rigorosa** — a IA preenche um contrato (schema) já definido;
+   o validador rejeita qualquer coisa fora dele.
+3. **Idempotência** — reexecutar não duplica (ex.: `upsert_site` por slug).
+4. **Observabilidade** — geração e validação são logadas (`metrics.py`).
 
-### Tipos de Template
-
-```
-├── Landing (Conversão)
-├── Institucional (Apresentação)
-├── Clínica (Agendamento)
-├── Restaurante (Delivery)
-├── Advogado (Contato)
-├── Imobiliária (Listings)
-├── Academia (Membros)
-└── Hotel (Reserva)
-```
-
-### Implementar
-
-- Cada template em pasta própria
-- Mesmo schema JSON
-- Sistema de seleção no n8n
-- Testes de compatibilidade
-
----
-
-## 🤖 FASE 8 — Agentes Especializados
-
-**Objetivo**: Qualidade superior com agentes focados.
-
-### Equipe de Agentes
-
-```
-Agente Copy
-  ↓ Gera copys persuasivas
-
-Agente SEO  
-  ↓ Otimiza títulos, metas
-
-Agente Paleta
-  ↓ Paleta harmônica
-
-Agente Imagens
-  ↓ Gera/seleciona imagens
-
-Agente JSON
-  ↓ Estrutura final
-
-Agente QA
-  ↓ Valida tudo
-```
-
-### Comunicação
-
-- Todos conversam pelo JSON
-- Cada um adiciona/atualiza seu campo
-- Validação incremental
-- Rollback se algo quebrar
-
----
-
-## 🌍 FASE 9 — Escala em Produção
-
-**Objetivo**: Sistema robusto, escalável, 24/7.
-
-### Arquitetura Finalizada
-
-```
-┌─────────────────┐
-│   WhatsApp      │
-│   (Interface)   │
-└────────┬────────┘
-         │
-┌────────▼────────┐
-│   n8n (Cloud)   │
-│   (Orquestrador)│
-└────────┬────────┘
-         │
-┌────────▼──────────┐
-│  Python API       │
-│  (Servidores VPS) │
-├─ Agent Builder    │
-├─ Validator        │
-└─ Logger/Metrics   │
-         │
-┌────────┴──────────┐
-│                   │
-▼                   ▼
-PostgreSQL      Redis Cache
-(Clientes)      (Config)
-│                   │
-└────────┬──────────┘
-         │
-┌────────▼──────────┐
-│   GitHub + CI/CD  │
-│   (Versionamento) │
-└────────┬──────────┘
-         │
-┌────────▼──────────┐
-│  Vercel (Deploy)  │
-│  (Sites ao Vivo)  │
-└────────┬──────────┘
-         │
-    Centenas
-    de Sites
-    Rodando
-```
-
-### Tecnologias
-
-- **Message Broker**: RabbitMQ/Redis
-- **Container**: Docker + Docker Compose
-- **Orquestração**: n8n (ou Airflow para escala)
-- **Banco**: PostgreSQL + Redis
-- **Versionamento**: Git + GitHub
-- **Logs**: ELK Stack ou Datadog
-- **Monitoramento**: Prometheus + Grafana
-
----
-
-## ⚙️ Princípios Arquiteturais
-
-### 1. JSON Schema Driven
-
-```
-Template HTML → Depende APENAS de site-config.json
-site-config.json → Segue um schema fixo
-Agentes → Preenchem campos específicos do schema
-```
-
-### 2. Validação Rigorosa
-
-```
-IA não escreve livremente
-IA preenche um "contrato" (schema) já definido
-Validador rejeita qualquer coisa fora do contrato
-```
-
-### 3. Separação de Responsabilidades
-
-```
-Cada agente = uma tarefa
-Cada agente = testável isoladamente
-Comunicação via JSON
-Fácil trocar um agente depois
-```
-
-### 4. Idempotência
-
-```
-Mesmo input → Mesmo output
-Reexecutar ≠ Duplicar
-Sistema é determinístico
-```
-
-### 5. Observabilidade
-
-```
-Tudo é logado
-Métricas de tudo
-Possível rastrear qualquer erro
-```
-
----
-
-## 📋 Próxima Ação (Imediata)
-
-### Passar de:
-```
-agent_construtor.py
-↓
-JSON (às vezes ruim)
-```
-
-### Para:
-```
-schema_validator.py (Pydantic)
-test_suite.py (50 nichos)
-metrics.py (logging)
-agent_construtor.py (melhorado)
-↓
-JSON (sempre válido) ✅
-```
-
-### Checklist Fase 1
-
-- [ ] Validador com Pydantic
-- [ ] Suite de testes com 50 nichos
-- [ ] Retry automático (3x)
-- [ ] Logging completo
-- [ ] Relatório de qualidade
-- [ ] Documentação de problemas
-- [ ] Confiança > 99% de sucesso
+Infraestrutura de escala enterprise (RabbitMQ/Redis, ELK, Prometheus/
+Grafana, múltiplos templates simultâneos) foi removida deste roadmap por
+ser prematura para a fase atual (MEI/fundador solo) — revisitar só quando
+o volume de assinantes justificar, não antes.
 
 ---
 
 ## 📚 Documentação Viva
 
-Este roadmap será atualizado conforme evoluirmos.
-
-Cada fase concluída = nova fase iniciada.
-
-Objetivo final: Uma máquina de gerar sites que dispensa intervenção manual.
-
----
-
-**Desenvolvido com estratégia e visão de longo prazo.**
+Este roadmap é atualizado conforme as fases avançam. Fase de negócio
+concluída = próxima fase priorizada, não a lista técnica antiga.
