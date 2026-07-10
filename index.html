@@ -87,11 +87,15 @@
         }
 
         function renderNavigation() {
+            const logo = config.company.logo
+                ? `<img src="${config.company.logo}" alt="${config.company.name}" class="w-10 h-10 rounded-full object-cover" onerror="this.remove()">`
+                : `<span class="text-3xl">${config.metadata.favicon || '🚀'}</span>`;
+
             return `
                 <nav class="sticky top-0 z-50 bg-white shadow-sm" style="border-bottom: 2px solid ${config.colors.border}">
                     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
                         <div class="flex items-center gap-3">
-                            <span class="text-3xl">${config.hero ? config.hero.icon || '🚀' : '🚀'}</span>
+                            ${logo}
                             <h1 class="font-bold text-lg" style="color: ${config.colors.primary}">${config.company.name}</h1>
                         </div>
                         <div class="hidden md:flex gap-6">
@@ -107,19 +111,19 @@
 
         function renderHero() {
             if (!config.hero || !config.hero.enabled) return '';
-            
+
             return `
-                <section class="fade-in min-h-screen flex items-center justify-center relative overflow-hidden" 
-                         style="background: linear-gradient(135deg, ${config.colors.primary}15 0%, ${config.colors.secondary}15 100%)">
-                    <div class="absolute inset-0 opacity-10" style="background-image: url('${config.hero.backgroundImage}'); background-size: cover;"></div>
+                <section class="fade-in min-h-screen flex items-center justify-center relative overflow-hidden bg-gray-900">
+                    <img src="${config.hero.backgroundImage}" alt="" class="absolute inset-0 w-full h-full object-cover" onerror="this.style.display='none'">
+                    <div class="absolute inset-0" style="background: linear-gradient(135deg, ${config.colors.primary}e6 0%, ${config.colors.secondary}cc 100%)"></div>
                     <div class="max-w-5xl mx-auto px-4 py-20 text-center relative z-10">
-                        <h2 class="text-5xl md:text-6xl font-bold mb-6 leading-tight" style="color: ${config.colors.primary}">
+                        <h2 class="text-5xl md:text-6xl font-bold mb-6 leading-tight text-white drop-shadow-sm">
                             ${config.hero.title}
                         </h2>
-                        <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto" style="color: ${config.colors.textLight}">
+                        <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-white text-opacity-90">
                             ${config.hero.subtitle}
                         </p>
-                        <a href="${config.hero.ctaLink}" class="btn-primary text-white px-8 py-4 rounded-lg font-bold text-lg inline-block transition transform hover:scale-105 hover:shadow-xl">
+                        <a href="${config.hero.ctaLink}" class="bg-white px-8 py-4 rounded-lg font-bold text-lg inline-block transition transform hover:scale-105 hover:shadow-xl" style="color: ${config.colors.primary}">
                             ${config.hero.ctaText}
                         </a>
                     </div>
@@ -143,7 +147,7 @@
                                     ${section.content}
                                 </p>
                             </div>
-                            <img src="${section.image}" alt="${section.title}" class="rounded-lg shadow-lg">
+                            <img src="${section.image}" alt="${section.title}" loading="lazy" class="w-full h-80 object-cover rounded-lg shadow-lg" onerror="this.remove()">
                         </div>
                     </div>
                 </section>
@@ -267,7 +271,7 @@
                             ${enabledTestimonials.map(testimonial => `
                                 <div class="bg-white p-8 rounded-lg shadow-md">
                                     <div class="flex items-center gap-4 mb-4">
-                                        <img src="${testimonial.avatar}" alt="${testimonial.name}" class="w-12 h-12 rounded-full">
+                                        <img src="${testimonial.avatar}" alt="${testimonial.name}" loading="lazy" class="w-12 h-12 rounded-full object-cover" onerror="this.remove()">
                                         <div>
                                             <p class="font-bold" style="color: ${config.colors.primary}">${testimonial.name}</p>
                                             <p class="text-sm" style="color: ${config.colors.textLight}">${testimonial.role}</p>

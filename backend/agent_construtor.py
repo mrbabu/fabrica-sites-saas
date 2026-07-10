@@ -160,7 +160,7 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
     "subtitle": "string (mínimo 10, máximo 300 caracteres) - Subtítulo persuasivo",
     "ctaText": "string (mínimo 3, máximo 50 caracteres) - Texto do botão CTA",
     "ctaLink": "#contato",
-    "backgroundImage": "https://via.placeholder.com/1920x600?text=Hero+Background",
+    "backgroundImage": "",
     "enabled": true
   }},
   "sections": [
@@ -170,7 +170,7 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
       "title": "string (mínimo 5, máximo 100 caracteres) - Título seção",
       "subtitle": "string (mínimo 5, máximo 200 caracteres) - Subtítulo",
       "content": "string (mínimo 20, máximo 1000 caracteres) - Conteúdo 3-4 frases, rico em palavras-chave do ramo de atividade",
-      "image": "https://via.placeholder.com/500x400?text=About",
+      "image": "",
       "enabled": true
     }}
   ],
@@ -229,7 +229,7 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
       "name": "string (mínimo 3, máximo 100 caracteres) - Nome real",
       "role": "string (mínimo 5, máximo 100 caracteres) - Profissão/empresa",
       "content": "string (mínimo 20, máximo 500 caracteres) - Depoimento positivo e específico",
-      "avatar": "https://via.placeholder.com/100x100?text=Avatar+1",
+      "avatar": "",
       "rating": 5,
       "enabled": true
     }},
@@ -238,7 +238,7 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
       "name": "string (mínimo 3, máximo 100 caracteres)",
       "role": "string (mínimo 5, máximo 100 caracteres)",
       "content": "string (mínimo 20, máximo 500 caracteres)",
-      "avatar": "https://via.placeholder.com/100x100?text=Avatar+2",
+      "avatar": "",
       "rating": 5,
       "enabled": true
     }},
@@ -247,7 +247,7 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
       "name": "string (mínimo 3, máximo 100 caracteres)",
       "role": "string (mínimo 5, máximo 100 caracteres)",
       "content": "string (mínimo 20, máximo 500 caracteres)",
-      "avatar": "https://via.placeholder.com/100x100?text=Avatar+3",
+      "avatar": "",
       "rating": 5,
       "enabled": true
     }}
@@ -311,6 +311,7 @@ Instruções de copywriting para o nicho "{nicho}":
 ATENÇÃO:
 - Nenhum campo "icon" pode ficar vazio. Cada serviço PRECISA ter um emoji real e visível no campo "icon" (nunca "" ou null).
 - Os limites de caracteres MÍNIMO e MÁXIMO indicados em cada campo são REGRAS RÍGIDAS. Nunca ultrapasse o máximo indicado, mesmo que precise encurtar o texto.
+- NUNCA use "via.placeholder.com" ou qualquer outro serviço de placeholder para os campos de imagem (hero.backgroundImage, sections[].image, testimonials[].avatar, company.logo). Se não souber uma URL de imagem real, deixe o campo como string vazia "" — o sistema preenche automaticamente com uma imagem real depois.
 
 Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
 
@@ -367,34 +368,40 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         tem_logo_explicito: bool = False,
     ) -> dict:
         """
-        Garante que nenhum campo de imagem/SEO derivado fique vazio no JSON final.
-        A IA às vezes retorna "" para favicon/logo/backgroundImage/image/avatar;
-        aqui aplicamos fallbacks determinísticos (sem custo de API), usando
-        LoremFlickr (fotos reais por palavra-chave, sem API key) e pravatar.cc
-        (avatares de pessoa para depoimentos). Os campos ogTitle/ogDescription/
-        ogImage e o objeto footer são sempre derivados aqui, nunca pedidos à IA.
+        Garante que nenhum campo de imagem/SEO derivado fique vazio ou quebrado
+        no JSON final. A IA às vezes retorna "" para favicon/logo/backgroundImage/
+        image/avatar, ou copia URLs de serviços de placeholder (via.placeholder.com
+        e similares) que não carregam de verdade; aqui aplicamos fallbacks
+        determinísticos (sem custo de API), usando LoremFlickr (fotos reais por
+        palavra-chave, sem API key) e pravatar.cc (avatares de pessoa para
+        depoimentos). Os campos ogTitle/ogDescription/ogImage e o objeto footer
+        são sempre derivados aqui, nunca pedidos à IA.
         """
         nicho_slug = _slugify(nicho) or "negocio"
         empresa_slug = _slugify(nome_empresa) or "empresa"
+
+        def _url_invalida(url: Optional[str]) -> bool:
+            url = (url or "").strip().lower()
+            return not url or "placeholder" in url
 
         metadata = config.setdefault("metadata", {})
         if not (metadata.get("favicon") or "").strip():
             metadata["favicon"] = "🚀"
 
         hero = config.setdefault("hero", {})
-        if not (hero.get("backgroundImage") or "").strip():
+        if _url_invalida(hero.get("backgroundImage")):
             hero["backgroundImage"] = f"https://loremflickr.com/1920/600/{nicho_slug}"
 
         company = config.setdefault("company", {})
-        if not tem_logo_explicito and not (company.get("logo") or "").strip():
+        if not tem_logo_explicito and _url_invalida(company.get("logo")):
             company["logo"] = f"https://loremflickr.com/400/400/{nicho_slug},logo"
 
         for i, secao in enumerate(config.get("sections", []) or []):
-            if not (secao.get("image") or "").strip():
+            if _url_invalida(secao.get("image")):
                 secao["image"] = f"https://loremflickr.com/500/400/{nicho_slug}?lock={i}"
 
         for i, depoimento in enumerate(config.get("testimonials", []) or []):
-            if not (depoimento.get("avatar") or "").strip():
+            if _url_invalida(depoimento.get("avatar")):
                 depoimento["avatar"] = f"https://i.pravatar.cc/150?u={empresa_slug}-{i}"
 
         # SEO/OG derivados sempre de metadata/hero já preenchidos acima

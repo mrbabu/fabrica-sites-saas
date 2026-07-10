@@ -41,14 +41,14 @@ class Company(BaseModel):
     name: str = Field(..., min_length=2, max_length=100, description="Nome da empresa")
     tagline: str = Field(..., min_length=5, max_length=100, description="Slogan/proposta de valor")
     description: str = Field(..., min_length=20, max_length=500, description="Descrição completa")
-    logo: str = Field(default="https://via.placeholder.com/180x50?text=Logo", description="URL do logo")
+    logo: str = Field(default="https://loremflickr.com/180/50/logo", description="URL do logo")
 
     class Config:
         examples = [{
             "name": "Minha Empresa",
             "tagline": "Transformando negócios",
             "description": "Somos especializados em inovação...",
-            "logo": "https://via.placeholder.com/180x50?text=Logo"
+            "logo": "https://loremflickr.com/180/50/logo"
         }]
 
 
@@ -89,7 +89,7 @@ class Hero(BaseModel):
     subtitle: str = Field(..., min_length=10, max_length=300, description="Subtítulo")
     ctaText: str = Field(..., min_length=3, max_length=50, description="Texto do botão")
     ctaLink: str = Field(default="#contato", description="Link do botão")
-    backgroundImage: str = Field(default="https://via.placeholder.com/1920x600?text=Hero", description="URL background")
+    backgroundImage: str = Field(default="https://loremflickr.com/1920/600/negocio", description="URL background")
     enabled: bool = Field(default=True, description="Ativar/desativar seção")
 
     class Config:
@@ -98,7 +98,7 @@ class Hero(BaseModel):
             "subtitle": "Soluções inovadoras",
             "ctaText": "Começar Agora",
             "ctaLink": "#contato",
-            "backgroundImage": "https://via.placeholder.com/1920x600?text=Hero",
+            "backgroundImage": "https://loremflickr.com/1920/600/negocio",
             "enabled": True
         }]
 
@@ -110,7 +110,7 @@ class Section(BaseModel):
     title: str = Field(..., min_length=5, max_length=100, description="Título")
     subtitle: str = Field(..., min_length=5, max_length=200, description="Subtítulo")
     content: str = Field(..., min_length=20, max_length=1000, description="Conteúdo")
-    image: str = Field(default="https://via.placeholder.com/500x400?text=Content", description="URL imagem")
+    image: str = Field(default="https://loremflickr.com/500/400/negocio", description="URL imagem")
     enabled: bool = Field(default=True, description="Ativar/desativar")
 
     class Config:
@@ -120,7 +120,7 @@ class Section(BaseModel):
             "title": "Sobre Nós",
             "subtitle": "Nossa história",
             "content": "Somos uma empresa...",
-            "image": "https://via.placeholder.com/500x400?text=About",
+            "image": "https://loremflickr.com/500/400/negocio",
             "enabled": True
         }]
 
@@ -158,7 +158,7 @@ class Testimonial(BaseModel):
     name: str = Field(..., min_length=3, max_length=100, description="Nome do cliente")
     role: str = Field(..., min_length=5, max_length=100, description="Profissão/empresa")
     content: str = Field(..., min_length=20, max_length=500, description="Conteúdo do depoimento")
-    avatar: str = Field(default="https://via.placeholder.com/100x100?text=Avatar", description="URL avatar")
+    avatar: str = Field(default="https://i.pravatar.cc/100", description="URL avatar")
     rating: int = Field(default=5, ge=1, le=5, description="Avaliação 1-5")
     enabled: bool = Field(default=True, description="Ativar/desativar")
 
@@ -168,7 +168,7 @@ class Testimonial(BaseModel):
             "name": "João Silva",
             "role": "CEO - Tech",
             "content": "Excelente serviço!",
-            "avatar": "https://via.placeholder.com/100x100?text=Avatar",
+            "avatar": "https://i.pravatar.cc/100",
             "rating": 5,
             "enabled": True
         }]
@@ -399,7 +399,7 @@ class ValidadorSchema:
                 "name": "Nome Empresa",
                 "tagline": "Tagline/Slogan",
                 "description": "Descrição da empresa",
-                "logo": "https://via.placeholder.com/180x50?text=Logo"
+                "logo": "https://loremflickr.com/180/50/logo"
             },
             "colors": {
                 "primary": "#6366f1",
@@ -416,7 +416,7 @@ class ValidadorSchema:
                 "subtitle": "Subtítulo do Hero",
                 "ctaText": "Começar",
                 "ctaLink": "#contato",
-                "backgroundImage": "https://via.placeholder.com/1920x600?text=Hero",
+                "backgroundImage": "https://loremflickr.com/1920/600/negocio",
                 "enabled": True
             },
             "sections": [
@@ -426,7 +426,7 @@ class ValidadorSchema:
                     "title": "Sobre",
                     "subtitle": "Conheça nossa história",
                     "content": "Descrição completa da empresa e sua história",
-                    "image": "https://via.placeholder.com/500x400?text=About",
+                    "image": "https://loremflickr.com/500/400/negocio",
                     "enabled": True
                 }
             ],

@@ -1,41 +1,41 @@
 {
   "metadata": {
-    "siteTitle": "Padaria Artesanal em Curitiba",
-    "siteDescription": "Descubra a melhor padaria artesanal de Curitiba. Encontre nossos produtos artesanais feitos com amor e qualidade. Faça seu pedido agora mesmo!",
-    "favicon": "🍞",
+    "siteTitle": "Academia e Personal Trainer em Belo Horizonte",
+    "siteDescription": "Melhore sua saúde e condicionamento físico com nossos treinadores experientes em Belo Horizonte. Agende sua consulta hoje mesmo!",
+    "favicon": "🚀",
     "keywords": [
-      "padaria artesanal",
-      "curitiba",
-      "produtos artesanais",
-      "qualidade",
-      "amor"
+      "academia",
+      "personal trainer",
+      "treinamento",
+      "condicionamento físico",
+      "Belo Horizonte"
     ],
-    "ogTitle": "Padaria Artesanal em Curitiba",
-    "ogDescription": "Descubra a melhor padaria artesanal de Curitiba. Encontre nossos produtos artesanais feitos com amor e qualidade. Faça seu pedido agora mesmo!",
-    "ogImage": "https://via.placeholder.com/1920x600?text=Hero+Background"
+    "ogTitle": "Academia e Personal Trainer em Belo Horizonte",
+    "ogDescription": "Melhore sua saúde e condicionamento físico com nossos treinadores experientes em Belo Horizonte. Agende sua consulta hoje mesmo!",
+    "ogImage": "https://loremflickr.com/1920/600/academia-e-personal-trainer"
   },
   "company": {
-    "name": "Padaria São José",
-    "tagline": "A melhor padaria artesanal de Curitiba",
-    "description": "A Padaria São José é uma padaria artesanal de Curitiba que oferece produtos feitos com amor e qualidade. Nossa equipe é composta por padeiros experientes que trabalham incansavelmente para criar produtos deliciosos e únicos.",
-    "logo": "https://via.placeholder.com/500x100"
+    "name": "Studio Vida Fitness",
+    "tagline": "Treinamento Personalizado e Eficaz",
+    "description": "Nossa equipe de treinadores experientes e motivados está aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico. Agende sua consulta hoje mesmo!",
+    "logo": "https://loremflickr.com/400/400/academia-e-personal-trainer,logo"
   },
   "colors": {
-    "primary": "#d97706",
-    "primaryDark": "#b56c00",
-    "secondary": "#2c9f8d",
-    "accent": "#f9d2c3",
+    "primary": "#7c3aed",
+    "primaryDark": "#5f249f",
+    "secondary": "#ffbf00",
+    "accent": "#34c759",
     "background": "#ffffff",
     "text": "#1f2937",
     "textLight": "#6b7280",
     "border": "#e5e7eb"
   },
   "hero": {
-    "title": "Padaria Artesanal em Curitiba",
-    "subtitle": "Descubra a melhor padaria artesanal de Curitiba e encontre nossos produtos artesanais feitos com amor e qualidade.",
-    "ctaText": "Faça seu pedido agora mesmo!",
+    "title": "Melhore sua saúde e condicionamento físico com nossos treinadores experientes em Belo Horizonte",
+    "subtitle": "Nossa equipe está aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico. Agende sua consulta hoje mesmo!",
+    "ctaText": "Agende sua consulta",
     "ctaLink": "#contato",
-    "backgroundImage": "https://via.placeholder.com/1920x600?text=Hero+Background",
+    "backgroundImage": "https://loremflickr.com/1920/600/academia-e-personal-trainer",
     "enabled": true
   },
   "sections": [
@@ -43,46 +43,46 @@
       "id": "sobre",
       "type": "content",
       "title": "Sobre Nós",
-      "subtitle": "Conheça nossa história e nossa equipe",
-      "content": "A Padaria São José foi fundada em 2010 com o objetivo de oferecer produtos artesanais de alta qualidade. Nossa equipe é composta por padeiros experientes que trabalham incansavelmente para criar produtos deliciosos e únicos.",
-      "image": "https://via.placeholder.com/500x400?text=About",
+      "subtitle": "Nossa equipe de treinadores experientes e motivados está aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico.",
+      "content": "Nossa equipe está composta por treinadores experientes e motivados que estão aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico. Nossos treinadores são especializados em diferentes áreas, incluindo treinamento personalizado, treinamento de grupo e treinamento de condicionamento físico.",
+      "image": "https://loremflickr.com/500/400/academia-e-personal-trainer?lock=0",
       "enabled": true
     }
   ],
   "services": [
     {
       "id": 1,
-      "title": "Pães Artesanais",
-      "description": "Nossos pães são feitos com amor e qualidade. Eles são perfeitos para qualquer ocasião.",
-      "icon": "🍞",
+      "title": "Treinamento Personalizado",
+      "description": "Nossos treinadores experientes criam um plano de treinamento personalizado para atender às suas necessidades e objetivos.",
+      "icon": "⭐",
       "features": [
-        "Feito com amor",
-        "Qualidade garantida",
-        "Variedade de sabores"
+        "Treinamento personalizado",
+        "Plano de treinamento personalizado",
+        "Progresso mensurável"
       ],
       "enabled": true
     },
     {
       "id": 2,
-      "title": "Bolos Artesanais",
-      "description": "Nossos bolos são feitos com amor e qualidade. Eles são perfeitos para qualquer ocasião.",
-      "icon": "🎂",
+      "title": "Treinamento de Grupo",
+      "description": "Participe de nossos treinamentos de grupo e encontre uma comunidade de pessoas que compartilham seus objetivos de saúde e condicionamento físico.",
+      "icon": "👥",
       "features": [
-        "Feito com amor",
-        "Qualidade garantida",
-        "Variedade de sabores"
+        "Treinamento de grupo",
+        "Comunidade de apoio",
+        "Desafios e incentivos"
       ],
       "enabled": true
     },
     {
       "id": 3,
-      "title": "Salgadinhos Artesanais",
-      "description": "Nossos salgadinhos são feitos com amor e qualidade. Eles são perfeitos para qualquer ocasião.",
-      "icon": "🚚",
+      "title": "Treinamento de Condicionamento Físico",
+      "description": "Nossos treinadores experientes ajudam a melhorar sua condicionamento físico e alcançar seus objetivos de saúde.",
+      "icon": "🔧",
       "features": [
-        "Feito com amor",
-        "Qualidade garantida",
-        "Variedade de sabores"
+        "Treinamento de condicionamento físico",
+        "Melhoria da resistência cardiorrespiratória",
+        "Aumento da força e da flexibilidade"
       ],
       "enabled": true
     }
@@ -90,22 +90,22 @@
   "features": [
     {
       "id": 1,
-      "title": "Feito com Amor",
-      "description": "Nossos produtos são feitos com amor e qualidade. Isso garante que você receba o melhor.",
+      "title": "Treinamento Personalizado",
+      "description": "Nossos treinadores experientes criam um plano de treinamento personalizado para atender às suas necessidades e objetivos.",
       "icon": "⚡",
       "enabled": true
     },
     {
       "id": 2,
-      "title": "Qualidade Garantida",
-      "description": "Nossos produtos são feitos com ingredientes de alta qualidade. Isso garante que você receba o melhor.",
+      "title": "Comunidade de Apoio",
+      "description": "Participe de nossos treinamentos de grupo e encontre uma comunidade de pessoas que compartilham seus objetivos de saúde e condicionamento físico.",
       "icon": "✅",
       "enabled": true
     },
     {
       "id": 3,
-      "title": "Variedade de Sabores",
-      "description": "Nossos produtos são feitos com sabores únicos e deliciosos. Isso garante que você receba o melhor.",
+      "title": "Progresso Mensurável",
+      "description": "Nossos treinadores experientes ajudam a melhorar sua condicionamento físico e alcançar seus objetivos de saúde.",
       "icon": "🎯",
       "enabled": true
     }
@@ -114,27 +114,27 @@
     {
       "id": 1,
       "name": "João Silva",
-      "role": "Cliente",
-      "content": "Eu adoro a Padaria São José! Os pães são deliciosos e o atendimento é sempre muito bom.",
-      "avatar": "https://via.placeholder.com/100x100?text=Avatar+1",
+      "role": "Trabalhador Autônomo",
+      "content": "Eu estava procurando por um treinamento que me ajudasse a melhorar minha saúde e condicionamento físico. Nossa equipe de treinadores experientes me ajudou a alcançar meus objetivos e melhorar minha vida.",
+      "avatar": "https://i.pravatar.cc/150?u=studio-vida-fitness-0",
       "rating": 5,
       "enabled": true
     },
     {
       "id": 2,
-      "name": "Maria Oliveira",
-      "role": "Cliente",
-      "content": "Eu recomendo a Padaria São José para qualquer um que queira comer algo delicioso e fresco.",
-      "avatar": "https://via.placeholder.com/100x100?text=Avatar+2",
+      "name": "Maria Souza",
+      "role": "Professora",
+      "content": "Eu estava procurando por um treinamento que me ajudasse a melhorar minha saúde e condicionamento físico. Nossa equipe de treinadores experientes me ajudou a alcançar meus objetivos e melhorar minha vida.",
+      "avatar": "https://i.pravatar.cc/150?u=studio-vida-fitness-1",
       "rating": 5,
       "enabled": true
     },
     {
       "id": 3,
       "name": "Pedro Costa",
-      "role": "Cliente",
-      "content": "Eu adoro a variedade de sabores que a Padaria São José oferece. É sempre um prazer comer lá.",
-      "avatar": "https://via.placeholder.com/100x100?text=Avatar+3",
+      "role": "Estudante",
+      "content": "Eu estava procurando por um treinamento que me ajudasse a melhorar minha saúde e condicionamento físico. Nossa equipe de treinadores experientes me ajudou a alcançar meus objetivos e melhorar minha vida.",
+      "avatar": "https://i.pravatar.cc/150?u=studio-vida-fitness-2",
       "rating": 5,
       "enabled": true
     }
@@ -142,44 +142,50 @@
   "faq": [
     {
       "id": 1,
-      "question": "O que é a Padaria São José?",
-      "answer": "A Padaria São José é uma padaria artesanal que oferece produtos feitos com amor e qualidade.",
+      "question": "Quais são os benefícios do treinamento personalizado?",
+      "answer": "Os benefícios do treinamento personalizado incluem uma melhoria da saúde e condicionamento físico, aumento da força e da flexibilidade, e uma progressão mensurável.",
       "enabled": true
     },
     {
       "id": 2,
-      "question": "Qual é a melhor forma de fazer um pedido?",
-      "answer": "Você pode fazer um pedido online ou pessoalmente na nossa loja.",
+      "question": "Quais são os benefícios do treinamento de grupo?",
+      "answer": "Os benefícios do treinamento de grupo incluem uma comunidade de apoio, desafios e incentivos, e uma melhoria da saúde e condicionamento físico.",
       "enabled": true
     },
     {
       "id": 3,
-      "question": "Qual é o horário de funcionamento da loja?",
-      "answer": "O horário de funcionamento da loja é das 8h às 18h, de segunda a sábado.",
+      "question": "Quais são os benefícios do treinamento de condicionamento físico?",
+      "answer": "Os benefícios do treinamento de condicionamento físico incluem uma melhoria da resistência cardiorrespiratória, aumento da força e da flexibilidade, e uma progressão mensurável.",
+      "enabled": true
+    },
+    {
+      "id": 4,
+      "question": "Quais são os objetivos do treinamento?",
+      "answer": "Os objetivos do treinamento incluem melhorar a saúde e condicionamento físico, aumentar a força e a flexibilidade, e alcançar os objetivos de saúde e condicionamento físico.",
       "enabled": true
     }
   ],
   "contact": {
-    "email": "contato@padariasãojosé.com",
+    "email": "contato@studiovidafitness.com",
     "phone": "+55 11 98765-4321",
     "whatsapp": "+5511987654321",
-    "address": "Curitiba",
+    "address": "Belo Horizonte",
     "social": {
-      "instagram": "https://instagram.com/padariasãojosé",
-      "facebook": "https://facebook.com/padariasãojosé",
-      "linkedin": "https://linkedin.com/company/padariasãojosé",
-      "twitter": "https://twitter.com/padariasãojosé"
+      "instagram": "https://instagram.com/studiovidafitness",
+      "facebook": "https://facebook.com/studiovidafitness",
+      "linkedin": "https://linkedin.com/company/studiovidafitness",
+      "twitter": "https://twitter.com/studiovidafitness"
     }
   },
   "cta": {
-    "title": "Faça Seu Pedido Agora Mesmo!",
-    "description": "Nossa equipe está ansiosa para atendê-lo. Faça seu pedido agora mesmo e aproveite a melhor padaria artesanal de Curitiba.",
-    "buttonText": "Fazer Pedido",
-    "buttonLink": "mailto:contato@padariasãojosé.com",
+    "title": "Melhore sua saúde e condicionamento físico com nossos treinadores experientes em Belo Horizonte",
+    "description": "Nossa equipe está aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico. Agende sua consulta hoje mesmo!",
+    "buttonText": "Agende sua consulta",
+    "buttonLink": "mailto:contato@studiovidafitness.com",
     "enabled": true
   },
   "footer": {
-    "description": "A Padaria São José é uma padaria artesanal de Curitiba que oferece produtos feitos com amor e qualidade. Nossa equipe é composta por padeiros experientes que trabalham incansavelmente para criar produtos deliciosos e únicos.",
+    "description": "Nossa equipe de treinadores experientes e motivados está aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico. Agende sua consulta hoje mesmo!",
     "links": [
       {
         "label": "Sobre Nós",
@@ -190,6 +196,6 @@
         "url": "#contato"
       }
     ],
-    "copyrightText": "© 2026 Padaria São José. Todos os direitos reservados."
+    "copyrightText": "© 2026 Studio Vida Fitness. Todos os direitos reservados."
   }
 }
