@@ -53,6 +53,7 @@ configs/
 site-configs/
 *.json
 !site-config-example.json
+!site-config.json
 
 # Métricas e dados
 metrics.json

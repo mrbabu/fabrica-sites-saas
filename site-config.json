@@ -1,0 +1,195 @@
+{
+  "metadata": {
+    "siteTitle": "Padaria Artesanal em Curitiba",
+    "siteDescription": "Descubra a melhor padaria artesanal de Curitiba. Encontre nossos produtos artesanais feitos com amor e qualidade. Faça seu pedido agora mesmo!",
+    "favicon": "🍞",
+    "keywords": [
+      "padaria artesanal",
+      "curitiba",
+      "produtos artesanais",
+      "qualidade",
+      "amor"
+    ],
+    "ogTitle": "Padaria Artesanal em Curitiba",
+    "ogDescription": "Descubra a melhor padaria artesanal de Curitiba. Encontre nossos produtos artesanais feitos com amor e qualidade. Faça seu pedido agora mesmo!",
+    "ogImage": "https://via.placeholder.com/1920x600?text=Hero+Background"
+  },
+  "company": {
+    "name": "Padaria São José",
+    "tagline": "A melhor padaria artesanal de Curitiba",
+    "description": "A Padaria São José é uma padaria artesanal de Curitiba que oferece produtos feitos com amor e qualidade. Nossa equipe é composta por padeiros experientes que trabalham incansavelmente para criar produtos deliciosos e únicos.",
+    "logo": "https://via.placeholder.com/500x100"
+  },
+  "colors": {
+    "primary": "#d97706",
+    "primaryDark": "#b56c00",
+    "secondary": "#2c9f8d",
+    "accent": "#f9d2c3",
+    "background": "#ffffff",
+    "text": "#1f2937",
+    "textLight": "#6b7280",
+    "border": "#e5e7eb"
+  },
+  "hero": {
+    "title": "Padaria Artesanal em Curitiba",
+    "subtitle": "Descubra a melhor padaria artesanal de Curitiba e encontre nossos produtos artesanais feitos com amor e qualidade.",
+    "ctaText": "Faça seu pedido agora mesmo!",
+    "ctaLink": "#contato",
+    "backgroundImage": "https://via.placeholder.com/1920x600?text=Hero+Background",
+    "enabled": true
+  },
+  "sections": [
+    {
+      "id": "sobre",
+      "type": "content",
+      "title": "Sobre Nós",
+      "subtitle": "Conheça nossa história e nossa equipe",
+      "content": "A Padaria São José foi fundada em 2010 com o objetivo de oferecer produtos artesanais de alta qualidade. Nossa equipe é composta por padeiros experientes que trabalham incansavelmente para criar produtos deliciosos e únicos.",
+      "image": "https://via.placeholder.com/500x400?text=About",
+      "enabled": true
+    }
+  ],
+  "services": [
+    {
+      "id": 1,
+      "title": "Pães Artesanais",
+      "description": "Nossos pães são feitos com amor e qualidade. Eles são perfeitos para qualquer ocasião.",
+      "icon": "🍞",
+      "features": [
+        "Feito com amor",
+        "Qualidade garantida",
+        "Variedade de sabores"
+      ],
+      "enabled": true
+    },
+    {
+      "id": 2,
+      "title": "Bolos Artesanais",
+      "description": "Nossos bolos são feitos com amor e qualidade. Eles são perfeitos para qualquer ocasião.",
+      "icon": "🎂",
+      "features": [
+        "Feito com amor",
+        "Qualidade garantida",
+        "Variedade de sabores"
+      ],
+      "enabled": true
+    },
+    {
+      "id": 3,
+      "title": "Salgadinhos Artesanais",
+      "description": "Nossos salgadinhos são feitos com amor e qualidade. Eles são perfeitos para qualquer ocasião.",
+      "icon": "🚚",
+      "features": [
+        "Feito com amor",
+        "Qualidade garantida",
+        "Variedade de sabores"
+      ],
+      "enabled": true
+    }
+  ],
+  "features": [
+    {
+      "id": 1,
+      "title": "Feito com Amor",
+      "description": "Nossos produtos são feitos com amor e qualidade. Isso garante que você receba o melhor.",
+      "icon": "⚡",
+      "enabled": true
+    },
+    {
+      "id": 2,
+      "title": "Qualidade Garantida",
+      "description": "Nossos produtos são feitos com ingredientes de alta qualidade. Isso garante que você receba o melhor.",
+      "icon": "✅",
+      "enabled": true
+    },
+    {
+      "id": 3,
+      "title": "Variedade de Sabores",
+      "description": "Nossos produtos são feitos com sabores únicos e deliciosos. Isso garante que você receba o melhor.",
+      "icon": "🎯",
+      "enabled": true
+    }
+  ],
+  "testimonials": [
+    {
+      "id": 1,
+      "name": "João Silva",
+      "role": "Cliente",
+      "content": "Eu adoro a Padaria São José! Os pães são deliciosos e o atendimento é sempre muito bom.",
+      "avatar": "https://via.placeholder.com/100x100?text=Avatar+1",
+      "rating": 5,
+      "enabled": true
+    },
+    {
+      "id": 2,
+      "name": "Maria Oliveira",
+      "role": "Cliente",
+      "content": "Eu recomendo a Padaria São José para qualquer um que queira comer algo delicioso e fresco.",
+      "avatar": "https://via.placeholder.com/100x100?text=Avatar+2",
+      "rating": 5,
+      "enabled": true
+    },
+    {
+      "id": 3,
+      "name": "Pedro Costa",
+      "role": "Cliente",
+      "content": "Eu adoro a variedade de sabores que a Padaria São José oferece. É sempre um prazer comer lá.",
+      "avatar": "https://via.placeholder.com/100x100?text=Avatar+3",
+      "rating": 5,
+      "enabled": true
+    }
+  ],
+  "faq": [
+    {
+      "id": 1,
+      "question": "O que é a Padaria São José?",
+      "answer": "A Padaria São José é uma padaria artesanal que oferece produtos feitos com amor e qualidade.",
+      "enabled": true
+    },
+    {
+      "id": 2,
+      "question": "Qual é a melhor forma de fazer um pedido?",
+      "answer": "Você pode fazer um pedido online ou pessoalmente na nossa loja.",
+      "enabled": true
+    },
+    {
+      "id": 3,
+      "question": "Qual é o horário de funcionamento da loja?",
+      "answer": "O horário de funcionamento da loja é das 8h às 18h, de segunda a sábado.",
+      "enabled": true
+    }
+  ],
+  "contact": {
+    "email": "contato@padariasãojosé.com",
+    "phone": "+55 11 98765-4321",
+    "whatsapp": "+5511987654321",
+    "address": "Curitiba",
+    "social": {
+      "instagram": "https://instagram.com/padariasãojosé",
+      "facebook": "https://facebook.com/padariasãojosé",
+      "linkedin": "https://linkedin.com/company/padariasãojosé",
+      "twitter": "https://twitter.com/padariasãojosé"
+    }
+  },
+  "cta": {
+    "title": "Faça Seu Pedido Agora Mesmo!",
+    "description": "Nossa equipe está ansiosa para atendê-lo. Faça seu pedido agora mesmo e aproveite a melhor padaria artesanal de Curitiba.",
+    "buttonText": "Fazer Pedido",
+    "buttonLink": "mailto:contato@padariasãojosé.com",
+    "enabled": true
+  },
+  "footer": {
+    "description": "A Padaria São José é uma padaria artesanal de Curitiba que oferece produtos feitos com amor e qualidade. Nossa equipe é composta por padeiros experientes que trabalham incansavelmente para criar produtos deliciosos e únicos.",
+    "links": [
+      {
+        "label": "Sobre Nós",
+        "url": "#sobre"
+      },
+      {
+        "label": "Contato",
+        "url": "#contato"
+      }
+    ],
+    "copyrightText": "© 2026 Padaria São José. Todos os direitos reservados."
+  }
+}
