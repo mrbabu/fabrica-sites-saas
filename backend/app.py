@@ -291,7 +291,12 @@ async def health_check():
     )
 
 
-@app.post("/api/v1/generate-site", response_model=SiteResponse, tags=["Generation"])
+@app.post(
+    "/api/v1/generate-site",
+    response_model=SiteResponse,
+    tags=["Generation"],
+    dependencies=[Depends(verificar_api_key)],
+)
 async def generate_site(
     request: SiteRequest,
     background_tasks: BackgroundTasks
@@ -311,10 +316,14 @@ async def generate_site(
     - `timestamp`: Data/hora da geração
     - `tempo_geracao_segundos`: Quanto tempo levou
     
+    **Protegido**: exige o header `X-API-Key` igual a `WEBHOOK_API_KEY` do
+    ambiente do servidor — mesmo mecanismo do `/webhook/whatsapp`.
+
     **Exemplo de uso:**
     ```bash
     curl -X POST "http://localhost:8000/api/v1/generate-site" \\
       -H "Content-Type: application/json" \\
+      -H "X-API-Key: sua-chave-aqui" \\
       -d '{
         "nome_empresa": "Tech Solutions",
         "nicho": "Software",
