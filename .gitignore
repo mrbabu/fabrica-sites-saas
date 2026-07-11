@@ -56,6 +56,7 @@ prompt_teste_lovable.txt
 *.json
 !site-config-example.json
 !site-config.json
+!vendas-config.json
 
 # Métricas e dados
 metrics.json

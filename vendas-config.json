@@ -1,0 +1,130 @@
+{
+  "metadata": {
+    "siteTitle": "Fábrica de Sites — Site profissional pro seu negócio local",
+    "siteDescription": "Site profissional, pronto em minutos, feito pra transformar visitante em cliente pelo WhatsApp. A partir de R$149/mês.",
+    "favicon": "🏗️",
+    "keywords": ["site profissional", "site para clínica", "site local", "WhatsApp", "SEO local", "Grande Vitória", "Espírito Santo"],
+    "ogTitle": "Fábrica de Sites — Site profissional pro seu negócio local",
+    "ogDescription": "Site profissional, pronto em minutos, feito pra transformar visitante em cliente pelo WhatsApp.",
+    "ogImage": ""
+  },
+  "company": {
+    "name": "Fábrica de Sites",
+    "tagline": "Site profissional, no ar em minutos",
+    "whatsapp": "+5527998742407"
+  },
+  "colors": {
+    "primary": "#1F5745",
+    "primaryDark": "#163E31",
+    "secondary": "#C97B4A",
+    "accent": "#C97B4A",
+    "background": "#FBF9F4",
+    "text": "#1C1C1A",
+    "textLight": "#6B6558",
+    "border": "#E4DFD3"
+  },
+  "hero": {
+    "title": "Seu negócio merece ser encontrado antes do concorrente",
+    "subtitle": "Fazemos o site do seu negócio local — clínica, consultório, pousada, prestador de serviço — pronto em minutos, com o WhatsApp no centro da conversão. Sem enrolação, sem mensalidade de agência.",
+    "ctaText": "Quero meu site"
+  },
+  "howItWorks": [
+    {
+      "step": "1",
+      "title": "Você manda as informações",
+      "description": "Nome do negócio, o que você oferece, fotos se tiver. Tudo pelo WhatsApp, sem formulário chato."
+    },
+    {
+      "step": "2",
+      "title": "Geramos uma demo em minutos",
+      "description": "Nossa IA monta um site completo com o conteúdo do seu negócio — não é um template genérico, é feito pra você."
+    },
+    {
+      "step": "3",
+      "title": "Você aprova ou pede ajustes",
+      "description": "Vê a demo pronta antes de qualquer compromisso. Se quiser mudar cor, texto ou foto, ajustamos na hora."
+    },
+    {
+      "step": "4",
+      "title": "Site no ar, com seu domínio",
+      "description": "Publicamos com endereço próprio (seunegocio.com.br) e o botão de WhatsApp já configurado pra receber clientes."
+    }
+  ],
+  "differentials": [
+    {
+      "icon": "🔍",
+      "title": "Feito pra aparecer no Google",
+      "description": "SEO local desde o primeiro dia — a diferença entre ter só um Instagram e ser encontrado por quem procura seu serviço na região."
+    },
+    {
+      "icon": "💬",
+      "title": "WhatsApp no centro do site",
+      "description": "Todo botão de ação leva direto pro seu WhatsApp — nada de formulário que ninguém preenche."
+    },
+    {
+      "icon": "🎨",
+      "title": "Identidade visual própria",
+      "description": "Cada site usa a paleta e o conteúdo do seu negócio — não é o mesmo template que todo mundo usa."
+    },
+    {
+      "icon": "⚡",
+      "title": "Rápido de verdade",
+      "description": "Demo pronta em minutos, não em semanas — você vê o resultado antes de decidir."
+    }
+  ],
+  "portfolio": [
+    {
+      "name": "Alumi Odontologia Integrada",
+      "nicho": "Odontologia Estética — Jardim da Penha, Vitória",
+      "url": "https://alumi-sparkle-site.lovable.app"
+    },
+    {
+      "name": "Studio Vértice Fisioterapia",
+      "nicho": "Fisioterapia e Pilates — Praia do Canto, Vitória",
+      "url": "https://studio-vertice-flow.lovable.app"
+    }
+  ],
+  "pricing": {
+    "price": "R$149",
+    "period": "/mês",
+    "features": [
+      "Site profissional completo, feito pro seu negócio",
+      "Domínio próprio (seunegocio.com.br)",
+      "Botão de WhatsApp integrado em todo o site",
+      "SEO local desde o primeiro dia",
+      "Ajustes de conteúdo quando precisar"
+    ],
+    "ctaText": "Falar sobre o meu plano"
+  },
+  "faq": [
+    {
+      "question": "Preciso entender de tecnologia?",
+      "answer": "Não. Você manda as informações pelo WhatsApp e a gente cuida do resto — do design ao ar no domínio."
+    },
+    {
+      "question": "Quanto tempo demora pra ficar pronto?",
+      "answer": "A demo inicial fica pronta em minutos. Depois da sua aprovação e domínio configurado, o site vai ao ar em poucos dias."
+    },
+    {
+      "question": "O domínio é meu?",
+      "answer": "Sim — o domínio (seunegocio.com.br) é registrado no seu nome, não fica preso à Fábrica de Sites."
+    },
+    {
+      "question": "Posso pedir alterações depois que o site estiver no ar?",
+      "answer": "Sim, é só chamar no WhatsApp. Como o site é gerado a partir de um arquivo de configuração, ajustes de texto, foto e cor são rápidos."
+    },
+    {
+      "question": "Atende negócios fora de clínicas/consultórios?",
+      "answer": "Sim — hoje trabalhamos com negócios locais em geral (pousadas, restaurantes, prestadores de serviço), com foco inicial em clínicas na Grande Vitória-ES e prestadores em Paraty-RJ."
+    }
+  ],
+  "cta": {
+    "title": "Vamos colocar seu negócio no Google?",
+    "description": "Manda uma mensagem agora e a gente já começa a montar a demo do seu site.",
+    "buttonText": "Chamar no WhatsApp"
+  },
+  "footer": {
+    "description": "Sites profissionais pra negócios locais, prontos em minutos e feitos pra converter visitante em cliente.",
+    "copyrightText": "© 2026 Fábrica de Sites."
+  }
+}

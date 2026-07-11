@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carregando...</title>
+    <meta name="description" content="Carregando...">
+    <meta name="keywords" content="">
+    <meta property="og:title" content="">
+    <meta property="og:description" content="">
+    <link id="favicon-link" rel="icon" href="">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .font-display { font-family: 'Fraunces', serif; }
+        html { scroll-behavior: smooth; }
+
+        .grain-overlay {
+            position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0.035; mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s ease; }
+        .reveal.is-visible { opacity: 1; transform: translateY(0); }
+        .hero-in { animation: heroIn 0.8s ease-out both; }
+        @keyframes heroIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .word-reveal { display: inline-block; opacity: 0; transform: translateY(14px); animation: wordUp 0.6s ease forwards; }
+        @keyframes wordUp { to { opacity: 1; transform: translateY(0); } }
+
+        .whatsapp-pulse { animation: waPulse 2.6s ease-in-out infinite; }
+        @keyframes waPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0.10); } 50% { box-shadow: 0 0 0 9px rgba(0,0,0,0); } }
+        .wa-label-fade { transition: opacity 0.35s ease; }
+
+        a:focus-visible, button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 4px; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+            .hero-in, .word-reveal { animation: none !important; opacity: 1 !important; transform: none !important; }
+            .whatsapp-pulse { animation: none !important; }
+            html { scroll-behavior: auto; }
+        }
+    </style>
+</head>
+<body class="text-gray-900 antialiased">
+    <div class="grain-overlay"></div>
+    <div id="app"></div>
+
+    <script>
+        let config = {};
+        const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('./vendas-config.json');
+                config = await response.json();
+                render();
+            } catch (error) {
+                console.error('Erro ao carregar configuração:', error);
+                document.getElementById('app').innerHTML = '<p class="text-red-500 p-4">Erro ao carregar configuração</p>';
+            }
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            document.title = config.metadata.siteTitle;
+            document.querySelector('meta[name="description"]').setAttribute('content', config.metadata.siteDescription);
+            document.querySelector('meta[name="keywords"]').setAttribute('content', (config.metadata.keywords || []).join(', '));
+            document.querySelector('meta[property="og:title"]').setAttribute('content', config.metadata.ogTitle || config.metadata.siteTitle);
+            document.querySelector('meta[property="og:description"]').setAttribute('content', config.metadata.ogDescription || config.metadata.siteDescription);
+            document.body.style.backgroundColor = config.colors.background;
+            setFavicon(config.metadata.favicon || '🏗️');
+
+            app.innerHTML = `
+                ${renderNavigation()}
+                ${renderHero()}
+                ${renderHowItWorks()}
+                ${renderDifferentials()}
+                ${renderPortfolio()}
+                ${renderPricing()}
+                ${renderFAQ()}
+                ${renderCTA()}
+                ${renderFooter()}
+                ${renderWhatsAppButton()}
+            `;
+
+            setupNavBehavior();
+            initScrollReveal();
+            initWhatsAppLabel();
+        }
+
+        function setFavicon(emoji) {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="0.9em" font-size="90">${emoji}</text></svg>`;
+            document.getElementById('favicon-link').setAttribute('href', 'data:image/svg+xml,' + encodeURIComponent(svg));
+        }
+
+        function setupNavBehavior() {
+            const nav = document.getElementById('site-nav');
+            if (nav) {
+                const onScroll = () => {
+                    if (window.scrollY > 8) nav.classList.add('shadow-md');
+                    else nav.classList.remove('shadow-md');
+                };
+                window.addEventListener('scroll', onScroll);
+                onScroll();
+            }
+        }
+
+        function initScrollReveal() {
+            const items = document.querySelectorAll('.reveal');
+            if (prefersReducedMotion() || !('IntersectionObserver' in window)) {
+                items.forEach(el => el.classList.add('is-visible'));
+                return;
+            }
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        io.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+            items.forEach(el => io.observe(el));
+        }
+
+        function initWhatsAppLabel() {
+            const label = document.getElementById('wa-label');
+            if (!label || prefersReducedMotion()) return;
+            const phrases = ['Fale agora', 'Resposta rápida'];
+            let i = 0;
+            setInterval(() => {
+                i = (i + 1) % phrases.length;
+                label.style.opacity = '0';
+                setTimeout(() => { label.textContent = phrases[i]; label.style.opacity = '1'; }, 350);
+            }, 3400);
+        }
+
+        function staggerWords(text) {
+            return text.split(' ').map((w, i) => `<span class="word-reveal" style="animation-delay:${(i * 0.045).toFixed(2)}s">${w}&nbsp;</span>`).join('');
+        }
+
+        function waLink(numeroRaw, mensagem) {
+            const numero = (numeroRaw || '').replace(/\D/g, '');
+            return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+        }
+
+        const WHATSAPP_ICON = `<svg viewBox="0 0 32 32" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M16.02 3C9.4 3 4 8.38 4 15c0 2.34.64 4.53 1.76 6.42L4 29l7.76-1.7A11.9 11.9 0 0 0 16.02 27C22.64 27 28 21.62 28 15S22.64 3 16.02 3Zm6.98 16.9c-.3.85-1.72 1.63-2.38 1.72-.61.09-1.36.13-2.2-.14-.5-.16-1.15-.37-1.98-.73-3.5-1.51-5.78-5.05-5.96-5.29-.17-.24-1.43-1.9-1.43-3.62s.9-2.57 1.22-2.92c.32-.35.7-.44.93-.44.23 0 .47 0 .67.01.22.01.51-.08.79.6.3.72 1.02 2.49 1.11 2.67.09.18.15.39.03.63-.12.24-.18.39-.36.6-.18.21-.38.47-.54.63-.18.18-.37.37-.16.73.21.36.94 1.55 2.02 2.51 1.39 1.24 2.56 1.62 2.92 1.8.36.18.57.15.78-.09.21-.24.9-1.05 1.14-1.41.24-.36.48-.3.81-.18.33.12 2.1.99 2.46 1.17.36.18.6.27.69.42.09.15.09.85-.21 1.7Z"/></svg>`;
+
+        function waHref(mensagem) {
+            return waLink(config.company.whatsapp, mensagem);
+        }
+
+        function renderWhatsAppButton() {
+            const link = waHref(`Olá! Vi a página da ${config.company.name} e quero saber mais sobre o site pro meu negócio.`);
+            return `
+                <a href="${link}" target="_blank" rel="noopener" aria-label="Falar no WhatsApp"
+                   class="whatsapp-pulse fixed right-5 z-50 flex items-center gap-2 text-white pl-4 pr-5 py-3.5 shadow-xl transition transform hover:scale-105"
+                   style="background-color: ${config.colors.accent}; border-radius: 20px 20px 4px 20px; bottom: calc(1.25rem + env(safe-area-inset-bottom));">
+                    ${WHATSAPP_ICON}
+                    <span id="wa-label" class="wa-label-fade hidden sm:inline font-display italic font-medium text-sm">Fale agora</span>
+                </a>
+            `;
+        }
+
+        function renderNavigation() {
+            return `
+                <nav id="site-nav" class="sticky top-0 z-40 backdrop-blur-md transition-shadow duration-300" style="background-color: ${config.colors.background}cc">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6 py-4 flex justify-between items-center">
+                        <span class="font-display font-semibold text-lg tracking-tight" style="color: ${config.colors.primary}">${config.company.name}</span>
+                        <div class="hidden md:flex items-center gap-8">
+                            <a href="#como-funciona" class="font-medium text-sm transition hover:opacity-70" style="color: ${config.colors.text}">Como funciona</a>
+                            <a href="#portfolio" class="font-medium text-sm transition hover:opacity-70" style="color: ${config.colors.text}">Portfólio</a>
+                            <a href="#preco" class="font-medium text-sm transition hover:opacity-70" style="color: ${config.colors.text}">Preço</a>
+                            <a href="${waHref('Olá! Vi a página da ' + config.company.name + ' e quero saber mais sobre o site pro meu negócio.')}" target="_blank" rel="noopener" class="text-white px-5 py-2.5 rounded-full text-sm font-semibold transition hover:shadow-lg" style="background-color: ${config.colors.primary}">Falar no WhatsApp</a>
+                        </div>
+                    </div>
+                </nav>
+            `;
+        }
+
+        function renderHero() {
+            const link = waHref(`Olá! Vi a página da ${config.company.name} e quero meu site.`);
+            return `
+                <section class="hero-in relative overflow-hidden min-h-[80vh] flex items-center" style="background: linear-gradient(150deg, ${config.colors.primary} 10%, ${config.colors.primaryDark} 60%, ${config.colors.text} 130%)">
+                    <div class="max-w-4xl mx-auto px-5 sm:px-6 py-24 text-center relative z-10">
+                        <span class="font-display italic inline-block text-base sm:text-lg text-white/85 mb-5">${config.company.tagline}</span>
+                        <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-medium mb-6 leading-[1.1] tracking-tight text-white">
+                            ${staggerWords(config.hero.title)}
+                        </h1>
+                        <p class="text-lg md:text-xl mb-10 max-w-2xl mx-auto text-white/90 leading-relaxed">
+                            ${config.hero.subtitle}
+                        </p>
+                        <a href="${link}" target="_blank" rel="noopener" class="bg-white px-8 py-4 rounded-full font-bold text-base inline-flex items-center justify-center gap-2 transition transform hover:scale-105 hover:shadow-2xl" style="color: ${config.colors.primary}">
+                            ${WHATSAPP_ICON} ${config.hero.ctaText}
+                        </a>
+                    </div>
+                </section>
+            `;
+        }
+
+        function sectionEyebrow(text) {
+            return `
+                <div class="flex items-center justify-center gap-3 mb-4">
+                    <span class="w-6 h-px" style="background-color: ${config.colors.accent}"></span>
+                    <span class="font-display italic text-base" style="color: ${config.colors.primary}">${text}</span>
+                    <span class="w-6 h-px" style="background-color: ${config.colors.accent}"></span>
+                </div>
+            `;
+        }
+
+        function renderHowItWorks() {
+            const steps = config.howItWorks || [];
+            if (steps.length === 0) return '';
+            return `
+                <section id="como-funciona" class="reveal py-20 md:py-28">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+                        <div class="text-center max-w-2xl mx-auto mb-14">
+                            ${sectionEyebrow('Como funciona')}
+                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                                Do WhatsApp ao site no ar
+                            </h2>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            ${steps.map(s => `
+                                <div class="p-6">
+                                    <div class="font-display text-3xl italic mb-3" style="color: ${config.colors.accent}">${s.step}</div>
+                                    <h3 class="text-lg font-bold mb-2" style="color: ${config.colors.text}">${s.title}</h3>
+                                    <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">${s.description}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderDifferentials() {
+            const items = config.differentials || [];
+            if (items.length === 0) return '';
+            return `
+                <section class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+                        <div class="text-center max-w-2xl mx-auto mb-14">
+                            ${sectionEyebrow('Diferenciais')}
+                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                                Por que não é só mais um site
+                            </h2>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            ${items.map(item => `
+                                <div class="bg-white p-8 rounded-2xl shadow-sm flex gap-5">
+                                    <div class="w-14 h-14 flex-shrink-0 rounded-xl flex items-center justify-center text-2xl" style="background-color: ${config.colors.primary}14">${item.icon}</div>
+                                    <div>
+                                        <h3 class="text-lg font-bold mb-2" style="color: ${config.colors.text}">${item.title}</h3>
+                                        <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">${item.description}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderPortfolio() {
+            const items = config.portfolio || [];
+            if (items.length === 0) return '';
+            return `
+                <section id="portfolio" class="reveal py-20 md:py-28">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+                        <div class="text-center max-w-2xl mx-auto mb-14">
+                            ${sectionEyebrow('Portfólio')}
+                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                                Exemplos reais que já entregamos
+                            </h2>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            ${items.map(item => `
+                                <a href="${item.url}" target="_blank" rel="noopener" class="block bg-white p-8 rounded-2xl border transition hover:shadow-xl hover:-translate-y-1" style="border-color: ${config.colors.border}">
+                                    <h3 class="font-display text-xl font-medium mb-2" style="color: ${config.colors.text}">${item.name}</h3>
+                                    <p class="text-sm mb-4" style="color: ${config.colors.textLight}">${item.nicho}</p>
+                                    <span class="text-sm font-semibold inline-flex items-center gap-1" style="color: ${config.colors.primary}">Ver site →</span>
+                                </a>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderPricing() {
+            const p = config.pricing;
+            if (!p) return '';
+            const link = waHref(`Olá! Vi o plano de ${p.price}${p.period} da ${config.company.name} e quero saber mais.`);
+            return `
+                <section id="preco" class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08">
+                    <div class="max-w-lg mx-auto px-5 sm:px-6">
+                        <div class="text-center mb-10">
+                            ${sectionEyebrow('Investimento')}
+                            <h2 class="font-display text-3xl md:text-4xl font-medium tracking-tight" style="color: ${config.colors.text}">
+                                Sem letra miúda
+                            </h2>
+                        </div>
+                        <div class="bg-white p-10 rounded-3xl shadow-lg text-center" style="border: 1px solid ${config.colors.border}">
+                            <div class="mb-6">
+                                <span class="font-display text-5xl font-medium" style="color: ${config.colors.primary}">${p.price}</span>
+                                <span class="text-lg" style="color: ${config.colors.textLight}">${p.period}</span>
+                            </div>
+                            <ul class="space-y-3 mb-8 text-left">
+                                ${p.features.map(f => `
+                                    <li class="flex items-start gap-2 text-sm" style="color: ${config.colors.text}">
+                                        <span class="mt-0.5 flex-shrink-0" style="color: ${config.colors.accent}">✓</span> ${f}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                            <a href="${link}" target="_blank" rel="noopener" class="block text-white px-8 py-4 rounded-full font-bold text-base transition hover:shadow-lg" style="background-color: ${config.colors.primary}">
+                                ${p.ctaText}
+                            </a>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderFAQ() {
+            const items = config.faq || [];
+            if (items.length === 0) return '';
+            return `
+                <section class="reveal py-20 md:py-28">
+                    <div class="max-w-3xl mx-auto px-5 sm:px-6">
+                        <div class="text-center mb-14">
+                            ${sectionEyebrow('FAQ')}
+                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                                Perguntas frequentes
+                            </h2>
+                        </div>
+                        <div class="space-y-3">
+                            ${items.map(item => `
+                                <details class="bg-white p-6 rounded-2xl shadow-sm">
+                                    <summary class="font-bold cursor-pointer flex justify-between items-center gap-4" style="color: ${config.colors.text}">
+                                        <span>${item.question}</span>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="color:${config.colors.primary}"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </summary>
+                                    <p class="mt-4 leading-relaxed" style="color: ${config.colors.textLight}">${item.answer}</p>
+                                </details>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderCTA() {
+            const link = waHref(`Olá! Vi a página da ${config.company.name} e quero começar meu site.`);
+            return `
+                <section class="reveal py-20 md:py-24" style="background: linear-gradient(135deg, ${config.colors.primary}, ${config.colors.primaryDark})">
+                    <div class="max-w-3xl mx-auto px-5 sm:px-6 text-center">
+                        <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 text-white tracking-tight">${config.cta.title}</h2>
+                        <p class="text-lg mb-9 text-white/85 leading-relaxed">${config.cta.description}</p>
+                        <a href="${link}" target="_blank" rel="noopener" class="bg-white px-9 py-4 rounded-full font-bold text-base inline-flex items-center gap-2 transition transform hover:scale-105 hover:shadow-2xl" style="color: ${config.colors.primary}">
+                            ${WHATSAPP_ICON} ${config.cta.buttonText}
+                        </a>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderFooter() {
+            return `
+                <footer class="reveal" style="background-color: ${config.colors.text}">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6 py-12 text-center">
+                        <p class="font-display text-lg text-white mb-2">${config.company.name}</p>
+                        <p class="text-gray-400 text-sm mb-6 max-w-md mx-auto">${config.footer.description}</p>
+                        <p class="text-gray-500 text-xs">${config.footer.copyrightText}</p>
+                    </div>
+                </footer>
+            `;
+        }
+
+        document.addEventListener('DOMContentLoaded', loadConfig);
+    </script>
+</body>
+</html>
