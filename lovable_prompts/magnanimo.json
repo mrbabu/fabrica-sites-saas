@@ -1,0 +1,161 @@
+{
+  "metadata": {
+    "siteTitle": "Magnânimo — Arquitetura e Interiores de Alto Padrão",
+    "siteDescription": "Projetos autorais de arquitetura e interiores para residências e espaços comerciais de altíssimo padrão, com curadoria de materiais nobres.",
+    "favicon": "🏛️",
+    "keywords": ["arquitetura de alto padrão", "design de interiores", "projeto autoral", "curadoria de materiais", "arquitetura residencial premium"],
+    "ogTitle": "Magnânimo — Arquitetura e Interiores de Alto Padrão",
+    "ogDescription": "Ecossistemas espaciais autorais, com engenharia de ponta e curadoria de materiais nobres.",
+    "ogImage": "https://images.unsplash.com/photo-1782392487647-7fee9715d1f5?w=1920&h=630&fit=crop&q=80"
+  },
+  "company": {
+    "name": "Magnânimo",
+    "tagline": "Arquitetura autoral para quem exige o extraordinário",
+    "description": "A Magnânimo nasce do encontro entre engenharia de precisão e sensibilidade material. Cada projeto é desenhado do zero — nunca um template, sempre uma resposta única ao terreno, à luz e ao modo de viver de quem vai habitar o espaço.",
+    "logo": "https://loremflickr.com/180/50/architecture,logo"
+  },
+  "colors": {
+    "primary": "#4338CA",
+    "primaryDark": "#312E81",
+    "secondary": "#B08D57",
+    "accent": "#B08D57",
+    "background": "#F7F5F2",
+    "text": "#1A1825",
+    "textLight": "#6B6478",
+    "border": "#E4E1EA"
+  },
+  "hero": {
+    "title": "Onde a engenharia encontra o extraordinário",
+    "subtitle": "Projetos autorais de arquitetura e interiores, com curadoria de materiais nobres e acompanhamento de obra ponta a ponta — para quem não aceita menos que o excepcional.",
+    "ctaText": "Iniciar meu projeto",
+    "ctaLink": "#contato",
+    "backgroundImage": "https://images.unsplash.com/photo-1782392487647-7fee9715d1f5?w=1920&h=1000&fit=crop&q=80",
+    "enabled": true
+  },
+  "sections": [
+    {
+      "id": "sobre",
+      "type": "content",
+      "title": "Cada projeto é uma resposta única",
+      "subtitle": "Não trabalhamos com fórmulas — trabalhamos com terreno, luz e material",
+      "content": "A Magnânimo é um ateliê de arquitetura dedicado a residências e espaços comerciais de altíssimo padrão. Nossa equipe conduz o projeto do estudo de viabilidade à entrega da obra, com curadoria pessoal de cada material — da marcenaria à pedra, do metal à iluminação — garantindo que o resultado final seja tão preciso na execução quanto ousado no conceito.",
+      "image": "https://loremflickr.com/500/400/architecture,minimalist",
+      "enabled": true
+    }
+  ],
+  "services": [
+    {
+      "id": 1,
+      "title": "Projeto Residencial Autoral",
+      "description": "Arquitetura e interiores desenhados sob medida para o terreno, a luz e o modo de viver de cada cliente — do partido inicial ao último detalhe de acabamento.",
+      "icon": "🏛️",
+      "features": ["Estudo de viabilidade e implantação", "Projeto executivo completo", "Curadoria de materiais nobres"],
+      "enabled": true
+    },
+    {
+      "id": 2,
+      "title": "Design Comercial de Alto Padrão",
+      "description": "Espaços comerciais e corporativos pensados para comunicar posicionamento de marca através de arquitetura — do flagship ao escritório-sede.",
+      "icon": "🏢",
+      "features": ["Conceito alinhado à marca", "Projeto luminotécnico autoral", "Especificação de mobiliário sob medida"],
+      "enabled": true
+    },
+    {
+      "id": 3,
+      "title": "Acompanhamento de Obra Ponta a Ponta",
+      "description": "Da fundação ao detalhe final de marcenaria, acompanhamos cada etapa da execução para garantir fidelidade total ao projeto original.",
+      "icon": "📐",
+      "features": ["Visitas técnicas semanais", "Gestão de fornecedores premium", "Compatibilização de projetos complementares"],
+      "enabled": true
+    }
+  ],
+  "features": [
+    {
+      "id": 1,
+      "title": "Design de Interiores Autoral",
+      "description": "Nenhum projeto se repete — cada ambiente é desenhado especificamente para quem vai vivê-lo, nunca adaptado de um catálogo.",
+      "icon": "✒️",
+      "enabled": true
+    },
+    {
+      "id": 2,
+      "title": "Curadoria de Materiais Nobres",
+      "description": "Selecionamos pessoalmente cada pedra, madeira e metal — a diferença entre um espaço bonito e um espaço que envelhece com dignidade.",
+      "icon": "🪨",
+      "enabled": true
+    },
+    {
+      "id": 3,
+      "title": "Precisão de Engenharia",
+      "description": "Todo conceito ousado é sustentado por um projeto executivo rigoroso — o extraordinário só existe quando a execução é impecável.",
+      "icon": "📏",
+      "enabled": true
+    }
+  ],
+  "testimonials": [
+    {
+      "id": 1,
+      "name": "Renata Colares",
+      "role": "Cliente residencial — Praia do Canto",
+      "content": "A Magnânimo entendeu o que eu queria antes mesmo de eu conseguir explicar direito. O projeto ficou mais preciso do que eu imaginei ser possível.",
+      "avatar": "https://i.pravatar.cc/150?u=magnanimo-renata",
+      "rating": 5,
+      "enabled": true
+    },
+    {
+      "id": 2,
+      "name": "Eduardo Malta",
+      "role": "Diretor — grupo corporativo",
+      "content": "Contratamos pra um flagship e o resultado comunicou exatamente o posicionamento que a marca precisava. Acompanhamento de obra impecável do início ao fim.",
+      "avatar": "https://i.pravatar.cc/150?u=magnanimo-eduardo",
+      "rating": 5,
+      "enabled": true
+    }
+  ],
+  "faq": [
+    {
+      "id": 1,
+      "question": "Como funciona a primeira etapa do projeto?",
+      "answer": "Começamos com um estudo de viabilidade — visitamos o terreno ou o espaço, entendemos o programa de necessidades e apresentamos um partido conceitual antes de avançar pro projeto executivo."
+    },
+    {
+      "id": 2,
+      "question": "Vocês acompanham a obra ou só entregam o projeto?",
+      "answer": "Acompanhamos ponta a ponta, com visitas técnicas semanais, até a entrega final — garantindo fidelidade total ao projeto original."
+    },
+    {
+      "id": 3,
+      "question": "Quais tipos de projeto vocês atendem?",
+      "answer": "Residências, espaços comerciais e corporativos de alto padrão — sempre projetos autorais, nunca adaptações de catálogo."
+    },
+    {
+      "id": 4,
+      "question": "Como entro em contato para um orçamento?",
+      "answer": "Pelo WhatsApp — conte um pouco do projeto que a equipe retorna com os próximos passos."
+    }
+  ],
+  "contact": {
+    "email": "contato@magnanimo.arq.br",
+    "phone": "+55 27 3222-0000",
+    "whatsapp": "+5527999990000",
+    "address": "Praia do Canto, Vitória - ES",
+    "social": {
+      "instagram": "https://instagram.com/magnanimo.arq"
+    }
+  },
+  "cta": {
+    "title": "Vamos desenhar o extraordinário juntos?",
+    "description": "Conte um pouco do seu projeto e a equipe da Magnânimo retorna com os próximos passos.",
+    "buttonText": "Falar com a equipe",
+    "buttonLink": "mailto:contato@magnanimo.arq.br",
+    "enabled": true
+  },
+  "footer": {
+    "description": "Ateliê de arquitetura e design de interiores de alto padrão — projetos autorais, curadoria de materiais nobres e execução impecável.",
+    "links": [
+      {"label": "Sobre", "url": "#sobre"},
+      {"label": "Contato", "url": "#contato"}
+    ],
+    "copyrightText": "© 2026 Magnânimo Arquitetura. Todos os direitos reservados."
+  }
+}
