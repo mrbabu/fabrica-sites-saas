@@ -1,240 +1,140 @@
-# Fábrica de Sites SaaS - MVP v1
+# Fábrica de Sites SaaS
 
-## 🚀 Visão Geral
-Plataforma SaaS automatizada que gera e publica sites profissionais em menos de 30 segundos. Sistema baseado em **Template Universal + Configuração JSON**.
+WaaS (Website as a Service) para MEIs e pequenos negócios locais — hoje
+com foco em clínicas médicas (odontologia, fisioterapia, dermatologia) na
+Grande Vitória-ES. Um Agente Construtor de IA transforma nome + nicho +
+cor em um site profissional completo em segundos, publicado a partir de
+uma estrutura de template única controlada 100% por JSON.
 
-## 📁 Estrutura do Projeto
+Ver `ROADMAP.md` para o plano de negócio completo (fases 0-4, guardrails)
+e `CLAUDE.md` para o contexto técnico usado por assistentes de IA neste
+repositório.
+
+## Arquitetura
+
+```
+Nome + nicho + cor  →  Agente Construtor (IA)  →  site-config.json
+                                                          │
+                        ┌─────────────────────────────────┤
+                        ▼                                  ▼
+              index.html (template estático)     Postgres (persistência
+              renderiza o JSON, no ar via              via API)
+              Vercel — este é o site do cliente
+```
+
+- **Motor de produção**: `backend/agent_construtor.py` gera o
+  `site-config.json` via IA (cadeia de provedores com fallback: Gemini →
+  NVIDIA NIM → Anthropic → Ollama), com fallbacks determinísticos pra
+  garantir que nenhum campo (imagem, SEO, rodapé) fique quebrado ou vazio.
+  Motor considerado estável — não mexer sem necessidade explícita (ver
+  `CLAUDE.md`).
+- **Template estático**: `index.html`, HTML/Tailwind puro sem build,
+  renderiza qualquer `site-config.json` dinamicamente. É o que o cliente
+  final recebe — hospedado como site estático na Vercel.
+- **Backend/API**: `backend/app.py` (FastAPI) expõe o Agente Construtor
+  como REST, persiste os sites gerados em Postgres (`backend/db.py`,
+  `backend/repository.py`, `backend/alembic/`), pronto pra ser chamado
+  por automações (n8n, webhook do WhatsApp).
+- **Demos de venda (Lovable)**: `backend/agents/vendedor.py` traduz
+  qualquer `site-config.json` num prompt pronto pro Lovable (chat
+  automatizado via "Build with URL", sem copiar/colar) — gera mockups
+  visuais usados **só** pra demonstração comercial. Não substitui o
+  motor de produção acima.
+- **Agentes especializados** (`backend/agents/`): `hunter.py` (captura de
+  lead via WhatsApp), `vendedor.py` (conecta ao Lovable, envia link de
+  demo), `financeiro.py` (conciliação PIX) — esqueleto com lógica real,
+  ainda sem integração de webhook real. Ver guardrails no topo do
+  `ROADMAP.md` antes de mexer neles (risco de banimento de WhatsApp,
+  gate de vendas manuais).
+
+## Estrutura do projeto
 
 ```
 fabrica-sites-saas/
-├── index.html              # Template universal (renderiza o JSON)
-├── site-config.json        # Configuração do cliente (dados dinâmicos)
-├── README.md              # Este arquivo
-└── CLAUDE.md              # Contexto do projeto
+├── index.html                    # template estático de produção
+├── site-config.json              # config de exemplo/demo local
+├── assets/logos/                 # logos normalizados de clientes (gitignored)
+├── backend/
+│   ├── agent_construtor.py       # motor de geração via IA (congelado)
+│   ├── ai_provider.py            # cadeia de provedores de IA com fallback
+│   ├── schema_validator.py       # schema Pydantic do site-config.json
+│   ├── image_utils.py            # normalização de logo/slug
+│   ├── app.py                    # API FastAPI
+│   ├── db.py / models_db.py / repository.py / alembic/   # persistência Postgres
+│   ├── agents/                   # hunter.py, vendedor.py, financeiro.py
+│   └── scripts/                  # gerar_portfolio_lovable.py, simular_esteira.py
+├── docs/
+│   └── fase2_scripts_whatsapp.md # scripts de abordagem comercial (Fase 2)
+├── leads/
+│   └── clinicas_grande_vitoria.example.csv   # estrutura da base de leads
+├── infra/
+│   ├── provision_ampere_ubuntu.sh   # provisionamento do host de produção
+│   └── zero_trust_deploy.md         # runbook Tailscale + Cloudflare Tunnel + NSG
+├── lovable_prompts/               # prompts + JSON dos mockups de venda (gitignored)
+├── Dockerfile / docker-compose.yml       # stack de desenvolvimento local
+├── docker-compose.prod.yml               # stack de produção Zero Trust (ARM64)
+├── CLAUDE.md                      # contexto técnico pra assistentes de IA
+└── ROADMAP.md                     # plano de negócio + guardrails
 ```
 
-## 🎯 Como Funciona
+## Como rodar localmente
 
-### 1. **site-config.json** - Schema de Configuração
-Arquivo JSON que contém **TODAS** as variáveis do site:
-
-```json
-{
-  "metadata": { /* SEO e info do site */ },
-  "company": { /* Nome, logo, descrição */ },
-  "colors": { /* Paleta hex (primária, secundária, acentos) */ },
-  "hero": { /* Seção hero (título, CTA) */ },
-  "sections": [ /* Seções de conteúdo dinâmico */ ],
-  "services": [ /* Lista de serviços */ ],
-  "testimonials": [ /* Depoimentos com ratings */ ],
-  "contact": { /* Email, phone, redes sociais */ },
-  "cta": { /* Call-to-action final */ }
-}
-```
-
-### 2. **index.html** - Template Universal
-Template em HTML/Tailwind que:
-- ✅ Carrega o `site-config.json` dinamicamente
-- ✅ Renderiza todas as seções com base no JSON
-- ✅ Aplica cores customizadas em tempo real
-- ✅ É responsivo e otimizado para performance
-- ✅ **NENHUMA** informação hardcoded (tudo vem do JSON)
-
-## ⚙️ Como Usar
-
-### Passo 1: Personalizar `site-config.json`
-Edite o arquivo preenchendo todos os campos com dados do cliente:
+### Opção 1 — Docker (recomendado, replica produção)
 
 ```bash
-{
-  "company": {
-    "name": "Nome da Empresa",
-    "tagline": "Proposta de valor"
-  },
-  "colors": {
-    "primary": "#6366f1",      # Cor principal (hex)
-    "secondary": "#ec4899",    # Cor secundária
-    "accent": "#f59e0b"        # Cor de destaque
-  },
-  "hero": {
-    "title": "Título do Hero",
-    "subtitle": "Subtítulo",
-    "ctaText": "Botão CTA",
-    "ctaLink": "#contato"
-  },
-  "services": [ /* ... */ ],
-  "testimonials": [ /* ... */ ]
-}
+cp .env.example .env   # preencher com chaves reais (ao menos um provedor de IA)
+docker compose up -d --build
+curl http://localhost:8000/health
 ```
 
-### Passo 2: Abrir no Navegador
+Sobe backend (FastAPI) + Postgres juntos, com migration do Alembic
+rodando automaticamente no start (`entrypoint.sh`).
+
+### Opção 2 — Python direto
+
 ```bash
-# Opção 1: Usar Live Server do VS Code
-# Opção 2: Python
-python -m http.server 8000
-
-# Opção 3: Node.js
-npx http-server
+cd backend
+pip install -r requirements.txt
+python app.py
 ```
 
-Acesse: `http://localhost:8000`
+Requer `DATABASE_URL` configurada em `.env` (ex.: Postgres local) pra
+persistência via API funcionar — sem isso, `GET`/`POST` de site-config
+ficam indisponíveis, mas a geração via CLI/`site-config.json` da raiz
+continua funcionando.
 
-### Passo 3: Deploy via Vercel/n8n
-A automação capturará o JSON, injetará no HTML e fará deploy automático.
+### Gerar um site via API
 
-## 📊 Schema Completo do `site-config.json`
-
-### Metadata
-```json
-{
-  "siteTitle": "Título da página",
-  "siteDescription": "Meta description",
-  "favicon": "🚀" // Emoji ou URL
-}
+```bash
+curl -X POST "http://localhost:8000/api/v1/generate-site" \
+  -H "Content-Type: application/json" \
+  -d '{"nome_empresa": "Clínica Exemplo", "nicho": "Odontologia", "cor_preferida": "#0D9488"}'
 ```
 
-### Company
-```json
-{
-  "name": "Nome Empresa",
-  "tagline": "Slogan",
-  "description": "Descrição longa",
-  "logo": "https://..."
-}
-```
+## Status atual
 
-### Colors
-```json
-{
-  "primary": "#6366f1",      // Cor primária
-  "primaryDark": "#4f46e5",  // Variação escura
-  "secondary": "#ec4899",    // Cor secundária
-  "accent": "#f59e0b",       // Acentos
-  "background": "#ffffff",   // Fundo
-  "text": "#1f2937",         // Texto principal
-  "textLight": "#6b7280",    // Texto secundário
-  "border": "#e5e7eb"        // Bordas
-}
-```
+**Fase 0 (fundação do negócio) concluída** — nicho e região definidos
+(Clínicas Médicas/Saúde, Grande Vitória-ES), portfólio semente gerado.
+**Fase 1 (MVP técnico) concluída** — motor estável, schema completo,
+persistência em Postgres, containerização Docker, pipeline JSON→Lovable
+validado ponta a ponta (2 demos publicadas). **Fase 2 (vendas manuais)**
+em andamento — scripts de abordagem prontos, estrutura de leads pronta,
+coleta de leads reais em progresso. Detalhe completo, checklist e
+guardrails: ver `ROADMAP.md`.
 
-### Hero
-```json
-{
-  "title": "Bem-vindo",
-  "subtitle": "Subtítulo",
-  "ctaText": "Começar",
-  "ctaLink": "#contato",
-  "backgroundImage": "https://...",
-  "enabled": true
-}
-```
+Infraestrutura de produção Zero Trust (Tailscale + Cloudflare Tunnel +
+Oracle Cloud Ampere ARM64, zero porta pública exposta) está desenhada e
+pronta em `infra/`, aguardando disponibilidade de capacidade Ampere na
+Oracle Cloud pra deploy.
 
-### Sections (Array)
-```json
-{
-  "id": "sobre",
-  "type": "content",
-  "title": "Sobre Nós",
-  "subtitle": "Subtítulo",
-  "content": "Conteúdo...",
-  "image": "https://...",
-  "enabled": true
-}
-```
+## Tecnologias
 
-### Services (Array)
-```json
-{
-  "id": 1,
-  "title": "Serviço 1",
-  "description": "Descrição",
-  "icon": "⚡",
-  "features": ["Feature 1", "Feature 2"],
-  "enabled": true
-}
-```
-
-### Testimonials (Array)
-```json
-{
-  "id": 1,
-  "name": "João Silva",
-  "role": "CEO - Tech",
-  "content": "Excelente!",
-  "avatar": "https://...",
-  "rating": 5,
-  "enabled": true
-}
-```
-
-### Contact
-```json
-{
-  "email": "contato@empresa.com",
-  "phone": "+55 11 99999-9999",
-  "whatsapp": "+5511999999999",
-  "address": "Endereço completo",
-  "social": {
-    "instagram": "https://...",
-    "facebook": "https://...",
-    "linkedin": "https://...",
-    "twitter": "https://..."
-  }
-}
-```
-
-## 🎨 Recursos Principais
-
-### ✅ Implementados
-- [x] Renderização dinâmica do JSON
-- [x] Paleta de cores configurável
-- [x] Hero section responsivo
-- [x] Seções de conteúdo
-- [x] Grid de serviços (3 colunas)
-- [x] Testimonials com ratings
-- [x] Call-to-action final
-- [x] Footer completo com redes sociais
-- [x] Navegação sticky
-- [x] Animações fade-in
-- [x] Design responsivo (mobile-first)
-- [x] Otimizado para performance
-
-### 🔮 Próximos Passos (Agente Construtor)
-- [ ] API que recebe dados brutos (nome, nicho, cor)
-- [ ] Gera `site-config.json` automaticamente
-- [ ] Integração com n8n para automação
-- [ ] Deploy automático via Vercel
-
-## 🛠️ Tecnologias
-- **HTML5** - Markup semântico
-- **Tailwind CSS** - Estilização via CDN
-- **JavaScript Vanilla** - Renderização dinâmica (sem dependências)
-- **JSON** - Configuração driver
-
-## 📈 Performance
-- Zero build process
-- Carregamento instantâneo
-- Sem JavaScript framework pesado
-- CSS via CDN (cached globalmente)
-- Fonte Inter otimizada do Google Fonts
-
-## 🚀 Próximas Fases
-
-### Fase 2: Agente Construtor
-- API que recebe: nome, nicho, cor primária
-- Retorna: `site-config.json` pré-preenchido
-- Exemplo: `POST /api/generate-config` → JSON
-
-### Fase 3: Automação n8n
-- Webhook que captura JSON
-- Injeta no template HTML
-- Deploy automático via Vercel API
-
-### Fase 4: Dashboard
-- Interface para editar JSON visualmente
-- Preview em tempo real
-- Histórico de versões
+- **Backend**: Python, FastAPI, SQLAlchemy + Alembic, Postgres
+- **IA**: Gemini / NVIDIA NIM / Anthropic / Ollama (cadeia com fallback automático)
+- **Frontend**: HTML5 + Tailwind (CDN) + JavaScript vanilla, zero build
+- **Infra**: Docker, Docker Compose, Tailscale, Cloudflare Tunnel, Oracle Cloud (Always Free)
+- **Demos comerciais**: Lovable (React + Tailwind, gerado via prompt)
 
 ---
 
-**Desenvolvido com ❤️ por Fábrica de Sites SaaS**
+**Fábrica de Sites SaaS** — sites profissionais em menos de 30 segundos.
