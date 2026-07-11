@@ -33,6 +33,7 @@ try:
     from image_utils import normalizar_logo, ErroNormalizacaoLogo, _slugify
     from db import get_db, DATABASE_URL
     import repository
+    from routers.whatsapp_inbound import router as whatsapp_inbound_router
 except ImportError as e:
     print(f"❌ Erro ao importar módulos locais: {e}")
     sys.exit(1)
@@ -81,6 +82,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Roteador de webhook inbound do WhatsApp (só recebe/registra — não qualifica
+# nem responde sozinho, ver backend/routers/whatsapp_inbound.py)
+app.include_router(whatsapp_inbound_router)
 
 # Inicializar agente (singleton)
 try:

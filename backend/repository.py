@@ -9,7 +9,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from models_db import Site
+from models_db import Site, Lead
 
 
 def upsert_site(db: Session, slug: str, nome_empresa: str, nicho: str, config: dict) -> Site:
@@ -32,3 +32,21 @@ def upsert_site(db: Session, slug: str, nome_empresa: str, nicho: str, config: d
 def obter_site(db: Session, slug: str) -> Optional[Site]:
     """Busca um site salvo pelo slug, ou None se não existir"""
     return db.query(Site).filter(Site.slug == slug).one_or_none()
+
+
+def registrar_lead_inbound(db: Session, whatsapp: str, mensagem: str = "") -> Lead:
+    """
+    Registra que um número iniciou contato via WhatsApp (idempotente por
+    whatsapp). Se o lead já existir, NÃO sobrescreve o status — evita
+    apagar um estado que um humano já avançou manualmente depois do
+    primeiro contato.
+    """
+    lead = db.query(Lead).filter(Lead.whatsapp == whatsapp).one_or_none()
+
+    if lead is None:
+        lead = Lead(whatsapp=whatsapp, status="inbound_recebido", primeira_mensagem=mensagem)
+        db.add(lead)
+
+    db.commit()
+    db.refresh(lead)
+    return lead
