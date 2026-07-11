@@ -68,8 +68,12 @@ correspondentes. Ver também `CLAUDE.md` para o estado atual do código.
 
 ## Fase 2 — Vendas manuais (GATE — ver guardrail #2)
 
-- [ ] Geração de leads (Google Maps scraping — Outscraper/PhantomBuster) do
-      nicho/região escolhidos, filtrando quem não tem site
+- [x] Geração de leads via Google Places API oficial
+      (`backend/scripts/buscar_leads_google_maps.py`), filtrando quem não
+      tem site — Facebook/Instagram/GetNinjas ficaram de fora por risco de
+      ToS/anti-bot (Meta persegue scraping ativamente) e, no caso do
+      GetNinjas, por ser a base de leads paga de um concorrente direto;
+      descoberta nesses canais continua manual (`docs/fase2_scripts_whatsapp.md`)
 - [ ] 15-20 vendas fechadas manualmente, idealmente mostrando um mockup do
       site pronto na primeira mensagem
 - [ ] Documentar objeções e scripts reais — vira o material de treino dos

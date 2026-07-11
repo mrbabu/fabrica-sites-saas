@@ -4,12 +4,9 @@
 Plataforma SaaS automatizada baseada em IA Multi-Agente. O sistema gera e publica sites profissionais em menos de 30 segundos injetando variáveis de clientes em uma única estrutura de template padronizada (HTML/Tailwind), controlada por arquivos JSON.
 
 ## Arquitetura do Sistema
-1. **Agente Construtor (MVP):** Atua como preenchedor inteligente. Recebe dados brutos (nome, nicho, cor) e cospe a estrutura de dados em um arquivo `site-config.json`.
-2. **Template Base:** Estrutura estática universal em HTML/Tailwind que renderiza dinamicamente as variáveis contidas no `site-config.json`.
-3. **Backend/Gateway:** `backend/app.py` expõe o Agente Construtor como API REST (FastAPI), pronta para ser chamada pelo n8n. Deve atuar estritamente como gateway — validação (via `backend/schema_validator.py`) e repasse, sem lógica de negócio pesada.
-4. **Normalização de assets:** `backend/image_utils.py` já baixa e normaliza logos de clientes (Pillow) para um formato padrão antes de injetar no `site-config.json` (salvos em `assets/logos/`, na raiz, pois são servidos pelo frontend estático).
-5. **Automação (n8n):** Orquestra webhooks e integrações externas.
-6. **Deploy:** todo código Python vive em `backend/` justamente para ficar fora do escopo de build da Vercel — a raiz do repo (`index.html`, `site-config.json`, `assets/`) é hospedada na Vercel como site estático puro (sem `vercel.json`, sem função serverless). O backend FastAPI (`backend/app.py`) roda separado, em uma plataforma de servidor real (Render/Railway) — não usar mais o runtime `@vercel/python`, ele causava `FUNCTION_INVOCATION_FAILED` (filesystem efêmero incompatível com as escritas em `configs/`). Não migrar a estratégia de deploy sem decisão explícita.
+1. **Backend/Gateway:** `backend/app.py` expõe o Agente Construtor como API REST (FastAPI), pronta para ser chamada pelo n8n. Deve atuar estritamente como gateway — validação (via `backend/schema_validator.py`) e repasse, sem lógica de negócio pesada.
+2. **Normalização de assets:** `backend/image_utils.py` já baixa e normaliza logos de clientes (Pillow) para um formato padrão antes de injetar no `site-config.json` (salvos em `assets/logos/`, na raiz, pois são servidos pelo frontend estático).
+3. **Deploy:** todo código Python vive em `backend/` justamente para ficar fora do escopo de build da Vercel — a raiz do repo (`index.html`, `site-config.json`, `assets/`) é hospedada na Vercel como site estático puro (sem `vercel.json`, sem função serverless). O backend FastAPI (`backend/app.py`) roda separado, em uma plataforma de servidor real (Render/Railway) — não usar mais o runtime `@vercel/python`, ele causava `FUNCTION_INVOCATION_FAILED` (filesystem efêmero incompatível com as escritas em `configs/`). Não migrar a estratégia de deploy sem decisão explícita.
 
 ## Diretrizes de Desenvolvimento
 - Manter código limpo, modular e focado em altíssima performance para carregamento rápido.
@@ -40,21 +37,7 @@ caracteres do prompt na primeira tentativa).
 
 ## Próxima Fase: Agentes Especializados
 
-Em construção em `backend/agents/` — esqueleto inicial com classes e interfaces, ainda sem
-lógica de negócio:
-1. **`backend/agents/hunter.py`** — captura e limpeza de leads recebidos via WhatsApp.
-2. **`backend/agents/vendedor.py`** — conecta com o Lovable e envia o link de demonstração ao lead.
-3. **`backend/agents/financeiro.py`** — monitoramento e conciliação de pagamentos via PIX.
-
-Esses agentes devem se comunicar via o mesmo contrato JSON (`site-config.json` /
-payload de lead), seguindo o princípio de "JSON Schema Driven" já usado pelo Agente
-Construtor (ver `ROADMAP.md`, Fase 3 — Automação por Agentes de IA).
-
-**Antes de mexer em qualquer um desses três agentes, ler os guardrails no topo do
-`ROADMAP.md`** — em especial: `vendedor.py` só pode responder conversas iniciadas
-pelo lead (nunca disparar outbound frio, sob risco de banimento do WhatsApp), e a
-automação de vendas em si não deve substituir o processo manual antes de 15-20
-vendas fechadas (Fase 2 do plano de negócio).
+Ver `backend/agents/CLAUDE.md` (carrega automaticamente ao trabalhar nessa pasta).
 
 ## Roadmap de Desenvolvimento
 
