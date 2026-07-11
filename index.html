@@ -9,25 +9,62 @@
     <meta property="og:title" content="">
     <meta property="og:description" content="">
     <meta property="og:image" content="">
+    <link id="favicon-link" rel="icon" href="">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Inter', sans-serif; }
-        .fade-in { animation: fadeIn 0.6s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .smoothScroll { scroll-behavior: smooth; }
+        .font-display { font-family: 'Fraunces', serif; }
+        html { scroll-behavior: smooth; }
+
+        /* Textura sutil, site-wide — dá um acabamento tátil/editorial, não decorativo por decorativo */
+        .grain-overlay {
+            position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0.035; mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        /* Revelação de seção ao rolar — deliberada, não "tudo pisca ao carregar" */
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s ease; }
+        .reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+        /* Entrada da hero (carregamento, não scroll) */
+        .hero-in { animation: heroIn 0.8s ease-out both; }
+        @keyframes heroIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .word-reveal { display: inline-block; opacity: 0; transform: translateY(14px); animation: wordUp 0.6s ease forwards; }
+        @keyframes wordUp { to { opacity: 1; transform: translateY(0); } }
+
+        details summary { list-style: none; }
+        details summary::-webkit-details-marker { display: none; }
+        details .faq-icon { transition: transform 0.25s ease; }
+        details[open] .faq-icon { transform: rotate(180deg); }
+        details[open] summary { border-bottom: 1px solid; }
+
+        .whatsapp-pulse { animation: waPulse 2.6s ease-in-out infinite; }
+        @keyframes waPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0.10); } 50% { box-shadow: 0 0 0 9px rgba(0,0,0,0); } }
+        .wa-label-fade { transition: opacity 0.35s ease; }
+
+        a:focus-visible, button:focus-visible, summary:focus-visible {
+            outline: 2px solid currentColor; outline-offset: 3px; border-radius: 4px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+            .hero-in, .word-reveal { animation: none !important; opacity: 1 !important; transform: none !important; }
+            .whatsapp-pulse { animation: none !important; }
+            html { scroll-behavior: auto; }
+        }
     </style>
 </head>
-<body class="smoothScroll text-gray-900 bg-white">
+<body class="text-gray-900 bg-white antialiased">
+    <div class="grain-overlay"></div>
     <div id="app"></div>
 
     <script>
-        // Configuração global
         let config = {};
+        const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        // Carregar JSON de configuração
         async function loadConfig() {
             try {
                 const response = await fetch('./site-config.json');
@@ -39,17 +76,16 @@
             }
         }
 
-        // Renderizar aplicação
         function render() {
             const app = document.getElementById('app');
-            
-            // Atualizar metadata
+
             document.title = config.metadata.siteTitle;
             document.querySelector('meta[name="description"]').setAttribute('content', config.metadata.siteDescription);
             document.querySelector('meta[name="keywords"]').setAttribute('content', (config.metadata.keywords || []).join(', '));
             document.querySelector('meta[property="og:title"]').setAttribute('content', config.metadata.ogTitle || config.metadata.siteTitle);
             document.querySelector('meta[property="og:description"]').setAttribute('content', config.metadata.ogDescription || config.metadata.siteDescription);
             document.querySelector('meta[property="og:image"]').setAttribute('content', config.metadata.ogImage || '');
+            setFavicon(config.metadata.favicon || '🚀');
 
             app.innerHTML = `
                 ${renderNavigation()}
@@ -61,10 +97,18 @@
                 ${renderFAQ()}
                 ${renderCTA()}
                 ${renderFooter()}
+                ${renderWhatsAppButton()}
             `;
 
-            // Aplicar cores customizadas
             applyThemeColors();
+            setupNavBehavior();
+            initScrollReveal();
+            initWhatsAppLabel();
+        }
+
+        function setFavicon(emoji) {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="0.9em" font-size="90">${emoji}</text></svg>`;
+            document.getElementById('favicon-link').setAttribute('href', 'data:image/svg+xml,' + encodeURIComponent(svg));
         }
 
         function applyThemeColors() {
@@ -82,76 +126,210 @@
                 .text-primary { color: var(--color-primary); }
                 .border-primary { border-color: var(--color-primary); }
                 .bg-primary { background-color: var(--color-primary); }
+                .bg-accent { background-color: var(--color-accent); }
+                .text-accent { color: var(--color-accent); }
+                details[open] summary { border-color: ${colors.border}; }
             `;
             document.head.appendChild(style);
         }
 
+        function setupNavBehavior() {
+            const nav = document.getElementById('site-nav');
+            if (nav) {
+                const onScroll = () => {
+                    if (window.scrollY > 8) nav.classList.add('shadow-md', 'bg-white/90');
+                    else nav.classList.remove('shadow-md', 'bg-white/90');
+                };
+                window.addEventListener('scroll', onScroll);
+                onScroll();
+            }
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            const menu = document.getElementById('mobile-menu');
+            if (menuBtn && menu) {
+                menuBtn.addEventListener('click', () => menu.classList.toggle('hidden'));
+                menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => menu.classList.add('hidden')));
+            }
+        }
+
+        function initScrollReveal() {
+            const items = document.querySelectorAll('.reveal');
+            if (prefersReducedMotion() || !('IntersectionObserver' in window)) {
+                items.forEach(el => el.classList.add('is-visible'));
+                return;
+            }
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        io.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+            items.forEach(el => io.observe(el));
+        }
+
+        function initWhatsAppLabel() {
+            const label = document.getElementById('wa-label');
+            if (!label || prefersReducedMotion()) return;
+            const phrases = ['Fale agora', 'Resposta rápida'];
+            let i = 0;
+            setInterval(() => {
+                i = (i + 1) % phrases.length;
+                label.style.opacity = '0';
+                setTimeout(() => { label.textContent = phrases[i]; label.style.opacity = '1'; }, 350);
+            }, 3400);
+        }
+
+        function staggerWords(text) {
+            return text.split(' ').map((w, i) => `<span class="word-reveal" style="animation-delay:${(i * 0.045).toFixed(2)}s">${w}&nbsp;</span>`).join('');
+        }
+
+        function waLink(numeroRaw, mensagem) {
+            const numero = (numeroRaw || '').replace(/\D/g, '');
+            return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+        }
+
+        const WHATSAPP_ICON = `<svg viewBox="0 0 32 32" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M16.02 3C9.4 3 4 8.38 4 15c0 2.34.64 4.53 1.76 6.42L4 29l7.76-1.7A11.9 11.9 0 0 0 16.02 27C22.64 27 28 21.62 28 15S22.64 3 16.02 3Zm6.98 16.9c-.3.85-1.72 1.63-2.38 1.72-.61.09-1.36.13-2.2-.14-.5-.16-1.15-.37-1.98-.73-3.5-1.51-5.78-5.05-5.96-5.29-.17-.24-1.43-1.9-1.43-3.62s.9-2.57 1.22-2.92c.32-.35.7-.44.93-.44.23 0 .47 0 .67.01.22.01.51-.08.79.6.3.72 1.02 2.49 1.11 2.67.09.18.15.39.03.63-.12.24-.18.39-.36.6-.18.21-.38.47-.54.63-.18.18-.37.37-.16.73.21.36.94 1.55 2.02 2.51 1.39 1.24 2.56 1.62 2.92 1.8.36.18.57.15.78-.09.21-.24.9-1.05 1.14-1.41.24-.36.48-.3.81-.18.33.12 2.1.99 2.46 1.17.36.18.6.27.69.42.09.15.09.85-.21 1.7Z"/></svg>`;
+
+        function renderWhatsAppButton() {
+            const wa = config.contact && config.contact.whatsapp;
+            if (!wa) return '';
+            const link = waLink(wa, `Olá! Vim pelo site da ${config.company.name} e gostaria de mais informações.`);
+            return `
+                <a href="${link}" target="_blank" rel="noopener" aria-label="Falar no WhatsApp"
+                   class="whatsapp-pulse fixed right-5 z-50 flex items-center gap-2 text-white pl-4 pr-5 py-3.5 shadow-xl transition transform hover:scale-105"
+                   style="background-color: ${config.colors.accent}; border-radius: 20px 20px 4px 20px; bottom: calc(1.25rem + env(safe-area-inset-bottom));">
+                    ${WHATSAPP_ICON}
+                    <span id="wa-label" class="wa-label-fade hidden sm:inline font-display italic font-medium text-sm">Fale agora</span>
+                </a>
+            `;
+        }
+
         function renderNavigation() {
             const logo = config.company.logo
-                ? `<img src="${config.company.logo}" alt="${config.company.name}" class="w-10 h-10 rounded-full object-cover" onerror="this.remove()">`
+                ? `<img src="${config.company.logo}" alt="${config.company.name}" class="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm" onerror="this.remove()">`
                 : `<span class="text-3xl">${config.metadata.favicon || '🚀'}</span>`;
 
+            const navLinks = config.sections.filter(s => s.enabled).map(s => `
+                <a href="#${s.id}" class="font-medium text-sm transition hover:opacity-70" style="color: ${config.colors.text}">${s.title}</a>
+            `).join('');
+
+            const waHref = config.contact && config.contact.whatsapp
+                ? waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`)
+                : '#contato';
+
             return `
-                <nav class="sticky top-0 z-50 bg-white shadow-sm" style="border-bottom: 2px solid ${config.colors.border}">
-                    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                <nav id="site-nav" class="sticky top-0 z-40 bg-white/70 backdrop-blur-md transition-shadow duration-300">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6 py-4 flex justify-between items-center">
                         <div class="flex items-center gap-3">
                             ${logo}
-                            <h1 class="font-bold text-lg" style="color: ${config.colors.primary}">${config.company.name}</h1>
+                            <span class="font-display font-semibold text-lg tracking-tight" style="color: ${config.colors.primary}">${config.company.name}</span>
                         </div>
-                        <div class="hidden md:flex gap-6">
-                            ${config.sections.filter(s => s.enabled).map(s => `
-                                <a href="#${s.id}" class="font-medium transition hover:opacity-75" style="color: ${config.colors.text}">${s.title}</a>
-                            `).join('')}
-                            <a href="#contato" class="btn-primary text-white px-6 py-2 rounded-lg font-medium transition hover:shadow-lg">Contato</a>
+                        <div class="hidden md:flex items-center gap-8">
+                            ${navLinks}
+                            <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary text-white px-5 py-2.5 rounded-full text-sm font-semibold transition hover:shadow-lg hover:shadow-black/10">Agendar agora</a>
                         </div>
+                        <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg" style="color: ${config.colors.primary}" aria-label="Abrir menu">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+                        </button>
+                    </div>
+                    <div id="mobile-menu" class="hidden md:hidden border-t bg-white px-5 py-4 flex flex-col gap-4" style="border-color: ${config.colors.border}">
+                        ${navLinks}
+                        <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary text-white px-5 py-3 rounded-full text-sm font-semibold text-center">Agendar agora</a>
                     </div>
                 </nav>
+            `;
+        }
+
+        function renderTrustStrip() {
+            const enabledTestimonials = (config.testimonials || []).filter(t => t.enabled);
+            if (enabledTestimonials.length === 0) return '';
+
+            const avatars = enabledTestimonials.slice(0, 4).map(t => `
+                <img src="${t.avatar}" alt="" class="w-7 h-7 sm:w-9 sm:h-9 rounded-full object-cover ring-2 ring-white -ml-2 first:ml-0" onerror="this.remove()">
+            `).join('');
+            const avg = (enabledTestimonials.reduce((sum, t) => sum + (t.rating || 5), 0) / enabledTestimonials.length).toFixed(1);
+
+            return `
+                <div class="max-w-full flex items-center justify-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full pl-1.5 pr-3 sm:pr-4 py-1.5 mt-8">
+                    <div class="flex flex-shrink-0">${avatars}</div>
+                    <span class="text-xs sm:text-sm text-white/90 font-medium whitespace-nowrap">⭐ ${avg} · ${enabledTestimonials.length}+ avaliações</span>
+                </div>
             `;
         }
 
         function renderHero() {
             if (!config.hero || !config.hero.enabled) return '';
 
+            const waHref = config.contact && config.contact.whatsapp
+                ? waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`)
+                : config.hero.ctaLink;
+
             return `
-                <section class="fade-in min-h-screen flex items-center justify-center relative overflow-hidden bg-gray-900">
+                <section class="relative overflow-hidden bg-gray-900 min-h-[88vh] flex items-center">
                     <img src="${config.hero.backgroundImage}" alt="" class="absolute inset-0 w-full h-full object-cover" onerror="this.style.display='none'">
-                    <div class="absolute inset-0" style="background: linear-gradient(135deg, ${config.colors.primary}e6 0%, ${config.colors.secondary}cc 100%)"></div>
-                    <div class="max-w-5xl mx-auto px-4 py-20 text-center relative z-10">
-                        <h2 class="text-5xl md:text-6xl font-bold mb-6 leading-tight text-white drop-shadow-sm">
-                            ${config.hero.title}
-                        </h2>
-                        <p class="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-white text-opacity-90">
+                    <div class="absolute inset-0" style="background: linear-gradient(150deg, ${config.colors.primary}f2 10%, ${config.colors.primaryDark}d9 55%, ${config.colors.secondary}99 100%)"></div>
+                    <div class="hero-in max-w-5xl mx-auto px-5 sm:px-6 py-24 text-center relative z-10">
+                        ${config.company.tagline ? `<span class="font-display italic inline-block text-base sm:text-lg text-white/85 mb-5">${config.company.tagline}</span>` : ''}
+                        <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-medium mb-6 leading-[1.1] tracking-tight text-white drop-shadow-sm">
+                            ${staggerWords(config.hero.title)}
+                        </h1>
+                        <p class="text-lg md:text-xl mb-10 max-w-2xl mx-auto text-white/90 leading-relaxed">
                             ${config.hero.subtitle}
                         </p>
-                        <a href="${config.hero.ctaLink}" class="bg-white px-8 py-4 rounded-lg font-bold text-lg inline-block transition transform hover:scale-105 hover:shadow-xl" style="color: ${config.colors.primary}">
-                            ${config.hero.ctaText}
-                        </a>
+                        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                            <a href="${waHref}" target="_blank" rel="noopener" class="bg-white px-8 py-4 rounded-full font-bold text-base inline-flex items-center justify-center gap-2 transition transform hover:scale-105 hover:shadow-2xl" style="color: ${config.colors.primary}">
+                                ${WHATSAPP_ICON} ${config.hero.ctaText}
+                            </a>
+                            <a href="#servicos" class="border border-white/40 text-white px-8 py-4 rounded-full font-semibold text-base inline-flex items-center justify-center transition hover:bg-white/10">
+                                Conhecer serviços
+                            </a>
+                        </div>
+                        <div class="flex justify-center">${renderTrustStrip()}</div>
                     </div>
                 </section>
             `;
         }
 
         function renderSections() {
-            return config.sections.filter(s => s.enabled).map((section, idx) => `
-                <section id="${section.id}" class="fade-in py-20" style="background-color: ${idx % 2 === 0 ? config.colors.background : config.colors.primary}10">
-                    <div class="max-w-5xl mx-auto px-4">
-                        <h3 class="text-4xl font-bold mb-4 text-center" style="color: ${config.colors.primary}">
+            return config.sections.filter(s => s.enabled).map((section, idx) => {
+                const imageFirst = idx % 2 === 1;
+                const textBlock = `
+                    <div>
+                        <span class="inline-block w-10 h-1 rounded-full mb-5" style="background-color: ${config.colors.accent}"></span>
+                        <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
                             ${section.title}
-                        </h3>
-                        <p class="text-lg text-center mb-12" style="color: ${config.colors.textLight}">
+                        </h2>
+                        <p class="text-lg mb-4 font-medium" style="color: ${config.colors.primary}">
                             ${section.subtitle}
                         </p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-                            <div>
-                                <p class="text-lg leading-relaxed mb-6" style="color: ${config.colors.text}">
-                                    ${section.content}
-                                </p>
-                            </div>
-                            <img src="${section.image}" alt="${section.title}" loading="lazy" class="w-full h-80 object-cover rounded-lg shadow-lg" onerror="this.remove()">
-                        </div>
+                        <p class="text-base leading-relaxed" style="color: ${config.colors.textLight}">
+                            ${section.content}
+                        </p>
                     </div>
-                </section>
-            `).join('');
+                `;
+                const imageBlock = `<img src="${section.image}" alt="${section.title}" loading="lazy" class="w-full h-72 md:h-96 object-cover rounded-3xl shadow-lg" onerror="this.remove()">`;
+
+                return `
+                    <section id="${section.id}" class="reveal py-20 md:py-28" style="background-color: ${config.colors.background}">
+                        <div class="max-w-6xl mx-auto px-5 sm:px-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
+                                ${imageFirst ? imageBlock + textBlock : textBlock + imageBlock}
+                            </div>
+                        </div>
+                    </section>
+                `;
+            }).join('');
+        }
+
+        function sectionEyebrow(text) {
+            return `
+                <div class="flex items-center justify-center gap-3 mb-4">
+                    <span class="w-6 h-px" style="background-color: ${config.colors.accent}"></span>
+                    <span class="font-display italic text-base" style="color: ${config.colors.primary}">${text}</span>
+                    <span class="w-6 h-px" style="background-color: ${config.colors.accent}"></span>
+                </div>
+            `;
         }
 
         function renderFeatures() {
@@ -159,22 +337,22 @@
             if (enabledFeatures.length === 0) return '';
 
             return `
-                <section class="fade-in py-20" style="background-color: ${config.colors.background}">
-                    <div class="max-w-6xl mx-auto px-4">
-                        <h3 class="text-4xl font-bold mb-4 text-center" style="color: ${config.colors.primary}">
-                            Nossos Diferenciais
-                        </h3>
-                        <p class="text-lg text-center mb-12" style="color: ${config.colors.textLight}">
-                            O que nos torna a escolha certa para você
-                        </p>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <section class="reveal py-20 md:py-28" style="background-color: ${config.colors.background}">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+                        <div class="text-center max-w-2xl mx-auto mb-14">
+                            ${sectionEyebrow('Diferenciais')}
+                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                                Por que escolher a gente
+                            </h2>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             ${enabledFeatures.map(feature => `
-                                <div class="text-center p-6">
-                                    <div class="text-5xl mb-4">${feature.icon}</div>
-                                    <h4 class="text-xl font-bold mb-2" style="color: ${config.colors.primary}">
+                                <div class="p-8 rounded-2xl border transition hover:shadow-lg" style="border-color: ${config.colors.border}">
+                                    <div class="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5" style="background-color: ${config.colors.primary}14">${feature.icon}</div>
+                                    <h3 class="text-lg font-bold mb-2" style="color: ${config.colors.text}">
                                         ${feature.title}
-                                    </h4>
-                                    <p style="color: ${config.colors.textLight}">
+                                    </h3>
+                                    <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">
                                         ${feature.description}
                                     </p>
                                 </div>
@@ -185,64 +363,33 @@
             `;
         }
 
-        function renderFAQ() {
-            const enabledFaq = (config.faq || []).filter(f => f.enabled);
-            if (enabledFaq.length === 0) return '';
-
-            return `
-                <section class="fade-in py-20 bg-gray-50">
-                    <div class="max-w-3xl mx-auto px-4">
-                        <h3 class="text-4xl font-bold mb-4 text-center" style="color: ${config.colors.primary}">
-                            Perguntas Frequentes
-                        </h3>
-                        <p class="text-lg text-center mb-12" style="color: ${config.colors.textLight}">
-                            Tire suas dúvidas antes de falar com a gente
-                        </p>
-                        <div class="space-y-4">
-                            ${enabledFaq.map(item => `
-                                <details class="bg-white p-6 rounded-lg shadow-md">
-                                    <summary class="font-bold cursor-pointer" style="color: ${config.colors.primary}">
-                                        ${item.question}
-                                    </summary>
-                                    <p class="mt-3" style="color: ${config.colors.text}">
-                                        ${item.answer}
-                                    </p>
-                                </details>
-                            `).join('')}
-                        </div>
-                    </div>
-                </section>
-            `;
-        }
-
         function renderServices() {
             const enabledServices = config.services.filter(s => s.enabled);
             if (enabledServices.length === 0) return '';
-            
+
             return `
-                <section class="fade-in py-20 bg-gray-50">
-                    <div class="max-w-6xl mx-auto px-4">
-                        <h3 class="text-4xl font-bold mb-4 text-center" style="color: ${config.colors.primary}">
-                            Nossos Serviços
-                        </h3>
-                        <p class="text-lg text-center mb-12" style="color: ${config.colors.textLight}">
-                            Soluções completas para seu negócio
-                        </p>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <section id="servicos" class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+                        <div class="text-center max-w-2xl mx-auto mb-14">
+                            ${sectionEyebrow('Serviços')}
+                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                                Soluções pensadas para você
+                            </h2>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             ${enabledServices.map(service => `
-                                <div class="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition transform hover:scale-105" 
-                                     style="border-top: 4px solid ${config.colors.primary}">
-                                    <div class="text-5xl mb-4">${service.icon}</div>
-                                    <h4 class="text-2xl font-bold mb-3" style="color: ${config.colors.primary}">
+                                <div class="bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition duration-300 transform hover:-translate-y-1">
+                                    <div class="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5 text-white" style="background: linear-gradient(135deg, ${config.colors.primary}, ${config.colors.primaryDark})">${service.icon}</div>
+                                    <h3 class="text-xl font-bold mb-3" style="color: ${config.colors.text}">
                                         ${service.title}
-                                    </h4>
-                                    <p class="mb-4" style="color: ${config.colors.textLight}">
+                                    </h3>
+                                    <p class="text-sm mb-5 leading-relaxed" style="color: ${config.colors.textLight}">
                                         ${service.description}
                                     </p>
-                                    <ul class="space-y-2">
+                                    <ul class="space-y-2.5">
                                         ${service.features.map(f => `
-                                            <li class="flex items-center gap-2" style="color: ${config.colors.text}">
-                                                <span style="color: ${config.colors.accent}">✓</span> ${f}
+                                            <li class="flex items-start gap-2 text-sm" style="color: ${config.colors.text}">
+                                                <span class="mt-0.5 flex-shrink-0" style="color: ${config.colors.accent}">✓</span> ${f}
                                             </li>
                                         `).join('')}
                                     </ul>
@@ -257,31 +404,64 @@
         function renderTestimonials() {
             const enabledTestimonials = config.testimonials.filter(t => t.enabled);
             if (enabledTestimonials.length === 0) return '';
-            
+
             return `
-                <section class="fade-in py-20" style="background: linear-gradient(135deg, ${config.colors.primary}15 0%, ${config.colors.secondary}15 100%)">
-                    <div class="max-w-6xl mx-auto px-4">
-                        <h3 class="text-4xl font-bold mb-4 text-center" style="color: ${config.colors.primary}">
-                            O Que Nossos Clientes Dizem
-                        </h3>
-                        <p class="text-lg text-center mb-12" style="color: ${config.colors.textLight}">
-                            Depoimentos de clientes satisfeitos
-                        </p>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <section class="reveal py-20 md:py-28" style="background-color: ${config.colors.background}">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+                        <div class="text-center max-w-2xl mx-auto mb-14">
+                            ${sectionEyebrow('Depoimentos')}
+                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                                O que dizem nossos pacientes
+                            </h2>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             ${enabledTestimonials.map(testimonial => `
-                                <div class="bg-white p-8 rounded-lg shadow-md">
-                                    <div class="flex items-center gap-4 mb-4">
-                                        <img src="${testimonial.avatar}" alt="${testimonial.name}" loading="lazy" class="w-12 h-12 rounded-full object-cover" onerror="this.remove()">
+                                <div class="p-8 rounded-2xl border" style="border-color: ${config.colors.border}">
+                                    <div class="mb-4 flex gap-0.5 text-sm" style="color: ${config.colors.secondary}">
+                                        ${Array.from({length: testimonial.rating}).map(() => '★').join('')}
+                                    </div>
+                                    <p class="font-display italic text-lg mb-6 leading-relaxed" style="color: ${config.colors.text}">“${testimonial.content}”</p>
+                                    <div class="flex items-center gap-3">
+                                        <img src="${testimonial.avatar}" alt="${testimonial.name}" loading="lazy" class="w-11 h-11 rounded-full object-cover" onerror="this.remove()">
                                         <div>
-                                            <p class="font-bold" style="color: ${config.colors.primary}">${testimonial.name}</p>
-                                            <p class="text-sm" style="color: ${config.colors.textLight}">${testimonial.role}</p>
+                                            <p class="font-bold text-sm" style="color: ${config.colors.text}">${testimonial.name}</p>
+                                            <p class="text-xs" style="color: ${config.colors.textLight}">${testimonial.role}</p>
                                         </div>
                                     </div>
-                                    <div class="mb-4 flex gap-1">
-                                        ${Array.from({length: testimonial.rating}).map(() => '⭐').join('')}
-                                    </div>
-                                    <p style="color: ${config.colors.text}">"${testimonial.content}"</p>
                                 </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderFAQ() {
+            const enabledFaq = (config.faq || []).filter(f => f.enabled);
+            if (enabledFaq.length === 0) return '';
+
+            return `
+                <section class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08">
+                    <div class="max-w-3xl mx-auto px-5 sm:px-6">
+                        <div class="text-center mb-14">
+                            ${sectionEyebrow('FAQ')}
+                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                                Perguntas frequentes
+                            </h2>
+                        </div>
+                        <div class="space-y-3">
+                            ${enabledFaq.map(item => `
+                                <details class="bg-white p-6 rounded-2xl shadow-sm group">
+                                    <summary class="font-bold cursor-pointer flex justify-between items-center gap-4 pb-0" style="color: ${config.colors.text}">
+                                        <span>${item.question}</span>
+                                        <span class="faq-icon flex-shrink-0" style="color: ${config.colors.primary}">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                        </span>
+                                    </summary>
+                                    <p class="mt-4 leading-relaxed" style="color: ${config.colors.textLight}">
+                                        ${item.answer}
+                                    </p>
+                                </details>
                             `).join('')}
                         </div>
                     </div>
@@ -291,18 +471,22 @@
 
         function renderCTA() {
             if (!config.cta || !config.cta.enabled) return '';
-            
+
+            const waHref = config.contact && config.contact.whatsapp
+                ? waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`)
+                : config.cta.buttonLink;
+
             return `
-                <section class="fade-in py-20" style="background-color: ${config.colors.primary}">
-                    <div class="max-w-4xl mx-auto px-4 text-center">
-                        <h3 class="text-4xl font-bold mb-4 text-white">
+                <section class="reveal py-20 md:py-24" style="background: linear-gradient(135deg, ${config.colors.primary}, ${config.colors.primaryDark})">
+                    <div class="max-w-3xl mx-auto px-5 sm:px-6 text-center">
+                        <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 text-white tracking-tight">
                             ${config.cta.title}
-                        </h3>
-                        <p class="text-lg mb-8 text-gray-100">
+                        </h2>
+                        <p class="text-lg mb-9 text-white/85 leading-relaxed">
                             ${config.cta.description}
                         </p>
-                        <a href="${config.cta.buttonLink}" class="bg-white text-gray-900 px-8 py-4 rounded-lg font-bold text-lg inline-block transition transform hover:scale-105 hover:shadow-xl">
-                            ${config.cta.buttonText}
+                        <a href="${waHref}" target="_blank" rel="noopener" class="bg-white px-9 py-4 rounded-full font-bold text-base inline-flex items-center gap-2 transition transform hover:scale-105 hover:shadow-2xl" style="color: ${config.colors.primary}">
+                            ${WHATSAPP_ICON} ${config.cta.buttonText}
                         </a>
                     </div>
                 </section>
@@ -311,47 +495,49 @@
 
         function renderFooter() {
             return `
-                <footer id="contato" class="fade-in" style="background-color: ${config.colors.text}">
-                    <div class="max-w-6xl mx-auto px-4 py-16">
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <footer id="contato" class="reveal" style="background-color: ${config.colors.text}">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6 py-16">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
                             <div>
-                                <h4 class="font-bold text-white mb-4 text-lg">Sobre</h4>
-                                <p class="text-gray-300">${config.footer.description}</p>
+                                <h4 class="font-display font-medium text-white mb-4 text-lg">${config.company.name}</h4>
+                                <p class="text-gray-400 text-sm leading-relaxed">${config.footer.description}</p>
                             </div>
                             <div>
-                                <h4 class="font-bold text-white mb-4 text-lg">Links</h4>
-                                <ul class="space-y-2 text-gray-300">
+                                <h4 class="font-bold text-white mb-4 text-base">Links</h4>
+                                <ul class="space-y-2.5 text-gray-400 text-sm">
                                     ${config.footer.links.map(link => `
                                         <li><a href="${link.url}" class="hover:text-white transition">${link.label}</a></li>
                                     `).join('')}
                                 </ul>
                             </div>
                             <div>
-                                <h4 class="font-bold text-white mb-4 text-lg">Contato</h4>
-                                <p class="text-gray-300 mb-2">📧 <a href="mailto:${config.contact.email}" class="hover:text-white transition">${config.contact.email}</a></p>
-                                <p class="text-gray-300 mb-2">📱 <a href="tel:${config.contact.phone}" class="hover:text-white transition">${config.contact.phone}</a></p>
-                                <p class="text-gray-300">📍 ${config.contact.address}</p>
+                                <h4 class="font-bold text-white mb-4 text-base">Contato</h4>
+                                <ul class="space-y-2.5 text-gray-400 text-sm">
+                                    ${config.contact.whatsapp ? `<li><a href="${waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name}.`)}" target="_blank" rel="noopener" class="hover:text-white transition">📱 WhatsApp</a></li>` : ''}
+                                    <li><a href="mailto:${config.contact.email}" class="hover:text-white transition">✉️ ${config.contact.email}</a></li>
+                                    <li><a href="tel:${config.contact.phone}" class="hover:text-white transition">☎️ ${config.contact.phone}</a></li>
+                                    <li>📍 ${config.contact.address}</li>
+                                </ul>
                             </div>
                             <div>
-                                <h4 class="font-bold text-white mb-4 text-lg">Redes Sociais</h4>
-                                <div class="flex gap-4">
-                                    ${config.contact.social.instagram ? `<a href="${config.contact.social.instagram}" class="text-gray-300 hover:text-white transition text-2xl">📸</a>` : ''}
-                                    ${config.contact.social.facebook ? `<a href="${config.contact.social.facebook}" class="text-gray-300 hover:text-white transition text-2xl">👍</a>` : ''}
-                                    ${config.contact.social.linkedin ? `<a href="${config.contact.social.linkedin}" class="text-gray-300 hover:text-white transition text-2xl">💼</a>` : ''}
-                                    ${config.contact.social.twitter ? `<a href="${config.contact.social.twitter}" class="text-gray-300 hover:text-white transition text-2xl">𝕏</a>` : ''}
+                                <h4 class="font-bold text-white mb-4 text-base">Redes sociais</h4>
+                                <div class="flex gap-3">
+                                    ${config.contact.social.instagram ? `<a href="${config.contact.social.instagram}" class="text-gray-400 hover:text-white transition text-xl" aria-label="Instagram">📸</a>` : ''}
+                                    ${config.contact.social.facebook ? `<a href="${config.contact.social.facebook}" class="text-gray-400 hover:text-white transition text-xl" aria-label="Facebook">👍</a>` : ''}
+                                    ${config.contact.social.linkedin ? `<a href="${config.contact.social.linkedin}" class="text-gray-400 hover:text-white transition text-xl" aria-label="LinkedIn">💼</a>` : ''}
+                                    ${config.contact.social.twitter ? `<a href="${config.contact.social.twitter}" class="text-gray-400 hover:text-white transition text-xl" aria-label="Twitter/X">𝕏</a>` : ''}
                                 </div>
                             </div>
                         </div>
-                        <div class="border-t border-gray-700 pt-8 text-center text-gray-400">
+                        <div class="border-t border-gray-800 pt-8 text-center text-gray-500 text-sm">
                             <p>${config.footer.copyrightText}</p>
-                            <p class="text-sm mt-2">Criado com ❤️ por Fábrica de Sites SaaS</p>
+                            <p class="mt-2">Criado com ❤️ por Fábrica de Sites SaaS</p>
                         </div>
                     </div>
                 </footer>
             `;
         }
 
-        // Inicializar ao carregar a página
         document.addEventListener('DOMContentLoaded', loadConfig);
     </script>
 </body>
