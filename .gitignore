@@ -7,6 +7,10 @@
 *.key
 *.pem
 *.secret
+*.ppk
+
+# Lembrete local de acesso à VM (IP Tailscale, caminho de chave privada)
+ACESSO-VM-TAILSCALE.txt
 
 # Python
 __pycache__/

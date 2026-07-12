@@ -1,22 +1,31 @@
-# Stack de produção Zero Trust — VM fabrica-postgres (AMD E2.1.Micro,
-# 147.15.73.239). Nenhum serviço publica porta pro host: backend só existe
-# na rede interna do Docker; o único jeito de alcançar o backend de fora é
-# via cloudflare_tunnel (saída), e a única forma de acessar a máquina em si
-# é via Tailscale (ver infra/zero_trust_deploy.md). NSG da Oracle Cloud
-# fica 100% fechado em Ingress.
-#
-# Diferença do design original (Ampere dedicada): aqui reaproveitamos o
-# Postgres que já roda nessa VM como container standalone (`fabrica-postgres`,
-# fora deste compose) em vez de subir um `db:` novo — por isso não há
-# serviço `db` aqui. `internal_net` é `external: true` porque foi criada
-# manualmente e o container `fabrica-postgres` foi conectado a ela à mão
-# (ver infra/zero_trust_deploy.md, seção "Reaproveitando o Postgres
-# existente") para que o backend enxergue o Postgres pelo nome do
-# container, sem publicar a porta 5432 pra rede alguma.
+# Stack de produção Zero Trust — instância Ampere (VM.Standard.A2.Flex,
+# ARM64, sa-saopaulo-1). Nenhum serviço publica porta pro host: backend e
+# db só existem na rede interna do Docker; o único jeito de alcançar o
+# backend de fora é via cloudflare_tunnel (saída), e a única forma de
+# acessar a máquina em si é via Tailscale (ver infra/zero_trust_deploy.md).
+# NSG da Oracle Cloud fica 100% fechado em Ingress.
 #
 # Deploy: docker compose -f docker-compose.prod.yml up -d --build
 
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-fabrica}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - internal_net
+    # sem "ports:" - só acessível pelo backend, dentro da internal_net
+
   backend:
     build:
       context: .
@@ -25,17 +34,18 @@ services:
     env_file:
       - .env
     environment:
-      # fabrica-postgres é o nome do container já existente na VM,
-      # conectado manualmente à internal_net (não é criado por este compose)
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@fabrica-postgres:5432/${POSTGRES_DB:-fabrica}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-fabrica}
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - internal_net
     # sem "ports:" - só o cloudflare_tunnel fala com ele (http://backend:8000)
 
   cloudflare_tunnel:
     image: cloudflare/cloudflared:latest
-    # sem "platform:" fixo - a VM fabrica-postgres é AMD64 (E2.1.Micro), não
-    # ARM64; a imagem do cloudflared é multi-arch, o Docker escolhe sozinho
+    # sem "platform:" fixo - a imagem é multi-arch, o Docker escolhe sozinho
+    # (ARM64 nessa instância)
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
@@ -49,7 +59,7 @@ services:
 
 networks:
   internal_net:
-    external: true
-    # criada manualmente (docker network create internal_net) e o container
-    # fabrica-postgres já existente conectado a ela à mão - ver
-    # infra/zero_trust_deploy.md, seção "Reaproveitando o Postgres existente"
+    driver: bridge
+
+volumes:
+  postgres_data:
