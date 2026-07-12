@@ -81,6 +81,25 @@ correspondentes. Ver também `CLAUDE.md` para o estado atual do código.
 - **Critério de saída**: 15-20 clientes pagantes, churn baixo nos 2
   primeiros meses, produção < 5h/site
 
+### Escopo de produto dentro da Fase 2 (decidido 2026-07-12, ver skill `/product`)
+
+Guardrail #2 mantido — nada de dashboard/self-service antes do gate acima.
+"Produto" nesta fase significa tudo que aumenta conversão e valida a oferta
+**sem automatizar a operação comercial**:
+
+- [ ] Landing page de alta conversão (`vendas.html`)
+- [ ] Demonstração pública sem login
+- [ ] Fluxo "gerar antes de cadastrar"
+- [ ] Templates premium (`index.html`)
+- [ ] Página de planos e diferenciais (contratação ainda manual)
+- [ ] Portfólio, FAQ e conteúdo para SEO
+- [ ] Melhorias de UX da demonstração
+
+Fora de escopo até bater o gate de 15-20 clientes pagantes: dashboard
+completo, assinatura self-service/checkout automático, compra/provisionamento
+automático de domínio, automação de vendas. Revisitar esta lista quando o
+gate for atingido.
+
 ---
 
 ## Fase 3 — Automação por agentes de IA (ordem por segurança, não conveniência)
