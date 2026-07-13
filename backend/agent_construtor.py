@@ -120,6 +120,19 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
 
         bloco_seo = self._montar_instrucoes_seo(nicho, localizacao)
 
+        # Bloco de contato: com whatsapp_contato informado, o prompt já recebe o
+        # número real em phone/whatsapp (nunca um valor fictício pra corrigir
+        # depois). Sem whatsapp_contato, preserva o comportamento legado — só
+        # para compatibilidade com chamadores que ainda não passam esse parâmetro
+        # (ex.: gerar_portfolio_lovable.py). _preencher_fallbacks() continua
+        # sendo a segunda camada de segurança, não a única.
+        if whatsapp_contato:
+            contato_phone_prompt = whatsapp_contato
+            contato_whatsapp_prompt = whatsapp_contato
+        else:
+            contato_phone_prompt = "+55 11 98765-4321"
+            contato_whatsapp_prompt = "+5511987654321"
+
         # Prompt para o modelo gerar o JSON completo
         prompt = f"""Você é um especialista em marketing, copywriting e SEO para criar sites profissionais de alto impacto.
 
@@ -135,7 +148,7 @@ IMPORTANTE:
 3. Crie copys persuasivos e impactantes adaptados ao nicho "{nicho}"
 4. Use a cor primária {cor_primaria} e a paleta {json.dumps(cores)}
 5. Gere 3 serviços principais para o nicho {nicho}
-6. Gere 3 depoimentos clientes reais e convincentes
+6. NÃO gere depoimentos de clientes — retorne "testimonials": [] (a plataforma só publica depoimentos reais fornecidos pelo próprio cliente, nunca fabricados pela IA)
 7. Todas as strings devem estar em português (Brasil)
 
 {bloco_seo}
@@ -223,35 +236,7 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
       "enabled": true
     }}
   ],
-  "testimonials": [
-    {{
-      "id": 1,
-      "name": "string (mínimo 3, máximo 100 caracteres) - Nome real",
-      "role": "string (mínimo 5, máximo 100 caracteres) - Profissão/empresa",
-      "content": "string (mínimo 20, máximo 500 caracteres) - Depoimento positivo e específico",
-      "avatar": "",
-      "rating": 5,
-      "enabled": true
-    }},
-    {{
-      "id": 2,
-      "name": "string (mínimo 3, máximo 100 caracteres)",
-      "role": "string (mínimo 5, máximo 100 caracteres)",
-      "content": "string (mínimo 20, máximo 500 caracteres)",
-      "avatar": "",
-      "rating": 5,
-      "enabled": true
-    }},
-    {{
-      "id": 3,
-      "name": "string (mínimo 3, máximo 100 caracteres)",
-      "role": "string (mínimo 5, máximo 100 caracteres)",
-      "content": "string (mínimo 20, máximo 500 caracteres)",
-      "avatar": "",
-      "rating": 5,
-      "enabled": true
-    }}
-  ],
+  "testimonials": [],
   "faq": [
     {{
       "id": 1,
@@ -279,16 +264,11 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
     }}
   ],
   "contact": {{
-    "email": "contato@{nome_empresa.lower().replace(' ', '')}.com",
-    "phone": "+55 11 98765-4321",
-    "whatsapp": "{whatsapp_contato or '+5511987654321'}",
+    "email": null,
+    "phone": "{contato_phone_prompt}",
+    "whatsapp": "{contato_whatsapp_prompt}",
     "address": "{localizacao or 'São Paulo, SP - Brasil'}",
-    "social": {{
-      "instagram": "https://instagram.com/{nome_empresa.lower().replace(' ', '')}",
-      "facebook": "https://facebook.com/{nome_empresa.lower().replace(' ', '')}",
-      "linkedin": "https://linkedin.com/company/{nome_empresa.lower().replace(' ', '')}",
-      "twitter": "https://twitter.com/{nome_empresa.lower().replace(' ', '')}"
-    }}
+    "social": {{}}
   }},
   "cta": {{
     "title": "string (mínimo 10, máximo 200 caracteres) - Chamada final impactante",
@@ -303,7 +283,6 @@ Instruções de copywriting para o nicho "{nicho}":
 - Hero: Crie urgência e prometa resultados mensuráveis
 - Serviços: Descreva benefícios, não apenas features
 - Diferenciais (features): Destaque o que torna o negócio diferente da concorrência
-- Depoimentos: Inclua números/resultados específicos
 - FAQ: Antecipe as dúvidas mais comuns de quem procura "{nicho}" antes de comprar/contratar
 - CTA: Use linguagem ativa e persuasiva
 - Todos os textos devem ser concisos mas impactantes
@@ -312,6 +291,8 @@ ATENÇÃO:
 - Nenhum campo "icon" pode ficar vazio. Cada serviço PRECISA ter um emoji real e visível no campo "icon" (nunca "" ou null).
 - Os limites de caracteres MÍNIMO e MÁXIMO indicados em cada campo são REGRAS RÍGIDAS. Nunca ultrapasse o máximo indicado, mesmo que precise encurtar o texto.
 - NUNCA use "via.placeholder.com" ou qualquer outro serviço de placeholder para os campos de imagem (hero.backgroundImage, sections[].image, testimonials[].avatar, company.logo). Se não souber uma URL de imagem real, deixe o campo como string vazia "" — o sistema preenche automaticamente com uma imagem real depois.
+- NUNCA invente contact.email ou contact.social (instagram/facebook/linkedin/twitter). Retorne sempre "email": null e "social": {{}}.
+- NÃO gere depoimentos (testimonials) — retorne sempre "testimonials": [].
 
 Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
 
@@ -326,7 +307,13 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 config.setdefault("company", {})["logo"] = logo_url
 
             config = self._autocorrigir(config)
-            config = self._preencher_fallbacks(config, nicho, nome_empresa, tem_logo_explicito=bool(logo_url))
+            config = self._preencher_fallbacks(
+                config,
+                nicho,
+                nome_empresa,
+                tem_logo_explicito=bool(logo_url),
+                whatsapp_contato=whatsapp_contato,
+            )
 
             # Validar schema básico (campos obrigatórios presentes)
             self._validar_schema(config)
@@ -366,6 +353,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         nicho: str,
         nome_empresa: str,
         tem_logo_explicito: bool = False,
+        whatsapp_contato: Optional[str] = None,
     ) -> dict:
         """
         Garante que nenhum campo de imagem/SEO derivado fique vazio ou quebrado
@@ -407,6 +395,23 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         for i, depoimento in enumerate(config.get("testimonials", []) or []):
             if _url_invalida(depoimento.get("avatar")):
                 depoimento["avatar"] = f"https://i.pravatar.cc/150?u={empresa_slug}-{i}"
+
+        # Guardrail: email/social/depoimentos nunca são fatos inventados — sempre
+        # zerados aqui, independente do que a IA tenha retornado. phone/whatsapp
+        # já chegam corretos do próprio prompt quando whatsapp_contato é informado
+        # (ver bloco "contact" em gerar_config_site); esta sobrescrita é a segunda
+        # camada de segurança, não a única. Quando whatsapp_contato NÃO é informado
+        # (chamador legado, ex.: gerar_portfolio_lovable.py), phone/whatsapp/address
+        # mantêm o comportamento antigo (podem conter números/localização
+        # genéricos) — isso NÃO é a garantia do fluxo DFY, só compatibilidade
+        # preservada.
+        contact = config.setdefault("contact", {})
+        contact["email"] = None
+        contact["social"] = {}
+        if whatsapp_contato:
+            contact["whatsapp"] = whatsapp_contato
+            contact["phone"] = whatsapp_contato
+        config["testimonials"] = []
 
         # SEO/OG derivados sempre de metadata/hero já preenchidos acima
         metadata["ogTitle"] = metadata.get("siteTitle", "")

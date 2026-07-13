@@ -238,7 +238,7 @@ class Social(BaseModel):
 
 class Contact(BaseModel):
     """Informações de contato"""
-    email: str = Field(..., description="Email principal")
+    email: Optional[str] = Field(default=None, description="Email principal (opcional — só se fornecido, nunca inventado)")
     phone: str = Field(..., min_length=10, description="Telefone")
     whatsapp: str = Field(..., min_length=10, description="WhatsApp")
     address: str = Field(..., min_length=5, description="Endereço")
@@ -246,8 +246,8 @@ class Contact(BaseModel):
 
     @validator('email')
     def validate_email(cls, v):
-        """Valida formato de email"""
-        if '@' not in v or '.' not in v:
+        """Valida formato de email, se informado"""
+        if v and ('@' not in v or '.' not in v):
             raise ValueError('Email deve ser válido')
         return v
 
@@ -293,7 +293,7 @@ class SiteConfig(BaseModel):
     sections: List[Section] = Field(default_factory=list, max_items=10, description="Seções de conteúdo")
     services: List[Service] = Field(..., min_items=1, max_items=10, description="Serviços")
     features: List[Feature] = Field(..., min_items=3, max_items=6, description="Diferenciais competitivos")
-    testimonials: List[Testimonial] = Field(..., min_items=1, max_items=20, description="Depoimentos")
+    testimonials: List[Testimonial] = Field(default_factory=list, max_items=20, description="Depoimentos (opcional — só depoimentos reais fornecidos pelo cliente, nunca fabricados pela IA)")
     faq: List[FAQItem] = Field(..., min_items=3, max_items=8, description="Perguntas frequentes")
     contact: Contact
     cta: CTA
@@ -304,13 +304,6 @@ class SiteConfig(BaseModel):
         """Valida que há pelo menos 1 serviço ativo"""
         if not any(s.enabled for s in v):
             raise ValueError('Deve haver pelo menos 1 serviço ativo')
-        return v
-
-    @validator('testimonials')
-    def validate_testimonials(cls, v):
-        """Valida que há pelo menos 1 depoimento ativo"""
-        if not any(t.enabled for t in v):
-            raise ValueError('Deve haver pelo menos 1 depoimento ativo')
         return v
 
     class Config:
