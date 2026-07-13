@@ -27,11 +27,14 @@ correspondentes. Ver também `CLAUDE.md` para o estado atual do código.
 
 ## Fase 0 — Fundação do negócio
 
-- [x] Nicho + região definidos (2026-07-10): **Clínicas Médicas/Saúde na
-      Grande Vitória-ES** (odontologia, fisioterapia, dermatologia) — forte
-      dependência de SEO local pra atrair paciente novo, o diferencial
-      central do produto, e ticket/recorrência mais estável que nichos
-      sazonais
+- [x] Hipótese inicial de nicho definida (2026-07-10): **Clínicas
+      Médicas/Saúde na Grande Vitória-ES** (odontologia, fisioterapia,
+      dermatologia) — forte dependência de SEO local pra atrair paciente
+      novo, o diferencial central do produto, e ticket/recorrência mais
+      estável que nichos sazonais. Foi o ponto de partida da Fase 0 e
+      orientou o portfólio semente e a primeira coleta de leads — não é
+      mais tratada como decisão de nicho único obrigatório (ver Fase 2 e
+      `docs/nichos_validacao.md`).
 - [ ] Estrutura jurídica: MEI para começar, plano de migração para ME/Simples
       antes de estourar o teto
 - [ ] Preço definido — planilha de cenários aponta **R$149/mês** como ponto
@@ -67,6 +70,16 @@ correspondentes. Ver também `CLAUDE.md` para o estado atual do código.
 ---
 
 ## Fase 2 — Vendas manuais (GATE — ver guardrail #2)
+
+**Mudança de escopo (2026-07-12):** a validação comercial deixou de
+buscar confirmação de um nicho único pré-definido e passou a testar
+múltiplos segmentos/regiões encontrados via Google Maps (infraestrutura
+de coleta já preparada pra múltiplos mercados). O objetivo é identificar
+quais segmentos têm maior aderência comercial pra oferta DFY antes de
+decidir se a operação deve ser especializada em um segmento específico
+ou manter uma abordagem multi-segmento. Critérios de avaliação, segmentos
+testados e resultados: `docs/nichos_validacao.md`. Processo comercial
+completo: `docs/playbook_dfy_v1.md`.
 
 - [x] Geração de leads via Google Places API oficial
       (`backend/scripts/buscar_leads_google_maps.py`), filtrando quem não
