@@ -37,6 +37,7 @@ try:
     from routers.whatsapp_inbound import router as whatsapp_inbound_router
     from routers.demo_dfy import router as demo_dfy_router
     from routers.demo_preview import router as demo_preview_router
+    from routers.demo import router as demo_router
 except ImportError as e:
     print(f"❌ Erro ao importar módulos locais: {e}")
     sys.exit(1)
@@ -91,6 +92,7 @@ app.add_middleware(
 app.include_router(whatsapp_inbound_router)
 app.include_router(demo_dfy_router)
 app.include_router(demo_preview_router)
+app.include_router(demo_router)
 
 # Inicializar agente (singleton)
 try:
