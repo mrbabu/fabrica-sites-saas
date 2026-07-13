@@ -33,7 +33,9 @@ try:
     from image_utils import normalizar_logo, ErroNormalizacaoLogo, _slugify
     from db import get_db, DATABASE_URL
     import repository
+    from auth import verificar_api_key
     from routers.whatsapp_inbound import router as whatsapp_inbound_router
+    from routers.demo_dfy import router as demo_dfy_router
 except ImportError as e:
     print(f"❌ Erro ao importar módulos locais: {e}")
     sys.exit(1)
@@ -86,6 +88,7 @@ app.add_middleware(
 # Roteador de webhook inbound do WhatsApp (só recebe/registra — não qualifica
 # nem responde sozinho, ver backend/routers/whatsapp_inbound.py)
 app.include_router(whatsapp_inbound_router)
+app.include_router(demo_dfy_router)
 
 # Inicializar agente (singleton)
 try:
@@ -96,25 +99,6 @@ except Exception as e:
     agente = None
 
 metricas = obter_metricas()
-
-# Chave usada para proteger endpoints de recebimento de leads (ex: webhook do WhatsApp)
-WEBHOOK_API_KEY = os.getenv("WEBHOOK_API_KEY")
-
-
-def verificar_api_key(x_api_key: Optional[str] = Header(default=None, alias="X-API-Key")) -> None:
-    """
-    Protege endpoints de captura de leads contra acesso público.
-    Exige o header `X-API-Key` batendo com WEBHOOK_API_KEY do ambiente.
-    """
-    if not WEBHOOK_API_KEY:
-        logger.error("❌ WEBHOOK_API_KEY não configurada — endpoint protegido está bloqueado até configurar")
-        raise HTTPException(
-            status_code=503,
-            detail="Webhook não configurado: defina WEBHOOK_API_KEY no ambiente do servidor"
-        )
-    if not x_api_key or x_api_key != WEBHOOK_API_KEY:
-        raise HTTPException(status_code=401, detail="API key ausente ou inválida")
-
 
 # ============================================================================
 # MODELOS PYDANTIC (Request/Response)
@@ -626,7 +610,7 @@ if __name__ == "__main__":
         print("⚠️  Nenhum provedor de IA configurado (NVIDIA_NIM_API_KEY / ANTHROPIC_API_KEY / OLLAMA_URL).")
         print("   Configure ao menos um em .env antes de gerar sites.")
 
-    if not WEBHOOK_API_KEY:
+    if not os.getenv("WEBHOOK_API_KEY"):
         print("⚠️  WEBHOOK_API_KEY não configurada — POST /webhook/whatsapp ficará bloqueado (503).")
 
     if not DATABASE_URL:
