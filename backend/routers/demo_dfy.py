@@ -45,6 +45,18 @@ class DemoDfyRequest(BaseModel):
     whatsapp_contato: str = Field(..., min_length=10, max_length=20, description="WhatsApp REAL do negócio, obrigatório")
     cor_primaria: str = Field(default="#0D9488", description="Cor primária em hexadecimal")
     logo_url: Optional[str] = Field(default=None, description="URL pública de imagem já existente — nunca upload")
+    descricao_negocio: Optional[str] = Field(default=None, max_length=1000, description="Contexto livre sobre o negócio, informado pelo cliente")
+    portfolio_urls: Optional[list[str]] = Field(
+        default=None,
+        max_length=8,
+        description=(
+            "Até 8 links diretos de imagem pública (JPG/PNG/WebP) do trabalho "
+            "real do cliente — precisam ser o link do próprio arquivo de "
+            "imagem, não o link de uma página ou de uma pasta/Drive "
+            "compartilhado, pois são usados diretamente em <img>/background "
+            "no site gerado. Nunca upload — mesmo padrão de logo_url."
+        ),
+    )
 
     @field_validator("cor_primaria")
     @classmethod
@@ -52,6 +64,24 @@ class DemoDfyRequest(BaseModel):
         if not re.match(r"^#[0-9a-fA-F]{6}$", v):
             raise ValueError("Cor deve estar em formato hex válido: #RRGGBB")
         return v.lower()
+
+    @field_validator("portfolio_urls")
+    @classmethod
+    def validar_portfolio_urls(cls, v: Optional[list[str]]) -> Optional[list[str]]:
+        if not v:
+            return v
+        for url in v:
+            if not re.match(r"^https?://", url, re.IGNORECASE):
+                raise ValueError(
+                    f"portfolio_urls deve conter apenas links http(s) diretos de imagem: '{url}' inválido"
+                )
+            if not re.search(r"\.(jpe?g|png|webp)(\?.*)?$", url, re.IGNORECASE):
+                raise ValueError(
+                    f"portfolio_urls deve apontar direto pra um arquivo de imagem "
+                    f"(.jpg/.jpeg/.png/.webp), não link de página ou pasta/Drive "
+                    f"compartilhado: '{url}' não parece ser um link direto de imagem"
+                )
+        return v
 
 
 @router.post("/api/v1/demo-dfy", dependencies=[Depends(verificar_api_key)])
@@ -66,6 +96,8 @@ async def gerar_demo(payload: DemoDfyRequest):
             localizacao=payload.localizacao,
             whatsapp_contato=payload.whatsapp_contato,
             logo_url=payload.logo_url,
+            descricao_negocio=payload.descricao_negocio,
+            portfolio_urls=payload.portfolio_urls,
             caminho_saida=str(PASTA_CONFIGS / f"{_slugify(payload.nome_empresa)}.json"),
         )
     except Exception as e:

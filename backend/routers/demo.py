@@ -39,8 +39,9 @@ async def formulario_demo():
   h1 {{ font-size: 1.4rem; margin-bottom: 4px; }}
   p.subtitle {{ color: #6b7280; margin-top: 0; margin-bottom: 28px; }}
   label {{ display: block; font-weight: 600; font-size: 0.9rem; margin: 16px 0 6px; }}
-  input {{ width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }}
+  input, textarea {{ width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; box-sizing: border-box; font-family: inherit; }}
   input[type=color] {{ padding: 4px; height: 42px; }}
+  textarea {{ resize: vertical; min-height: 70px; }}
   button {{ margin-top: 24px; width: 100%; padding: 12px; background: #0D9488; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }}
   button:disabled {{ background: #9ca3af; cursor: wait; }}
   #resultado {{ margin-top: 20px; padding: 14px; border-radius: 8px; display: none; }}
@@ -66,6 +67,12 @@ async def formulario_demo():
     <label>Cor principal</label>
     <input name="cor_primaria" type="color" value="#0D9488">
 
+    <label>Me conte sobre seu negócio (opcional)</label>
+    <textarea name="descricao_negocio" placeholder="O que torna esse negócio especial? Diferenciais, história, público-alvo..."></textarea>
+
+    <label>Fotos reais do trabalho (portfólio, opcional, até 8)</label>
+    <textarea name="portfolio_urls_raw" placeholder="Uma URL por linha — link direto de imagem (.jpg/.png/.webp), não link de página ou pasta compartilhada&#10;https://...&#10;https://..."></textarea>
+
     <button type="submit" id="btn-gerar">Gerar Demo</button>
   </form>
   <div id="resultado"></div>
@@ -78,6 +85,9 @@ document.getElementById('form-demo').addEventListener('submit', async (e) => {{
   const btn = document.getElementById('btn-gerar');
   const resultado = document.getElementById('resultado');
   const dados = Object.fromEntries(new FormData(e.target).entries());
+  const portfolioUrls = (dados.portfolio_urls_raw || '').split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
+  delete dados.portfolio_urls_raw;
+  if (portfolioUrls.length > 0) dados.portfolio_urls = portfolioUrls;
 
   btn.disabled = true;
   btn.textContent = 'Gerando... (~30-60s)';

@@ -99,6 +99,8 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
         localizacao: Optional[str] = None,
         whatsapp_contato: Optional[str] = None,
         logo_url: Optional[str] = None,
+        descricao_negocio: Optional[str] = None,
+        portfolio_urls: list[str] | None = None,
     ) -> dict:
         """
         Gera configuração completa de site usando o AIProvider, com SEO by design
@@ -110,6 +112,19 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
             localizacao: Cidade/região do negócio, usada para SEO local (opcional)
             whatsapp_contato: Número de WhatsApp do cliente (opcional)
             logo_url: URL/caminho do logo já normalizado (opcional)
+            descricao_negocio: Contexto livre sobre o negócio, informado pelo
+                próprio cliente (opcional) — usado só para enriquecer a copy,
+                nunca para inventar dados factuais (contato/redes/depoimentos)
+            portfolio_urls: links diretos de imagem (JPG/PNG/WebP) do
+                trabalho real do cliente, já validados pelo chamador
+                (opcional). Mesmo padrão de logo_url — nunca upload, só
+                link já pronto e já hospedado publicamente; a validação de
+                formato/esquema/quantidade é responsabilidade da camada de
+                entrada (ver DemoDfyRequest em routers/demo_dfy.py), este
+                método assume que a lista já chegou válida. Quando
+                fornecida, substitui o fallback de stock photo (LoremFlickr)
+                em hero.backgroundImage e sections[].image; não afeta
+                company.logo (ver logo_url para isso)
 
         Returns:
             Dicionário com configuração completa do site
@@ -141,6 +156,7 @@ Crie um arquivo site-config.json COMPLETO e altamente persuasivo para:
 - Nicho/Ramo de atividade: {nicho}
 - Localização: {localizacao or "não informada"}
 - Cor Primária: {cor_primaria}
+{f'- Contexto sobre o negócio, informado pelo próprio cliente (use para tornar a copy mais específica e realista, mas sem inventar dados factuais como contato, redes sociais ou depoimentos): {descricao_negocio}' if descricao_negocio else ''}
 
 IMPORTANTE:
 1. Retorne APENAS um JSON válido, sem markdown, sem explicações
@@ -313,6 +329,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 nome_empresa,
                 tem_logo_explicito=bool(logo_url),
                 whatsapp_contato=whatsapp_contato,
+                portfolio_urls=portfolio_urls,
             )
 
             # Validar schema básico (campos obrigatórios presentes)
@@ -354,6 +371,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         nome_empresa: str,
         tem_logo_explicito: bool = False,
         whatsapp_contato: Optional[str] = None,
+        portfolio_urls: list[str] | None = None,
     ) -> dict:
         """
         Garante que nenhum campo de imagem/SEO derivado fique vazio ou quebrado
@@ -364,6 +382,12 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         palavra-chave, sem API key) e pravatar.cc (avatares de pessoa para
         depoimentos). Os campos ogTitle/ogDescription/ogImage e o objeto footer
         são sempre derivados aqui, nunca pedidos à IA.
+
+        portfolio_urls (opcional, já validado pelo chamador): quando presente,
+        tem prioridade sobre o fallback LoremFlickr em hero.backgroundImage e
+        sections[].image — fotos reais do cliente sempre substituem stock
+        photo. Não afeta company.logo. Lista vazia/None preserva exatamente o
+        comportamento atual (zero mudança de comportamento sem portfólio).
         """
         nicho_slug = _slugify(nicho) or "negocio"
         empresa_slug = _slugify(nome_empresa) or "empresa"
@@ -381,7 +405,9 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
             ]
 
         hero = config.setdefault("hero", {})
-        if _url_invalida(hero.get("backgroundImage")):
+        if portfolio_urls:
+            hero["backgroundImage"] = portfolio_urls[0]
+        elif _url_invalida(hero.get("backgroundImage")):
             hero["backgroundImage"] = f"https://loremflickr.com/1920/600/{nicho_slug}"
 
         company = config.setdefault("company", {})
@@ -389,7 +415,9 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
             company["logo"] = f"https://loremflickr.com/400/400/{nicho_slug},logo"
 
         for i, secao in enumerate(config.get("sections", []) or []):
-            if _url_invalida(secao.get("image")):
+            if portfolio_urls:
+                secao["image"] = portfolio_urls[(i + 1) % len(portfolio_urls)]
+            elif _url_invalida(secao.get("image")):
                 secao["image"] = f"https://loremflickr.com/500/400/{nicho_slug}?lock={i}"
 
         for i, depoimento in enumerate(config.get("testimonials", []) or []):
@@ -516,6 +544,8 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         localizacao: Optional[str] = None,
         whatsapp_contato: Optional[str] = None,
         logo_url: Optional[str] = None,
+        descricao_negocio: Optional[str] = None,
+        portfolio_urls: list[str] | None = None,
     ) -> dict:
         """
         Executa o pipeline completo de geração
@@ -528,6 +558,11 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
             localizacao: Cidade/região do negócio (opcional, para SEO local)
             whatsapp_contato: WhatsApp do cliente (opcional)
             logo_url: URL/caminho do logo já normalizado (opcional)
+            descricao_negocio: Contexto livre sobre o negócio, informado pelo
+                cliente (opcional)
+            portfolio_urls: links diretos de imagem do trabalho real do
+                cliente, já validados pelo chamador (opcional) — ver
+                gerar_config_site() para o comportamento exato
 
         Returns:
             Configuração gerada
@@ -553,6 +588,8 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 localizacao=localizacao,
                 whatsapp_contato=whatsapp_contato,
                 logo_url=logo_url,
+                descricao_negocio=descricao_negocio,
+                portfolio_urls=portfolio_urls,
             )
 
             # Validação final (config já passou por isso dentro de gerar_config_site,
