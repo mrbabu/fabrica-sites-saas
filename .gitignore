@@ -40,6 +40,9 @@ ENV/
 env/
 .venv
 
+# Node.js
+node_modules/
+
 # IDE
 .vscode/
 .idea/
@@ -61,6 +64,8 @@ prompt_teste_lovable.txt
 !site-config-example.json
 !site-config.json
 !vendas-config.json
+!/package.json
+!/package-lock.json
 
 # Métricas e dados
 metrics.json
