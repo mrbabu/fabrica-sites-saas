@@ -13,10 +13,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:ital,opsz,wght@0,12..96,200..800;1,12..96,200..800&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Inter', sans-serif; }
-        .font-display { font-family: 'Fraunces', serif; }
+        .font-display { font-family: 'Bricolage Grotesque', sans-serif; }
         html { scroll-behavior: smooth; }
 
         /* Textura sutil, site-wide — dá um acabamento tátil/editorial, não decorativo por decorativo */
@@ -25,15 +25,33 @@
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
         }
 
-        /* Revelação de seção ao rolar — deliberada, não "tudo pisca ao carregar" */
-        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s ease; }
+        /* Revelação de seção/cartão ao rolar — stagger real via transition-delay por item */
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s ease; }
         .reveal.is-visible { opacity: 1; transform: translateY(0); }
 
         /* Entrada da hero (carregamento, não scroll) */
         .hero-in { animation: heroIn 0.8s ease-out both; }
         @keyframes heroIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .word-reveal { display: inline-block; opacity: 0; transform: translateY(14px); animation: wordUp 0.6s ease forwards; }
+        .word-reveal { display: inline-block; opacity: 0; transform: translateY(16px); animation: wordUp 0.65s cubic-bezier(.2,.7,.2,1) forwards; }
         @keyframes wordUp { to { opacity: 1; transform: translateY(0); } }
+
+        /* Faixa-ticker contínua — o elemento de assinatura, 100% orientado por dado */
+        .ticker-clip { clip-path: polygon(0 4.2vw, 100% 0, 100% 100%, 0 100%); }
+        .ticker-wrap { overflow: hidden; }
+        .ticker-track { display: flex; width: max-content; animation: ticker 26s linear infinite; }
+        .ticker-wrap:hover .ticker-track { animation-play-state: paused; }
+        @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+        /* Parallax do hero — JS aplica translateY, CSS só prepara o palco */
+        .hero-media { position: absolute; inset: -8% 0 -8% 0; }
+        .hero-media img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Botão magnético — JS aplica o transform, CSS só suaviza o retorno */
+        .magnetic { transition: transform 0.25s cubic-bezier(.2,.9,.3,1); will-change: transform; }
+
+        /* Carrossel de serviços — vernáculo de catálogo/stories, sem scrollbar visível */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         details summary { list-style: none; }
         details summary::-webkit-details-marker { display: none; }
@@ -53,6 +71,8 @@
             .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
             .hero-in, .word-reveal { animation: none !important; opacity: 1 !important; transform: none !important; }
             .whatsapp-pulse { animation: none !important; }
+            .ticker-track { animation: none !important; }
+            .magnetic { transition: none !important; }
             html { scroll-behavior: auto; }
         }
     </style>
@@ -90,6 +110,7 @@
             app.innerHTML = `
                 ${renderNavigation()}
                 ${renderHero()}
+                ${renderTicker()}
                 ${renderSections()}
                 ${renderFeatures()}
                 ${renderServices()}
@@ -104,6 +125,9 @@
             setupNavBehavior();
             initScrollReveal();
             initWhatsAppLabel();
+            initParallax();
+            initMagnetic();
+            initCountUp();
         }
 
         function setFavicon(emoji) {
@@ -180,6 +204,59 @@
             }, 3400);
         }
 
+        function initParallax() {
+            const media = document.getElementById('hero-media-img');
+            if (!media || prefersReducedMotion()) return;
+            let ticking = false;
+            const update = () => {
+                const y = Math.min(window.scrollY, 900) * 0.14;
+                media.style.transform = `translateY(${y}px)`;
+                ticking = false;
+            };
+            window.addEventListener('scroll', () => {
+                if (!ticking) { requestAnimationFrame(update); ticking = true; }
+            });
+            update();
+        }
+
+        function initMagnetic() {
+            if (prefersReducedMotion()) return;
+            document.querySelectorAll('.magnetic').forEach(el => {
+                el.addEventListener('mousemove', (e) => {
+                    const r = el.getBoundingClientRect();
+                    const x = (e.clientX - r.left - r.width / 2) * 0.25;
+                    const y = (e.clientY - r.top - r.height / 2) * 0.35;
+                    el.style.transform = `translate(${x}px, ${y}px)`;
+                });
+                el.addEventListener('mouseleave', () => { el.style.transform = 'translate(0, 0)'; });
+            });
+        }
+
+        function initCountUp() {
+            const el = document.getElementById('trust-rating-value');
+            if (!el) return;
+            const target = parseFloat(el.dataset.target || '0');
+            if (prefersReducedMotion() || !('IntersectionObserver' in window)) {
+                el.textContent = target.toFixed(1);
+                return;
+            }
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) return;
+                    io.unobserve(entry.target);
+                    const start = performance.now();
+                    const duration = 900;
+                    const step = (now) => {
+                        const p = Math.min((now - start) / duration, 1);
+                        el.textContent = (target * (1 - Math.pow(1 - p, 3))).toFixed(1);
+                        if (p < 1) requestAnimationFrame(step);
+                    };
+                    requestAnimationFrame(step);
+                });
+            }, { threshold: 0.4 });
+            io.observe(el);
+        }
+
         function staggerWords(text) {
             return text.split(' ').map((w, i) => `<span class="word-reveal" style="animation-delay:${(i * 0.045).toFixed(2)}s">${w}&nbsp;</span>`).join('');
         }
@@ -200,7 +277,7 @@
                    class="whatsapp-pulse fixed right-5 z-50 flex items-center gap-2 text-white pl-4 pr-5 py-3.5 shadow-xl transition transform hover:scale-105"
                    style="background-color: ${config.colors.accent}; border-radius: 20px 20px 4px 20px; bottom: calc(1.25rem + env(safe-area-inset-bottom));">
                     ${WHATSAPP_ICON}
-                    <span id="wa-label" class="wa-label-fade hidden sm:inline font-display italic font-medium text-sm">Fale agora</span>
+                    <span id="wa-label" class="wa-label-fade hidden sm:inline font-display font-bold uppercase tracking-wide text-xs">Fale agora</span>
                 </a>
             `;
         }
@@ -223,7 +300,7 @@
                     <div class="max-w-6xl mx-auto px-5 sm:px-6 py-4 flex justify-between items-center">
                         <div class="flex items-center gap-3">
                             ${logo}
-                            <span class="font-display font-semibold text-lg tracking-tight" style="color: ${config.colors.primary}">${config.company.name}</span>
+                            <span class="font-display font-bold text-lg tracking-tight" style="color: ${config.colors.primary}">${config.company.name}</span>
                         </div>
                         <div class="hidden md:flex items-center gap-8">
                             ${navLinks}
@@ -248,12 +325,12 @@
             const avatars = enabledTestimonials.slice(0, 4).map(t => `
                 <img src="${t.avatar}" alt="" class="w-7 h-7 sm:w-9 sm:h-9 rounded-full object-cover ring-2 ring-white -ml-2 first:ml-0" onerror="this.remove()">
             `).join('');
-            const avg = (enabledTestimonials.reduce((sum, t) => sum + (t.rating || 5), 0) / enabledTestimonials.length).toFixed(1);
+            const avg = (enabledTestimonials.reduce((sum, t) => sum + (t.rating || 5), 0) / enabledTestimonials.length);
 
             return `
                 <div class="max-w-full flex items-center justify-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full pl-1.5 pr-3 sm:pr-4 py-1.5 mt-8">
                     <div class="flex flex-shrink-0">${avatars}</div>
-                    <span class="text-xs sm:text-sm text-white/90 font-medium whitespace-nowrap">⭐ ${avg} · ${enabledTestimonials.length}+ avaliações</span>
+                    <span class="text-xs sm:text-sm text-white/90 font-medium whitespace-nowrap">⭐ <span id="trust-rating-value" data-target="${avg.toFixed(1)}">0.0</span> · ${enabledTestimonials.length}+ avaliações</span>
                 </div>
             `;
         }
@@ -265,20 +342,27 @@
                 ? waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`)
                 : config.hero.ctaLink;
 
+            const c = config.colors;
+
             return `
-                <section class="relative overflow-hidden bg-gray-900 min-h-[88vh] flex items-center">
-                    <img src="${config.hero.backgroundImage}" alt="" class="absolute inset-0 w-full h-full object-cover" onerror="this.style.display='none'">
-                    <div class="absolute inset-0" style="background: linear-gradient(150deg, ${config.colors.primary}f2 10%, ${config.colors.primaryDark}d9 55%, ${config.colors.secondary}99 100%)"></div>
+                <section class="relative overflow-hidden bg-gray-900 min-h-[92vh] flex items-center">
+                    <div class="hero-media">
+                        <img id="hero-media-img" src="${config.hero.backgroundImage}" alt="" onerror="this.style.display='none'">
+                    </div>
+                    <div class="absolute inset-0" style="background:
+                        radial-gradient(130% 110% at 12% 15%, ${c.primary}ee 0%, transparent 55%),
+                        radial-gradient(100% 100% at 88% 10%, ${c.accent}b3 0%, transparent 48%),
+                        linear-gradient(160deg, ${c.primaryDark}f2 25%, ${c.secondary}59 100%);"></div>
                     <div class="hero-in max-w-5xl mx-auto px-5 sm:px-6 py-24 text-center relative z-10">
                         ${config.company.tagline ? `<span class="font-display italic inline-block text-base sm:text-lg text-white/85 mb-5">${config.company.tagline}</span>` : ''}
-                        <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-medium mb-6 leading-[1.1] tracking-tight text-white drop-shadow-sm">
+                        <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-[1.05] tracking-tight text-white drop-shadow-sm">
                             ${staggerWords(config.hero.title)}
                         </h1>
                         <p class="text-lg md:text-xl mb-10 max-w-2xl mx-auto text-white/90 leading-relaxed">
                             ${config.hero.subtitle}
                         </p>
                         <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                            <a href="${waHref}" target="_blank" rel="noopener" class="bg-white px-8 py-4 rounded-full font-bold text-base inline-flex items-center justify-center gap-2 transition transform hover:scale-105 hover:shadow-2xl" style="color: ${config.colors.primary}">
+                            <a href="${waHref}" target="_blank" rel="noopener" id="hero-cta" class="magnetic bg-white px-8 py-4 rounded-full font-bold text-base inline-flex items-center justify-center gap-2 transition hover:shadow-2xl" style="color: ${c.primary}">
                                 ${WHATSAPP_ICON} ${config.hero.ctaText}
                             </a>
                             <a href="#servicos" class="border border-white/40 text-white px-8 py-4 rounded-full font-semibold text-base inline-flex items-center justify-center transition hover:bg-white/10">
@@ -291,13 +375,48 @@
             `;
         }
 
+        function tickerItems() {
+            const items = [];
+            if (config.company.tagline) items.push(config.company.tagline);
+            (config.services || []).filter(s => s.enabled).forEach(s => items.push(s.title));
+            (config.features || []).filter(f => f.enabled).forEach(f => items.push(f.title));
+            const testimonials = (config.testimonials || []).filter(t => t.enabled);
+            if (testimonials.length) {
+                const avg = (testimonials.reduce((sum, t) => sum + (t.rating || 5), 0) / testimonials.length).toFixed(1);
+                items.push(`⭐ ${avg} de avaliação`);
+            }
+            if (config.contact && config.contact.whatsapp) items.push('Resposta rápida no WhatsApp');
+            return items;
+        }
+
+        function renderTicker() {
+            const items = tickerItems();
+            if (items.length === 0) return '';
+
+            const row = items.map(item => `
+                <span class="font-display font-bold uppercase tracking-wide text-sm sm:text-base text-white whitespace-nowrap px-6">${item}</span>
+                <span class="text-white/50 text-sm">✦</span>
+            `).join('');
+
+            return `
+                <div class="ticker-clip relative z-10 -mt-8 sm:-mt-10">
+                    <div class="ticker-wrap py-4 sm:py-5" style="background-color: ${config.colors.primaryDark}">
+                        <div class="ticker-track">
+                            <div class="flex items-center">${row}</div>
+                            <div class="flex items-center" aria-hidden="true">${row}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderSections() {
             return config.sections.filter(s => s.enabled).map((section, idx) => {
                 const imageFirst = idx % 2 === 1;
                 const textBlock = `
                     <div>
                         <span class="inline-block w-10 h-1 rounded-full mb-5" style="background-color: ${config.colors.accent}"></span>
-                        <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                        <h2 class="font-display text-3xl md:text-4xl font-bold mb-4 tracking-tight" style="color: ${config.colors.text}">
                             ${section.title}
                         </h2>
                         <p class="text-lg mb-4 font-medium" style="color: ${config.colors.primary}">
@@ -326,7 +445,7 @@
             return `
                 <div class="flex items-center justify-center gap-3 mb-4">
                     <span class="w-6 h-px" style="background-color: ${config.colors.accent}"></span>
-                    <span class="font-display italic text-base" style="color: ${config.colors.primary}">${text}</span>
+                    <span class="font-display font-bold uppercase tracking-widest text-xs" style="color: ${config.colors.primary}">${text}</span>
                     <span class="w-6 h-px" style="background-color: ${config.colors.accent}"></span>
                 </div>
             `;
@@ -337,17 +456,17 @@
             if (enabledFeatures.length === 0) return '';
 
             return `
-                <section class="reveal py-20 md:py-28" style="background-color: ${config.colors.background}">
+                <section class="py-20 md:py-28" style="background-color: ${config.colors.background}">
                     <div class="max-w-6xl mx-auto px-5 sm:px-6">
-                        <div class="text-center max-w-2xl mx-auto mb-14">
+                        <div class="reveal text-center max-w-2xl mx-auto mb-14">
                             ${sectionEyebrow('Diferenciais')}
-                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                            <h2 class="font-display text-3xl md:text-4xl font-bold mb-4 tracking-tight" style="color: ${config.colors.text}">
                                 Por que escolher a gente
                             </h2>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            ${enabledFeatures.map(feature => `
-                                <div class="p-8 rounded-2xl border transition hover:shadow-lg" style="border-color: ${config.colors.border}">
+                            ${enabledFeatures.map((feature, i) => `
+                                <div class="reveal p-8 rounded-2xl border transition hover:shadow-lg" style="border-color: ${config.colors.border}; transition-delay: ${i * 90}ms">
                                     <div class="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5" style="background-color: ${config.colors.primary}14">${feature.icon}</div>
                                     <h3 class="text-lg font-bold mb-2" style="color: ${config.colors.text}">
                                         ${feature.title}
@@ -368,17 +487,17 @@
             if (enabledServices.length === 0) return '';
 
             return `
-                <section id="servicos" class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08">
+                <section id="servicos" class="py-20 md:py-28" style="background-color: ${config.colors.primary}08">
                     <div class="max-w-6xl mx-auto px-5 sm:px-6">
-                        <div class="text-center max-w-2xl mx-auto mb-14">
+                        <div class="reveal text-center max-w-2xl mx-auto mb-14">
                             ${sectionEyebrow('Serviços')}
-                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                            <h2 class="font-display text-3xl md:text-4xl font-bold mb-4 tracking-tight" style="color: ${config.colors.text}">
                                 Soluções pensadas para você
                             </h2>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            ${enabledServices.map(service => `
-                                <div class="bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition duration-300 transform hover:-translate-y-1">
+                        <div class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
+                            ${enabledServices.map((service, i) => `
+                                <div class="reveal snap-start shrink-0 w-[85%] sm:w-[360px] bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition duration-300" style="transition-delay: ${i * 90}ms">
                                     <div class="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5 text-white" style="background: linear-gradient(135deg, ${config.colors.primary}, ${config.colors.primaryDark})">${service.icon}</div>
                                     <h3 class="text-xl font-bold mb-3" style="color: ${config.colors.text}">
                                         ${service.title}
@@ -406,21 +525,21 @@
             if (enabledTestimonials.length === 0) return '';
 
             return `
-                <section class="reveal py-20 md:py-28" style="background-color: ${config.colors.background}">
+                <section class="py-20 md:py-28" style="background-color: ${config.colors.background}">
                     <div class="max-w-6xl mx-auto px-5 sm:px-6">
-                        <div class="text-center max-w-2xl mx-auto mb-14">
+                        <div class="reveal text-center max-w-2xl mx-auto mb-14">
                             ${sectionEyebrow('Depoimentos')}
-                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
-                                O que dizem nossos pacientes
+                            <h2 class="font-display text-3xl md:text-4xl font-bold mb-4 tracking-tight" style="color: ${config.colors.text}">
+                                O que dizem nossos clientes
                             </h2>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            ${enabledTestimonials.map(testimonial => `
-                                <div class="p-8 rounded-2xl border" style="border-color: ${config.colors.border}">
+                            ${enabledTestimonials.map((testimonial, i) => `
+                                <div class="reveal p-8 rounded-2xl border" style="border-color: ${config.colors.border}; transition-delay: ${i * 90}ms">
                                     <div class="mb-4 flex gap-0.5 text-sm" style="color: ${config.colors.secondary}">
                                         ${Array.from({length: testimonial.rating}).map(() => '★').join('')}
                                     </div>
-                                    <p class="font-display italic text-lg mb-6 leading-relaxed" style="color: ${config.colors.text}">“${testimonial.content}”</p>
+                                    <p class="font-display text-lg mb-6 leading-relaxed" style="color: ${config.colors.text}">“${testimonial.content}”</p>
                                     <div class="flex items-center gap-3">
                                         <img src="${testimonial.avatar}" alt="${testimonial.name}" loading="lazy" class="w-11 h-11 rounded-full object-cover" onerror="this.remove()">
                                         <div>
@@ -441,17 +560,17 @@
             if (enabledFaq.length === 0) return '';
 
             return `
-                <section class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08">
+                <section class="py-20 md:py-28" style="background-color: ${config.colors.primary}08">
                     <div class="max-w-3xl mx-auto px-5 sm:px-6">
-                        <div class="text-center mb-14">
+                        <div class="reveal text-center mb-14">
                             ${sectionEyebrow('FAQ')}
-                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                            <h2 class="font-display text-3xl md:text-4xl font-bold mb-4 tracking-tight" style="color: ${config.colors.text}">
                                 Perguntas frequentes
                             </h2>
                         </div>
                         <div class="space-y-3">
-                            ${enabledFaq.map(item => `
-                                <details class="bg-white p-6 rounded-2xl shadow-sm group">
+                            ${enabledFaq.map((item, i) => `
+                                <details class="reveal bg-white p-6 rounded-2xl shadow-sm group" style="transition-delay: ${i * 70}ms">
                                     <summary class="font-bold cursor-pointer flex justify-between items-center gap-4 pb-0" style="color: ${config.colors.text}">
                                         <span>${item.question}</span>
                                         <span class="faq-icon flex-shrink-0" style="color: ${config.colors.primary}">
@@ -479,7 +598,7 @@
             return `
                 <section class="reveal py-20 md:py-24" style="background: linear-gradient(135deg, ${config.colors.primary}, ${config.colors.primaryDark})">
                     <div class="max-w-3xl mx-auto px-5 sm:px-6 text-center">
-                        <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 text-white tracking-tight">
+                        <h2 class="font-display text-3xl md:text-4xl font-bold mb-4 text-white tracking-tight">
                             ${config.cta.title}
                         </h2>
                         <p class="text-lg mb-9 text-white/85 leading-relaxed">
@@ -499,7 +618,7 @@
                     <div class="max-w-6xl mx-auto px-5 sm:px-6 py-16">
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
                             <div>
-                                <h4 class="font-display font-medium text-white mb-4 text-lg">${config.company.name}</h4>
+                                <h4 class="font-display font-bold text-white mb-4 text-lg">${config.company.name}</h4>
                                 <p class="text-gray-400 text-sm leading-relaxed">${config.footer.description}</p>
                             </div>
                             <div>
