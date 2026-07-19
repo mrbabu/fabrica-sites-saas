@@ -103,10 +103,17 @@ Guardrail #2 mantido — nada de dashboard/self-service antes do gate acima.
 - [ ] Landing page de alta conversão (`vendas.html`)
 - [ ] Demonstração pública sem login
 - [ ] Fluxo "gerar antes de cadastrar"
-- [ ] Templates premium (`index.html`)
+- [~] Templates premium (`index.html`) — redesign completo aplicado
+      (tipografia, faixa-ticker de assinatura, hero em duotone com as
+      cores do cliente, motion, carrossel de serviços; commit `3ab4feb`,
+      2026-07-14). Ainda é um único template, não múltiplas opções —
+      "premium" aqui é uma direção visual, não variantes selecionáveis
 - [ ] Página de planos e diferenciais (contratação ainda manual)
 - [ ] Portfólio, FAQ e conteúdo para SEO
-- [ ] Melhorias de UX da demonstração
+- [~] Melhorias de UX da demonstração — campo de contexto livre sobre o
+      negócio e campo de URLs manuais de portfólio (fotos reais do
+      cliente substituem o stock photo no hero/seções, mesmo padrão do
+      `logo_url`) adicionados ao `/demo` (commit `3123628`, 2026-07-14)
 
 Fora de escopo até bater o gate de 15-20 clientes pagantes: dashboard
 completo, assinatura self-service/checkout automático, compra/provisionamento
