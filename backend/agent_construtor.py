@@ -9,9 +9,11 @@ import json
 import sys
 import os
 import time
+import zlib
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 import re
 
 # Carregar variáveis de ambiente do arquivo .env
@@ -24,11 +26,22 @@ except ImportError:
 from schema_validator import ValidadorSchema
 from metrics import obter_metricas
 from ai_provider import obter_ai_provider, ErroProvedorIA
-from image_utils import _slugify
+from image_utils import _slugify, mapear_categoria, obter_imagens_categoria, ErroBancoImagens
 
 
 MAX_TENTATIVAS_GERACAO = 3
 ICONES_FALLBACK = ["⭐", "✅", "🔧", "📦", "🎯", "💡", "🛠️", "📋"]
+
+
+def _lock_estavel(texto: str) -> int:
+    """
+    Deriva um inteiro estável a partir de uma string, para usar como
+    ?lock= do LoremFlickr — sem isso, o serviço sorteia uma foto nova a
+    cada requisição (ver hero.backgroundImage/company.logo em
+    _preencher_fallbacks). CRC32 é suficiente aqui: só precisa ser estável
+    e determinístico, não criptográfico.
+    """
+    return zlib.crc32(texto.encode("utf-8"))
 
 
 class AgenteConstrutor:
@@ -384,10 +397,17 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         são sempre derivados aqui, nunca pedidos à IA.
 
         portfolio_urls (opcional, já validado pelo chamador): quando presente,
-        tem prioridade sobre o fallback LoremFlickr em hero.backgroundImage e
-        sections[].image — fotos reais do cliente sempre substituem stock
-        photo. Não afeta company.logo. Lista vazia/None preserva exatamente o
-        comportamento atual (zero mudança de comportamento sem portfólio).
+        tem prioridade sobre o banco de imagens curado (Unsplash, por
+        categoria de nicho) em hero.backgroundImage e sections[].image —
+        fotos reais do cliente sempre substituem stock photo. Não afeta
+        company.logo. Lista vazia/None preserva exatamente o comportamento
+        atual (zero mudança de comportamento sem portfólio).
+
+        Sem portfolio_urls, a imagem vem do banco curado por categoria
+        (mapear_categoria() + obter_imagens_categoria(), ver image_utils.py);
+        se o Unsplash não estiver configurado ou a busca falhar, cai pro
+        LoremFlickr com ?lock= estável (rede de segurança, nunca quebra a
+        geração do site).
         """
         nicho_slug = _slugify(nicho) or "negocio"
         empresa_slug = _slugify(nome_empresa) or "empresa"
@@ -395,6 +415,22 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         def _url_invalida(url: Optional[str]) -> bool:
             url = (url or "").strip().lower()
             return not url or "placeholder" in url
+
+        categoria_imagem = mapear_categoria(nicho)
+        try:
+            imagens_categoria = obter_imagens_categoria(categoria_imagem)
+        except ErroBancoImagens as e:
+            print(
+                f"Aviso: banco de imagens curado indisponível para "
+                f"'{categoria_imagem}' ({e}). Usando fallback LoremFlickr."
+            )
+            imagens_categoria = None
+
+        def _imagem_curada(chave_lock: str) -> Optional[str]:
+            if not imagens_categoria:
+                return None
+            indice = _lock_estavel(chave_lock) % len(imagens_categoria)
+            return imagens_categoria[indice]
 
         metadata = config.setdefault("metadata", {})
         if not (metadata.get("favicon") or "").strip():
@@ -408,17 +444,33 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         if portfolio_urls:
             hero["backgroundImage"] = portfolio_urls[0]
         elif _url_invalida(hero.get("backgroundImage")):
-            hero["backgroundImage"] = f"https://loremflickr.com/1920/600/{nicho_slug}"
+            imagem_curada = _imagem_curada(f"{empresa_slug}-hero")
+            if imagem_curada:
+                hero["backgroundImage"] = imagem_curada
+            else:
+                lock_hero = _lock_estavel(f"{empresa_slug}-hero")
+                hero["backgroundImage"] = f"https://loremflickr.com/1920/600/{nicho_slug}?lock={lock_hero}"
 
+        # Foto de banco (mesmo curada) não faz sentido como "logo" — trocado
+        # por um avatar de iniciais (determinístico: mesmo nome = mesmo
+        # resultado), usando a cor primária já gerada pra paleta do site.
         company = config.setdefault("company", {})
         if not tem_logo_explicito and _url_invalida(company.get("logo")):
-            company["logo"] = f"https://loremflickr.com/400/400/{nicho_slug},logo"
+            cor_fundo = (config.get("colors", {}).get("primary") or "#6366f1").lstrip("#")
+            company["logo"] = (
+                f"https://ui-avatars.com/api/?name={quote(nome_empresa)}"
+                f"&background={cor_fundo}&color=fff&size=400&bold=true"
+            )
 
         for i, secao in enumerate(config.get("sections", []) or []):
             if portfolio_urls:
                 secao["image"] = portfolio_urls[(i + 1) % len(portfolio_urls)]
             elif _url_invalida(secao.get("image")):
-                secao["image"] = f"https://loremflickr.com/500/400/{nicho_slug}?lock={i}"
+                imagem_curada = _imagem_curada(f"{empresa_slug}-secao-{i}")
+                if imagem_curada:
+                    secao["image"] = imagem_curada
+                else:
+                    secao["image"] = f"https://loremflickr.com/500/400/{nicho_slug}?lock={i}"
 
         for i, depoimento in enumerate(config.get("testimonials", []) or []):
             if _url_invalida(depoimento.get("avatar")):

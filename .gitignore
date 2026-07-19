@@ -79,3 +79,7 @@ assets/logos/*
 # fica versionado como template/estrutura
 leads/*.csv
 !leads/*.example.csv
+
+# Cache de imagens curadas por categoria (Unsplash) - estado gerado em
+# runtime, não código-fonte
+backend/cache/
