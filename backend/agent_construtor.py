@@ -44,6 +44,22 @@ def _lock_estavel(texto: str) -> int:
     return zlib.crc32(texto.encode("utf-8"))
 
 
+def _truncar_para_limite(texto: str, limite: int) -> str:
+    """
+    Corta um texto que excede um limite de caracteres, preferindo quebrar
+    no último espaço (sem partir palavra no meio) e removendo pontuação
+    solta que sobrar na borda do corte.
+    """
+    texto = texto.strip()
+    if len(texto) <= limite:
+        return texto
+    cortado = texto[:limite]
+    ultimo_espaco = cortado.rfind(" ")
+    if ultimo_espaco > 0:
+        cortado = cortado[:ultimo_espaco]
+    return cortado.rstrip(" ,.-–—")
+
+
 class AgenteConstrutor:
     """Agente que gera configuração de site baseado em dados de onboarding do cliente"""
 
@@ -364,7 +380,22 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         às vezes deixa passar apesar das instruções do prompt (ex: icon vazio).
         Falhas que exigem regenerar conteúdo (campos curtos/longos demais) não
         são adivinhadas aqui — o laço de retry em gerar_config_site tenta de novo.
+
+        Exceção: metadata.siteTitle. Com nicho + localização longos (ex.:
+        "Igreja Católica Apostólica Romana" + "Vitória ES - Mata da Praia"),
+        só as duas palavras-chave já somam mais que os 60 caracteres do
+        limite — a instrução do prompt (combinar nicho+localização no
+        siteTitle) e o limite de tamanho ficam matematicamente incompatíveis,
+        e o retry sozinho não resolve (resorteia o texto, não encurta a
+        combinação de entrada, tende a estourar de novo). Por isso, ao
+        contrário dos outros campos de tamanho, aqui aplicamos corte
+        determinístico em vez de só confiar no retry.
         """
+        metadata = config.get("metadata") or {}
+        site_title = (metadata.get("siteTitle") or "").strip()
+        if len(site_title) > 60:
+            metadata["siteTitle"] = _truncar_para_limite(site_title, 60)
+
         for i, servico in enumerate(config.get("services", []) or []):
             icon = (servico.get("icon") or "").strip()
             if not (1 <= len(icon) <= 2):
