@@ -80,6 +80,18 @@ async def formulario_demo():
 <script>
 const API_KEY = {api_key!r};
 
+// FastAPI/Pydantic devolve "detail" como string (erros HTTPException, ex.:
+// falha ao chamar a IA) ou como lista de objetos {{msg, loc, type}} (erros de
+// validação 422, ex.: portfolio_urls inválido) — sem isso, new Error(array)
+// vira literalmente "[object Object]" na tela.
+function formatarErroDetail(detail) {{
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {{
+    return detail.map(item => (item && item.msg) ? item.msg : JSON.stringify(item)).join('; ');
+  }}
+  return detail ? JSON.stringify(detail) : 'Erro ao gerar demo';
+}}
+
 document.getElementById('form-demo').addEventListener('submit', async (e) => {{
   e.preventDefault();
   const btn = document.getElementById('btn-gerar');
