@@ -80,6 +80,10 @@ assets/logos/*
 leads/*.csv
 !leads/*.example.csv
 
+# Compatibilidade com Codex (não usado neste projeto atualmente)
+AGENTS.md
+.agents/
+
 # Cache de imagens curadas por categoria (Unsplash) - estado gerado em
 # runtime, não código-fonte
 backend/cache/
