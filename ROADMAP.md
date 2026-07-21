@@ -152,6 +152,49 @@ gate for atingido.
 
 ---
 
+## Backlog — Ideias registradas (não priorizadas)
+
+Itens capturados por não desviar o foco do gate de vendas manuais (Fase
+2), mas que valem a pena revisitar quando fizer sentido pelo critério de
+cada um. Nenhum destes bloqueia venda no plano base hoje.
+
+- **Auditoria de nichos (matriz + config por segmento).** Ideia: mapear
+  tom de voz, paleta, estilo visual, categorias de imagem, CTA e
+  palavras-chave para os nichos identificados num vídeo de concorrente
+  (Advogado, Imobiliária, Academia, Clínica Médica, Clínica Estética,
+  Restaurante, Educação, Tecnologia, Serviços Locais) e propor um modelo
+  de configuração (YAML/JSON) por nicho, sem alterar o motor
+  (`agent_construtor.py`, congelado). Retomar só quando decidirem
+  expandir de nicho ativo — hoje o texto já se adapta a qualquer nicho
+  digitado (prompt genérico), a lacuna real é só na imagem (ver item
+  abaixo).
+- **Pipeline Inteligente de Imagens** — especificação completa em
+  `docs/pipeline_imagens_inteligente.md`. Substitui o banco fixo de
+  imagens por nicho (`image_utils.py::CATEGORIAS_NICHO`) por um sistema
+  de "briefing de cena" gerado por IA e resolvido por múltiplos
+  provedores em cascata (banco próprio → Pexels/Unsplash/Pixabay → IA
+  generativa). Critério de priorização documentado na spec (seção 8):
+  só após o gate de 15-20 vendas **e** quando o banco fixo atual se
+  mostrar insuficiente na prática.
+
+---
+
+## Decisões Técnicas Relevantes
+
+Só decisões arquiteturais que mudam o funcionamento do sistema — não é
+changelog de todo commit, é registro do "porquê" pra não se perder.
+
+- **2026-07-21 — Demo Preview migrou de arquivos para PostgreSQL.**
+  Motivo: arquivo em `configs/` vive dentro do container do backend, sem
+  volume Docker — toda demo gerada sumia quando o container era
+  reconstruído. Solução: reusa `repository.upsert_site()`/`obter_site()`,
+  mesmo mecanismo já validado em produção via `app.py`. Status:
+  implementado e validado com teste de integração isolado (WSL Docker,
+  banco descartável — geração, preview, restart do backend, persistência
+  confirmada). Commit `a7ca5d2`.
+
+---
+
 ## Princípios arquiteturais (mantidos)
 
 1. **JSON Schema Driven** — o template HTML depende só do `site-config.json`;
