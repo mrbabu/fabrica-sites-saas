@@ -18,15 +18,20 @@ servidor) em vez do fetch() client-side atual.
 
 import os
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
+
+from auth_demo import exigir_login_demo
 
 router = APIRouter(tags=["Demo DFY (ferramenta interna)"])
 
 
 @router.get("/demo", response_class=HTMLResponse)
-async def formulario_demo():
+async def formulario_demo(request: Request):
     """Formulário de geração de demo DFY — nome, nicho, localização e WhatsApp obrigatórios."""
+    redirect = exigir_login_demo(request)
+    if redirect:
+        return redirect
     api_key = os.getenv("WEBHOOK_API_KEY", "")
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -50,7 +55,7 @@ async def formulario_demo():
 </head>
 <body>
   <h1>Gerador de Demo DFY</h1>
-  <p class="subtitle">Ferramenta interna — não é o produto final do cliente.</p>
+  <p class="subtitle">Ferramenta interna — não é o produto final do cliente. <a href="/demo/lista">Ver sites já gerados</a></p>
   <form id="form-demo">
     <label>Nome da empresa</label>
     <input name="nome_empresa" required>

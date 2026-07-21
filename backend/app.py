@@ -15,10 +15,12 @@ except ImportError:
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Header, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel, Field, field_validator, ConfigDict, HttpUrl
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
 import os
+import secrets
 import sys
 import logging
 import re
@@ -37,6 +39,8 @@ try:
     from routers.whatsapp_inbound import router as whatsapp_inbound_router
     from routers.demo_dfy import router as demo_dfy_router
     from routers.demo_preview import router as demo_preview_router
+    from routers.demo_lista import router as demo_lista_router
+    from routers.demo_login import router as demo_login_router
     from routers.demo import router as demo_router
 except ImportError as e:
     print(f"❌ Erro ao importar módulos locais: {e}")
@@ -87,11 +91,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Sessão de login da ferramenta interna de demo (ver backend/auth_demo.py).
+# Sem SESSION_SECRET_KEY no ambiente, gera uma chave aleatória por processo
+# — login continua funcionando, só derruba sessões abertas a cada restart
+# (aceitável; nunca cair pra uma chave fixa/previsível no código).
+_session_secret = os.getenv("SESSION_SECRET_KEY")
+if not _session_secret:
+    logging.getLogger("FabricaSitesAPI").warning(
+        "⚠️ SESSION_SECRET_KEY não definida — gerando chave temporária "
+        "(sessões de /demo serão derrubadas no próximo restart)"
+    )
+    _session_secret = secrets.token_hex(32)
+app.add_middleware(SessionMiddleware, secret_key=_session_secret, max_age=15 * 60)
+
 # Roteador de webhook inbound do WhatsApp (só recebe/registra — não qualifica
 # nem responde sozinho, ver backend/routers/whatsapp_inbound.py)
 app.include_router(whatsapp_inbound_router)
 app.include_router(demo_dfy_router)
 app.include_router(demo_preview_router)
+app.include_router(demo_lista_router)
+app.include_router(demo_login_router)
 app.include_router(demo_router)
 
 # Inicializar agente (singleton)

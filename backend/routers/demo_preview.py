@@ -19,10 +19,11 @@ import json
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
+from auth_demo import exigir_login_demo
 from db import get_db
 import repository
 
@@ -33,8 +34,11 @@ CAMINHO_INDEX_HTML = PASTA_RAIZ / "index.html"
 
 
 @router.get("/demo/preview/{slug}", response_class=HTMLResponse)
-async def preview_demo(slug: str, db: Session = Depends(get_db)):
+async def preview_demo(slug: str, request: Request, db: Session = Depends(get_db)):
     """Renderiza uma demo já gerada, injetando site-config no template de produção."""
+    redirect = exigir_login_demo(request)
+    if redirect:
+        return redirect
     if not re.match(r"^[a-z0-9-]+$", slug):
         raise HTTPException(status_code=400, detail="Slug inválido")
 

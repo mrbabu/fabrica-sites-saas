@@ -34,6 +34,11 @@ def obter_site(db: Session, slug: str) -> Optional[Site]:
     return db.query(Site).filter(Site.slug == slug).one_or_none()
 
 
+def listar_sites(db: Session) -> list[Site]:
+    """Lista todos os sites salvos, mais recente primeiro"""
+    return db.query(Site).order_by(Site.created_at.desc()).all()
+
+
 def registrar_lead_inbound(db: Session, whatsapp: str, mensagem: str = "") -> Lead:
     """
     Registra que um número iniciou contato via WhatsApp (idempotente por
