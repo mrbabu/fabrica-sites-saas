@@ -48,7 +48,7 @@ class DemoDfyRequest(BaseModel):
     whatsapp_contato: str = Field(..., min_length=10, max_length=20, description="WhatsApp REAL do negócio, obrigatório")
     cor_primaria: str = Field(default="#0D9488", description="Cor primária em hexadecimal")
     logo_url: Optional[str] = Field(default=None, description="URL pública de imagem já existente — nunca upload")
-    descricao_negocio: Optional[str] = Field(default=None, max_length=1000, description="Contexto livre sobre o negócio, informado pelo cliente")
+    descricao_negocio: Optional[str] = Field(default=None, max_length=2000, description="Contexto livre sobre o negócio, informado pelo cliente")
     portfolio_urls: Optional[list[str]] = Field(
         default=None,
         max_length=8,
