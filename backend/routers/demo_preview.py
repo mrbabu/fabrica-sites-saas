@@ -8,34 +8,41 @@ correspondente injetado — mesmo método já validado manualmente em sessão
 anterior (substituir o fetch('./site-config.json') por um <script> com o
 JSON inline), só que servido dinamicamente em vez de copiado à mão.
 
-Sem banco, sem login, sem edição, sem upload — só leitura de
-configs/<slug>.json (mesmo arquivo que POST /api/v1/demo-dfy já produz).
+Lê do Postgres (tabela `sites`, mesmo mecanismo de /webhook/whatsapp — ver
+repository.py), não mais de configs/<slug>.json: um arquivo dentro do
+container do backend não sobrevive a um rebuild (não é volume Docker), o
+que apagava toda demo gerada sempre que o backend era reconstruído. Sem
+login, sem edição, sem upload — só leitura.
 """
 
+import json
 import re
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
+from sqlalchemy.orm import Session
+
+from db import get_db
+import repository
 
 router = APIRouter(tags=["Demo DFY (ferramenta interna)"])
 
 PASTA_RAIZ = Path(__file__).resolve().parent.parent.parent
 CAMINHO_INDEX_HTML = PASTA_RAIZ / "index.html"
-PASTA_CONFIGS = PASTA_RAIZ / "configs"
 
 
 @router.get("/demo/preview/{slug}", response_class=HTMLResponse)
-async def preview_demo(slug: str):
+async def preview_demo(slug: str, db: Session = Depends(get_db)):
     """Renderiza uma demo já gerada, injetando site-config no template de produção."""
     if not re.match(r"^[a-z0-9-]+$", slug):
         raise HTTPException(status_code=400, detail="Slug inválido")
 
-    caminho_config = PASTA_CONFIGS / f"{slug}.json"
-    if not caminho_config.exists():
+    site = repository.obter_site(db, slug)
+    if site is None:
         raise HTTPException(status_code=404, detail=f"Demo '{slug}' não encontrada")
 
-    config_json = caminho_config.read_text(encoding="utf-8")
+    config_json = json.dumps(site.config, ensure_ascii=False)
     template_html = CAMINHO_INDEX_HTML.read_text(encoding="utf-8")
 
     injecao = f"<script>window.__SITE_CONFIG__ = {config_json};</script>\n</head>"

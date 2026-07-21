@@ -16,10 +16,13 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy.orm import Session
 
 from agent_construtor import AgenteConstrutor
 from image_utils import _slugify
 from auth import verificar_api_key
+from db import get_db
+import repository
 
 router = APIRouter(tags=["Demo DFY (ferramenta interna)"])
 
@@ -85,9 +88,24 @@ class DemoDfyRequest(BaseModel):
 
 
 @router.post("/api/v1/demo-dfy", dependencies=[Depends(verificar_api_key)])
-async def gerar_demo(payload: DemoDfyRequest):
-    """Gera uma demo DFY chamando o motor real e salva em configs/<slug>.json."""
+async def gerar_demo(payload: DemoDfyRequest, db: Session = Depends(get_db)):
+    """
+    Gera uma demo DFY chamando o motor real e persiste no Postgres (tabela
+    `sites`, mesmo mecanismo de /webhook/whatsapp — ver repository.py).
+
+    A gravação no Postgres é síncrona (não BackgroundTasks): o formulário em
+    routers/demo.py navega pro preview_url assim que a resposta chega, então
+    o registro precisa existir no banco antes de responder, sem risco de
+    corrida com o navegador batendo no preview antes do commit.
+
+    Ainda chama agente.executar(caminho_saida=...) sem alterar
+    agent_construtor.py (motor congelado) — o arquivo em configs/ continua
+    sendo escrito como efeito colateral inofensivo (é assim que o motor já
+    funciona pra todos os chamadores, inclusive scripts de CLI), mas deixou
+    de ser a fonte de verdade: só o Postgres é lido por /demo/preview agora.
+    """
     agente = _obter_agente()
+    slug = _slugify(payload.nome_empresa)
     try:
         config = agente.executar(
             nome_empresa=payload.nome_empresa,
@@ -98,12 +116,12 @@ async def gerar_demo(payload: DemoDfyRequest):
             logo_url=payload.logo_url,
             descricao_negocio=payload.descricao_negocio,
             portfolio_urls=payload.portfolio_urls,
-            caminho_saida=str(PASTA_CONFIGS / f"{_slugify(payload.nome_empresa)}.json"),
+            caminho_saida=str(PASTA_CONFIGS / f"{slug}.json"),
         )
+        repository.upsert_site(db, slug, payload.nome_empresa, payload.nicho, config)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao gerar demo: {e}")
 
-    slug = _slugify(payload.nome_empresa)
     return {
         "slug": slug,
         "site_title": config.get("metadata", {}).get("siteTitle", ""),
