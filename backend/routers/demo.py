@@ -112,7 +112,7 @@ document.getElementById('form-demo').addEventListener('submit', async (e) => {{
       body: JSON.stringify(dados),
     }});
     const json = await resp.json();
-    if (!resp.ok) throw new Error(json.detail || 'Erro ao gerar demo');
+    if (!resp.ok) throw new Error(formatarErroDetail(json.detail));
 
     window.location.href = json.preview_url;
   }} catch (err) {{
