@@ -1,0 +1,74 @@
+/* Fábrica de Sites AI — design system compartilhado (vendas.html + index.html)
+   Sem build step: editar direto, sem preprocessor. Ao editar, incrementar a
+   query string de cache-busting nos <link> que referenciam este arquivo
+   (design-system.css?v=1 -> ?v=2). Ver docs/design_system.md pro racional
+   de cada decisão. */
+
+html { scroll-behavior: smooth; }
+
+/* Textura sutil, site-wide — acabamento tátil/editorial, não decorativo por decorativo */
+.grain-overlay {
+    position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0.035; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Revelação de seção/cartão ao rolar — stagger real via transition-delay por item */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+/* Entrada da hero (carregamento, não scroll) */
+.hero-in { animation: heroIn 0.8s ease-out both; }
+@keyframes heroIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.word-reveal { display: inline-block; opacity: 0; transform: translateY(16px); animation: wordUp 0.65s cubic-bezier(.2,.7,.2,1) forwards; }
+@keyframes wordUp { to { opacity: 1; transform: translateY(0); } }
+
+/* Faixa-ticker contínua — elemento de assinatura, 100% orientado por dado */
+.ticker-clip { clip-path: polygon(0 1.2vw, 100% 0, 100% 100%, 0 100%); }
+.ticker-wrap { overflow: hidden; }
+.ticker-track { display: flex; width: max-content; animation: ticker 26s linear infinite; }
+.ticker-wrap:hover .ticker-track { animation-play-state: paused; }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* Parallax do hero — JS aplica translateY, CSS só prepara o palco */
+.hero-media { position: absolute; inset: -8% 0 -8% 0; }
+.hero-media img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Botão magnético — JS aplica o transform, CSS só suaviza o retorno */
+.magnetic { transition: transform 0.25s cubic-bezier(.2,.9,.3,1); will-change: transform; }
+
+/* Carrossel horizontal — vernáculo de catálogo/stories, sem scrollbar visível */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* FAQ em <details> — remove o marcador nativo, ícone customizado rotaciona ao abrir */
+details summary { list-style: none; }
+details summary::-webkit-details-marker { display: none; }
+details .faq-icon { transition: transform 0.25s ease; }
+details[open] .faq-icon { transform: rotate(180deg); }
+details[open] summary { border-bottom: 1px solid; }
+
+/* Botão flutuante de WhatsApp */
+.whatsapp-pulse { animation: waPulse 2.6s ease-in-out infinite; }
+@keyframes waPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0.10); } 50% { box-shadow: 0 0 0 9px rgba(0,0,0,0); } }
+.wa-label-fade { transition: opacity 0.35s ease; }
+
+/* Cartão com efeito glassmorphism leve — usado em seções de "prova real" (screenshots, tecnologia) */
+.glass-card {
+    background: rgba(255, 255, 255, 0.62);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid currentColor; outline-offset: 3px; border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+    .hero-in, .word-reveal { animation: none !important; opacity: 1 !important; transform: none !important; }
+    .whatsapp-pulse { animation: none !important; }
+    .ticker-track { animation: none !important; }
+    .magnetic { transition: none !important; }
+    html { scroll-behavior: auto; }
+}

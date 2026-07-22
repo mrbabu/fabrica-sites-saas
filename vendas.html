@@ -13,44 +13,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/design-system.css?v=1">
     <style>
         * { font-family: 'Inter', sans-serif; }
         .font-display { font-family: 'Fraunces', serif; }
-        html { scroll-behavior: smooth; }
-
-        .grain-overlay {
-            position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0.035; mix-blend-mode: overlay;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-        }
-
-        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s ease; }
-        .reveal.is-visible { opacity: 1; transform: translateY(0); }
-        .hero-in { animation: heroIn 0.8s ease-out both; }
-        @keyframes heroIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .word-reveal { display: inline-block; opacity: 0; transform: translateY(14px); animation: wordUp 0.6s ease forwards; }
-        @keyframes wordUp { to { opacity: 1; transform: translateY(0); } }
-
-        .whatsapp-pulse { animation: waPulse 2.6s ease-in-out infinite; }
-        @keyframes waPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0.10); } 50% { box-shadow: 0 0 0 9px rgba(0,0,0,0); } }
-        .wa-label-fade { transition: opacity 0.35s ease; }
-
-        a:focus-visible, button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 4px; }
-
-        @media (prefers-reduced-motion: reduce) {
-            .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
-            .hero-in, .word-reveal { animation: none !important; opacity: 1 !important; transform: none !important; }
-            .whatsapp-pulse { animation: none !important; }
-            html { scroll-behavior: auto; }
-        }
     </style>
 </head>
 <body class="text-gray-900 antialiased">
     <div class="grain-overlay"></div>
     <div id="app"></div>
 
+    <script src="assets/js/motion.js?v=1"></script>
     <script>
         let config = {};
-        const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         async function loadConfig() {
             try {
@@ -76,10 +51,13 @@
             app.innerHTML = `
                 ${renderNavigation()}
                 ${renderHero()}
+                ${renderTicker()}
+                ${renderProofStrip()}
                 ${renderHowItWorks()}
                 ${renderDifferentials()}
                 ${renderPortfolio()}
                 ${renderPricing()}
+                ${renderPlatformProof()}
                 ${renderFAQ()}
                 ${renderCTA()}
                 ${renderFooter()}
@@ -89,11 +67,13 @@
             setupNavBehavior();
             initScrollReveal();
             initWhatsAppLabel();
+            initMagnetic();
+            initCountUp();
         }
 
-        function setFavicon(emoji) {
-            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="0.9em" font-size="90">${emoji}</text></svg>`;
-            document.getElementById('favicon-link').setAttribute('href', 'data:image/svg+xml,' + encodeURIComponent(svg));
+        function formatDate(iso) {
+            const [y, m, d] = (iso || '').split('-');
+            return (y && m && d) ? `${d}/${m}/${y}` : '';
         }
 
         function setupNavBehavior() {
@@ -107,46 +87,6 @@
                 onScroll();
             }
         }
-
-        function initScrollReveal() {
-            const items = document.querySelectorAll('.reveal');
-            if (prefersReducedMotion() || !('IntersectionObserver' in window)) {
-                items.forEach(el => el.classList.add('is-visible'));
-                return;
-            }
-            const io = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('is-visible');
-                        io.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-            items.forEach(el => io.observe(el));
-        }
-
-        function initWhatsAppLabel() {
-            const label = document.getElementById('wa-label');
-            if (!label || prefersReducedMotion()) return;
-            const phrases = ['Fale agora', 'Resposta rápida'];
-            let i = 0;
-            setInterval(() => {
-                i = (i + 1) % phrases.length;
-                label.style.opacity = '0';
-                setTimeout(() => { label.textContent = phrases[i]; label.style.opacity = '1'; }, 350);
-            }, 3400);
-        }
-
-        function staggerWords(text) {
-            return text.split(' ').map((w, i) => `<span class="word-reveal" style="animation-delay:${(i * 0.045).toFixed(2)}s">${w}&nbsp;</span>`).join('');
-        }
-
-        function waLink(numeroRaw, mensagem) {
-            const numero = (numeroRaw || '').replace(/\D/g, '');
-            return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
-        }
-
-        const WHATSAPP_ICON = `<svg viewBox="0 0 32 32" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M16.02 3C9.4 3 4 8.38 4 15c0 2.34.64 4.53 1.76 6.42L4 29l7.76-1.7A11.9 11.9 0 0 0 16.02 27C22.64 27 28 21.62 28 15S22.64 3 16.02 3Zm6.98 16.9c-.3.85-1.72 1.63-2.38 1.72-.61.09-1.36.13-2.2-.14-.5-.16-1.15-.37-1.98-.73-3.5-1.51-5.78-5.05-5.96-5.29-.17-.24-1.43-1.9-1.43-3.62s.9-2.57 1.22-2.92c.32-.35.7-.44.93-.44.23 0 .47 0 .67.01.22.01.51-.08.79.6.3.72 1.02 2.49 1.11 2.67.09.18.15.39.03.63-.12.24-.18.39-.36.6-.18.21-.38.47-.54.63-.18.18-.37.37-.16.73.21.36.94 1.55 2.02 2.51 1.39 1.24 2.56 1.62 2.92 1.8.36.18.57.15.78-.09.21-.24.9-1.05 1.14-1.41.24-.36.48-.3.81-.18.33.12 2.1.99 2.46 1.17.36.18.6.27.69.42.09.15.09.85-.21 1.7Z"/></svg>`;
 
         function waHref(mensagem) {
             return waLink(config.company.whatsapp, mensagem);
@@ -180,21 +120,79 @@
             `;
         }
 
+        function renderHeroVisual() {
+            const cards = (config.platformProof && config.platformProof.cards) || [];
+            if (cards.length === 0) return '';
+            return `
+                <div class="relative h-64 sm:h-80 lg:h-[420px] mt-4 lg:mt-0">
+                    <div class="absolute inset-x-6 sm:inset-x-10 lg:inset-x-0 top-0 w-[85%] sm:w-3/4 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20" style="transform: rotate(-3deg);">
+                        <img src="${cards[1].image}?v=1" alt="${cards[1].imageAlt}" class="w-full h-40 sm:h-52 lg:h-64 object-cover object-top" loading="lazy">
+                    </div>
+                    <div class="hidden sm:block absolute top-10 right-0 w-2/3 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20" style="transform: rotate(4deg);">
+                        <img src="${cards[0].image}?v=1" alt="${cards[0].imageAlt}" class="w-full h-40 lg:h-48 object-cover object-top" loading="lazy">
+                    </div>
+                    <div class="hidden lg:block absolute -bottom-2 left-2 w-1/2 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20" style="transform: rotate(-6deg);">
+                        <img src="${cards[2].image}?v=1" alt="${cards[2].imageAlt}" class="w-full h-40 object-cover object-top" loading="lazy">
+                    </div>
+                </div>
+            `;
+        }
+
         function renderHero() {
             const link = waHref(`Olá! Vi a página da ${config.company.name} e quero meu site.`);
             return `
                 <section class="hero-in relative overflow-hidden min-h-[80vh] flex items-center" style="background: linear-gradient(150deg, ${config.colors.primary} 10%, ${config.colors.primaryDark} 60%, ${config.colors.text} 130%)">
-                    <div class="max-w-4xl mx-auto px-5 sm:px-6 py-24 text-center relative z-10">
-                        <span class="font-display italic inline-block text-base sm:text-lg text-white/85 mb-5">${config.company.tagline}</span>
-                        <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-medium mb-6 leading-[1.1] tracking-tight text-white">
-                            ${staggerWords(config.hero.title)}
-                        </h1>
-                        <p class="text-lg md:text-xl mb-10 max-w-2xl mx-auto text-white/90 leading-relaxed">
-                            ${config.hero.subtitle}
-                        </p>
-                        <a href="${link}" target="_blank" rel="noopener" class="bg-white px-8 py-4 rounded-full font-bold text-base inline-flex items-center justify-center gap-2 transition transform hover:scale-105 hover:shadow-2xl" style="color: ${config.colors.primary}">
-                            ${WHATSAPP_ICON} ${config.hero.ctaText}
-                        </a>
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6 py-20 sm:py-24 relative z-10 w-full">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+                            <div class="text-center lg:text-left">
+                                <span class="font-display italic inline-block text-base sm:text-lg text-white/85 mb-5">Prospecção + geração de site com IA</span>
+                                <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-medium mb-6 leading-[1.1] tracking-tight text-white">
+                                    ${staggerWords(config.hero.title)}
+                                </h1>
+                                <p class="text-lg md:text-xl mb-10 max-w-xl mx-auto lg:mx-0 text-white/90 leading-relaxed">
+                                    ${config.hero.subtitle}
+                                </p>
+                                <a href="${link}" target="_blank" rel="noopener" id="hero-cta" class="magnetic bg-white px-8 py-4 rounded-full font-bold text-base inline-flex items-center justify-center gap-2 transition hover:shadow-2xl" style="color: ${config.colors.primary}">
+                                    ${WHATSAPP_ICON} ${config.hero.ctaText}
+                                </a>
+                            </div>
+                            ${renderHeroVisual()}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function tickerItems() {
+            const items = [];
+            if (config.company.tagline) items.push(config.company.tagline);
+            (config.differentials || []).forEach(d => items.push(d.title));
+            (config.portfolio || []).forEach(p => items.push(p.nicho.split(' — ')[0]));
+            if (config.proof && config.proof.leadsMapeados) items.push(`${config.proof.leadsMapeados} empresas locais mapeadas`);
+            items.push('Resposta rápida no WhatsApp');
+            return items;
+        }
+
+        function renderTicker() {
+            return renderTickerMarkup(tickerItems(), config.colors.primaryDark);
+        }
+
+        function renderProofStrip() {
+            const leads = (config.proof && config.proof.leadsMapeados) || 0;
+            const demos = (config.portfolio || []).length;
+            if (!leads && !demos) return '';
+            const asOf = config.proof && config.proof.asOf ? formatDate(config.proof.asOf) : '';
+            return `
+                <section class="reveal py-14">
+                    <div class="max-w-3xl mx-auto px-5 sm:px-6 grid grid-cols-2 gap-6 text-center">
+                        <div class="glass-card px-6 py-8 rounded-3xl">
+                            <div class="font-display text-4xl md:text-5xl font-medium" style="color: ${config.colors.primary}"><span data-countup data-target="${leads}" data-decimals="0">0</span></div>
+                            <p class="text-sm mt-2" style="color: ${config.colors.textLight}">empresas locais já mapeadas sem site${asOf ? `<span class="block text-xs opacity-70 mt-1">dado de ${asOf}</span>` : ''}</p>
+                        </div>
+                        <div class="glass-card px-6 py-8 rounded-3xl">
+                            <div class="font-display text-4xl md:text-5xl font-medium" style="color: ${config.colors.primary}"><span data-countup data-target="${demos}" data-decimals="0">0</span></div>
+                            <p class="text-sm mt-2" style="color: ${config.colors.textLight}">demonstrações reais já entregues</p>
+                        </div>
                     </div>
                 </section>
             `;
@@ -206,6 +204,23 @@
                     <span class="w-6 h-px" style="background-color: ${config.colors.accent}"></span>
                     <span class="font-display italic text-base" style="color: ${config.colors.primary}">${text}</span>
                     <span class="w-6 h-px" style="background-color: ${config.colors.accent}"></span>
+                </div>
+            `;
+        }
+
+        function renderFlowSteps(steps) {
+            return `
+                <div class="relative">
+                    <div class="hidden md:block absolute top-6 left-0 right-0 h-px" style="background-color: ${config.colors.border}"></div>
+                    <div class="relative grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-6">
+                        ${steps.map((s, i) => `
+                            <div class="reveal relative" style="transition-delay: ${i * 90}ms">
+                                <div class="relative z-10 w-12 h-12 rounded-full flex items-center justify-center font-display text-lg font-bold text-white mb-4 mx-auto md:mx-0" style="background-color: ${config.colors.primary}">${s.step}</div>
+                                <h3 class="text-lg font-bold mb-2 text-center md:text-left" style="color: ${config.colors.text}">${s.title}</h3>
+                                <p class="text-sm leading-relaxed text-center md:text-left" style="color: ${config.colors.textLight}">${s.description}</p>
+                            </div>
+                        `).join('')}
+                    </div>
                 </div>
             `;
         }
@@ -222,12 +237,34 @@
                                 Do WhatsApp ao site no ar
                             </h2>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            ${steps.map(s => `
-                                <div class="p-6">
-                                    <div class="font-display text-3xl italic mb-3" style="color: ${config.colors.accent}">${s.step}</div>
-                                    <h3 class="text-lg font-bold mb-2" style="color: ${config.colors.text}">${s.title}</h3>
-                                    <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">${s.description}</p>
+                        ${renderFlowSteps(steps)}
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderPlatformProof() {
+            const p = config.platformProof;
+            if (!p || !(p.cards || []).length) return '';
+            return `
+                <section class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+                        <div class="text-center max-w-2xl mx-auto mb-14">
+                            ${sectionEyebrow(p.eyebrow || 'Por trás da plataforma')}
+                            <h2 class="font-display text-3xl md:text-4xl font-medium mb-4 tracking-tight" style="color: ${config.colors.text}">
+                                ${p.heading}
+                            </h2>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            ${p.cards.map((card, i) => `
+                                <div class="reveal glass-card rounded-2xl overflow-hidden shadow-sm" style="transition-delay: ${i * 90}ms">
+                                    <img src="${card.image}?v=1" alt="${card.imageAlt || card.title}" class="w-full h-40 object-cover object-top" loading="lazy">
+                                    <div class="p-6">
+                                        <div class="text-2xl mb-2">${card.icon}</div>
+                                        <h3 class="text-base font-bold mb-1" style="color: ${config.colors.text}">${card.title}</h3>
+                                        <p class="text-xs font-semibold mb-2" style="color: ${config.colors.primary}">${card.subtitle}</p>
+                                        <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">${card.description}</p>
+                                    </div>
                                 </div>
                             `).join('')}
                         </div>
@@ -276,9 +313,9 @@
                                 Exemplos reais que já entregamos
                             </h2>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            ${items.map(item => `
-                                <a href="${item.url}" target="_blank" rel="noopener" class="block bg-white p-8 rounded-2xl border transition hover:shadow-xl hover:-translate-y-1" style="border-color: ${config.colors.border}">
+                        <div class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0 sm:justify-center sm:flex-wrap">
+                            ${items.map((item, i) => `
+                                <a href="${item.url}" target="_blank" rel="noopener" class="reveal snap-start shrink-0 w-[85%] sm:w-[380px] block bg-white p-8 rounded-2xl border transition hover:shadow-xl hover:-translate-y-1" style="border-color: ${config.colors.border}; transition-delay: ${i * 90}ms">
                                     <h3 class="font-display text-xl font-medium mb-2" style="color: ${config.colors.text}">${item.name}</h3>
                                     <p class="text-sm mb-4" style="color: ${config.colors.textLight}">${item.nicho}</p>
                                     <span class="text-sm font-semibold inline-flex items-center gap-1" style="color: ${config.colors.primary}">Ver site →</span>
@@ -292,24 +329,25 @@
 
         function renderPricing() {
             const p = config.pricing;
-            if (!p) return '';
-            const link = waHref(`Olá! Vi o plano de ${p.price}${p.period} da ${config.company.name} e quero saber mais.`);
+            if (!p || !p.base) return '';
+            const link = waHref(`Olá! Vi o plano da ${config.company.name} e quero saber mais.`);
             return `
                 <section id="preco" class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08">
-                    <div class="max-w-lg mx-auto px-5 sm:px-6">
+                    <div class="max-w-2xl mx-auto px-5 sm:px-6">
                         <div class="text-center mb-10">
                             ${sectionEyebrow('Investimento')}
                             <h2 class="font-display text-3xl md:text-4xl font-medium tracking-tight" style="color: ${config.colors.text}">
-                                Sem letra miúda
+                                ${p.garantia ? p.garantia.title : 'Sem letra miúda'}
                             </h2>
                         </div>
-                        <div class="bg-white p-10 rounded-3xl shadow-lg text-center" style="border: 1px solid ${config.colors.border}">
+                        <div class="glass-card bg-white p-10 rounded-3xl shadow-lg text-center mb-6" style="border: 1px solid ${config.colors.border}">
+                            <p class="text-xs font-bold uppercase tracking-widest mb-3" style="color: ${config.colors.primary}">${p.base.title || 'Plano Base'}</p>
                             <div class="mb-6">
-                                <span class="font-display text-5xl font-medium" style="color: ${config.colors.primary}">${p.price}</span>
-                                <span class="text-lg" style="color: ${config.colors.textLight}">${p.period}</span>
+                                <span class="font-display text-5xl font-medium" style="color: ${config.colors.primary}">${p.base.price}</span>
+                                <span class="text-lg" style="color: ${config.colors.textLight}">${p.base.period}</span>
                             </div>
-                            <ul class="space-y-3 mb-8 text-left">
-                                ${p.features.map(f => `
+                            <ul class="space-y-3 mb-8 text-left max-w-sm mx-auto">
+                                ${p.base.features.map(f => `
                                     <li class="flex items-start gap-2 text-sm" style="color: ${config.colors.text}">
                                         <span class="mt-0.5 flex-shrink-0" style="color: ${config.colors.accent}">✓</span> ${f}
                                     </li>
@@ -319,6 +357,18 @@
                                 ${p.ctaText}
                             </a>
                         </div>
+                        ${p.opcionais ? `
+                            <div class="bg-white p-8 rounded-2xl border mb-6" style="border-color: ${config.colors.border}">
+                                <p class="text-xs font-bold uppercase tracking-widest mb-2" style="color: ${config.colors.primary}">${p.opcionais.title}</p>
+                                <p class="text-sm mb-4" style="color: ${config.colors.textLight}">${p.opcionais.description}</p>
+                                <ul class="space-y-2.5">
+                                    ${p.opcionais.items.map(o => `
+                                        <li class="text-sm" style="color: ${config.colors.text}"><span class="font-semibold">${o.name}</span> <span style="color: ${config.colors.textLight}">— ${o.description}</span></li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        ${p.garantia ? `<p class="text-center text-sm" style="color: ${config.colors.textLight}">${p.garantia.text}</p>` : ''}
                     </div>
                 </section>
             `;
@@ -341,7 +391,9 @@
                                 <details class="bg-white p-6 rounded-2xl shadow-sm">
                                     <summary class="font-bold cursor-pointer flex justify-between items-center gap-4" style="color: ${config.colors.text}">
                                         <span>${item.question}</span>
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="color:${config.colors.primary}"><polyline points="6 9 12 15 18 9"/></svg>
+                                        <span class="faq-icon flex-shrink-0" style="color: ${config.colors.primary}">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                        </span>
                                     </summary>
                                     <p class="mt-4 leading-relaxed" style="color: ${config.colors.textLight}">${item.answer}</p>
                                 </details>

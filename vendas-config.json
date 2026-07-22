@@ -1,15 +1,15 @@
 {
   "metadata": {
-    "siteTitle": "Fábrica de Sites — Site profissional pro seu negócio local",
-    "siteDescription": "Site profissional, pronto em minutos, feito pra transformar visitante em cliente pelo WhatsApp. A partir de R$149/mês.",
+    "siteTitle": "Fábrica de Sites AI — Encontramos seu próximo cliente e criamos o site dele com IA",
+    "siteDescription": "Prospecção + geração de site com Inteligência Artificial: encontramos empresas sem presença digital e entregamos uma demonstração pronta em minutos. A partir de R$149/mês.",
     "favicon": "🏗️",
-    "keywords": ["site profissional", "site para clínica", "site local", "WhatsApp", "SEO local", "Grande Vitória", "Espírito Santo"],
-    "ogTitle": "Fábrica de Sites — Site profissional pro seu negócio local",
-    "ogDescription": "Site profissional, pronto em minutos, feito pra transformar visitante em cliente pelo WhatsApp.",
+    "keywords": ["site profissional", "IA", "prospecção de clientes", "site para clínica", "WhatsApp", "SEO local", "Grande Vitória", "Espírito Santo"],
+    "ogTitle": "Fábrica de Sites AI — Prospecção e geração de site com IA",
+    "ogDescription": "Encontramos empresas sem site, criamos uma demonstração personalizada com IA e entregamos pronto pra vender.",
     "ogImage": ""
   },
   "company": {
-    "name": "Fábrica de Sites",
+    "name": "Fábrica de Sites AI",
     "tagline": "Site profissional, no ar em minutos",
     "whatsapp": "+5527998742407"
   },
@@ -24,9 +24,13 @@
     "border": "#E4DFD3"
   },
   "hero": {
-    "title": "Seu negócio merece ser encontrado antes do concorrente",
-    "subtitle": "Fazemos o site do seu negócio local — clínica, consultório, pousada, prestador de serviço — pronto em minutos, com o WhatsApp no centro da conversão. Sem enrolação, sem mensalidade de agência.",
+    "title": "Sites profissionais criados com IA, prontos pra vender mais",
+    "subtitle": "Encontramos empresas locais sem presença digital, criamos uma demonstração personalizada e entregamos um site pronto pra converter — tudo em minutos, com o WhatsApp no centro da conversa.",
     "ctaText": "Quero meu site"
+  },
+  "proof": {
+    "leadsMapeados": 64,
+    "asOf": "2026-07-22"
   },
   "howItWorks": [
     {
@@ -36,8 +40,8 @@
     },
     {
       "step": "2",
-      "title": "Geramos uma demo em minutos",
-      "description": "Nossa IA monta um site completo com o conteúdo do seu negócio — não é um template genérico, é feito pra você."
+      "title": "Nossa IA cria a demonstração",
+      "description": "Analisa o seu negócio, escreve o conteúdo, escolhe as imagens e monta um site completo — não é um template genérico, é feito pra você."
     },
     {
       "step": "3",
@@ -46,10 +50,40 @@
     },
     {
       "step": "4",
-      "title": "Site no ar, com seu domínio",
-      "description": "Publicamos com endereço próprio (seunegocio.com.br) e o botão de WhatsApp já configurado pra receber clientes."
+      "title": "Site no ar, pronto pra vender",
+      "description": "Publicamos com o botão de WhatsApp já configurado pra receber clientes."
     }
   ],
+  "platformProof": {
+    "eyebrow": "Por trás da plataforma",
+    "heading": "Não somos apenas uma agência. Temos uma plataforma própria.",
+    "cards": [
+      {
+        "icon": "🔎",
+        "title": "Encontramos oportunidades",
+        "subtitle": "Hunter Online",
+        "description": "Empresas sem presença digital identificadas por região e segmento.",
+        "image": "assets/screenshots/hunter-leads.png",
+        "imageAlt": "Tela real do Hunter Online mostrando leads encontrados pela plataforma"
+      },
+      {
+        "icon": "🤖",
+        "title": "Criamos demonstrações automaticamente",
+        "subtitle": "Site Constructor",
+        "description": "IA gera estrutura, textos e apresentação inicial.",
+        "image": "assets/screenshots/site-constructor.png",
+        "imageAlt": "Tela real do Site Constructor, o gerador de sites com IA"
+      },
+      {
+        "icon": "🚀",
+        "title": "Apresentamos antes de vender",
+        "subtitle": "Biblioteca de Demos",
+        "description": "Cada oportunidade pode receber uma demonstração personalizada.",
+        "image": "assets/screenshots/biblioteca-demos.png",
+        "imageAlt": "Tela real da Biblioteca de Demos com o histórico de sites gerados"
+      }
+    ]
+  },
   "differentials": [
     {
       "icon": "🔍",
@@ -85,29 +119,45 @@
     }
   ],
   "pricing": {
-    "price": "R$149",
-    "period": "/mês",
-    "features": [
-      "Site profissional completo, feito pro seu negócio",
-      "Domínio próprio (seunegocio.com.br)",
-      "Botão de WhatsApp integrado em todo o site",
-      "SEO local desde o primeiro dia",
-      "Ajustes de conteúdo quando precisar"
-    ],
+    "base": {
+      "price": "R$149",
+      "period": "/mês",
+      "title": "Plano Base",
+      "features": [
+        "Site profissional completo, feito pro seu negócio",
+        "Botão de WhatsApp integrado em todo o site",
+        "SEO local desde o primeiro dia",
+        "Hospedagem e manutenção inclusas",
+        "Ajustes de conteúdo quando precisar"
+      ]
+    },
+    "opcionais": {
+      "title": "Opcionais",
+      "description": "Contratados à parte, quando fizer sentido pro seu negócio.",
+      "items": [
+        { "name": "Domínio próprio", "description": "Endereço com o nome do seu negócio (seunegocio.com.br)" },
+        { "name": "E-mail profissional", "description": "E-mail com o domínio da sua empresa" },
+        { "name": "Integrações adicionais", "description": "Sob consulta, conforme a necessidade" }
+      ]
+    },
+    "garantia": {
+      "title": "Sem letra miúda",
+      "text": "Você pode começar imediatamente com o plano base, mesmo sem contratar nenhum opcional."
+    },
     "ctaText": "Falar sobre o meu plano"
   },
   "faq": [
     {
       "question": "Preciso entender de tecnologia?",
-      "answer": "Não. Você manda as informações pelo WhatsApp e a gente cuida do resto — do design ao ar no domínio."
+      "answer": "Não. Você manda as informações pelo WhatsApp e a gente cuida do resto — do design ao site no ar."
     },
     {
       "question": "Quanto tempo demora pra ficar pronto?",
-      "answer": "A demo inicial fica pronta em minutos. Depois da sua aprovação e domínio configurado, o site vai ao ar em poucos dias."
+      "answer": "A demo inicial fica pronta em minutos. Depois da sua aprovação, o site vai ao ar em poucos dias."
     },
     {
-      "question": "O domínio é meu?",
-      "answer": "Sim — o domínio (seunegocio.com.br) é registrado no seu nome, não fica preso à Fábrica de Sites."
+      "question": "O domínio próprio (seunegocio.com.br) está incluso?",
+      "answer": "Não — o plano base publica seu site num endereço padrão, pronto pra usar. Domínio próprio é um opcional contratado à parte, se e quando fizer sentido pro seu negócio."
     },
     {
       "question": "Posso pedir alterações depois que o site estiver no ar?",
@@ -124,7 +174,7 @@
     "buttonText": "Chamar no WhatsApp"
   },
   "footer": {
-    "description": "Sites profissionais pra negócios locais, prontos em minutos e feitos pra converter visitante em cliente.",
-    "copyrightText": "© 2026 Fábrica de Sites."
+    "description": "Prospecção e sites profissionais com IA — encontramos a oportunidade e entregamos pronto pra converter.",
+    "copyrightText": "© 2026 Fábrica de Sites AI."
   }
 }
