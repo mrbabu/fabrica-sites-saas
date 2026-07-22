@@ -60,10 +60,16 @@ correspondentes. Ver também `CLAUDE.md` para o estado atual do código.
 - [x] Frontend estático (`index.html` + `site-config.json`) no ar via Vercel
 - [ ] Backend FastAPI hospedado em produção (Render/Railway) — hoje só roda
       local
-- [ ] **Cobrança recorrente + régua de inadimplência + auto-suspensão**
-      (Asaas ou Mercado Pago Assinaturas) — ainda não iniciado. Segundo o
-      plano de negócio, isso resolve ~80% do "agente financeiro" sem
-      código próprio e é a peça que falta pro MVP de produto fechar
+- [ ] **Cobrança recorrente + régua de inadimplência + auto-suspensão** —
+      pesquisa e recomendação prontas em
+      `docs/fluxo_financeiro_recorrencia.md` (Asaas recomendado sobre
+      Mercado Pago: taxa fixa de PIX, sem mensalidade, compatível com o
+      `AgenteFinanceiro` já existente). Implementação ainda não iniciada.
+      **Não bloqueia os primeiros clientes** — PIX manual já resolve o
+      recebimento nesse volume (geração, preview, persistência e deploy já
+      validados ponta a ponta). Necessária pra transformar o MVP Comercial
+      em SaaS escalável, não pra fechar os 15-20 primeiros; o gargalo atual
+      é venda, não pagamento
 - [ ] Campos de assinatura na tabela `sites` (plano, status de pagamento,
       domínio do cliente) quando a cobrança acima existir
 
@@ -176,6 +182,16 @@ cada um. Nenhum destes bloqueia venda no plano base hoje.
   generativa). Critério de priorização documentado na spec (seção 8):
   só após o gate de 15-20 vendas **e** quando o banco fixo atual se
   mostrar insuficiente na prática.
+- **Backlog P2 — Hunter Online Comercial.** Spec completa em
+  `docs/hunter_online_spec.md`. Evolução de
+  `backend/scripts/buscar_leads_google_maps.py` (não de
+  `agents/hunter.py` — são dois "Hunter" diferentes, ver spec seção 3)
+  pra prospecção com parâmetros dinâmicos, score de oportunidade e
+  exportação XLS. Ferramenta interna (login já existente), nunca exposta
+  ao cliente. Instagram/Facebook seguem fora da coleta automática (regra
+  já vigente no `ROADMAP.md`). Critério de saída do backlog: só depois do
+  gate de 15-20 vendas e quando geração de leads virar o gargalo real —
+  hoje o gargalo é contato/conversão, não volume de leads.
 
 ---
 
