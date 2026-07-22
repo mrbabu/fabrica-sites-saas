@@ -22,6 +22,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from auth_demo import exigir_login_demo
+from ui_common import CSS_BASE, cabecalho
 
 router = APIRouter(tags=["Demo DFY (ferramenta interna)"])
 
@@ -40,22 +41,27 @@ async def formulario_demo(request: Request):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fábrica de Sites IA — Gerador de Demo DFY</title>
 <style>
-  body {{ font-family: -apple-system, Inter, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; color: #1f2937; }}
-  h1 {{ font-size: 1.4rem; margin-bottom: 4px; }}
-  p.subtitle {{ color: #6b7280; margin-top: 0; margin-bottom: 28px; }}
-  label {{ display: block; font-weight: 600; font-size: 0.9rem; margin: 16px 0 6px; }}
-  input, textarea {{ width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; box-sizing: border-box; font-family: inherit; }}
+{CSS_BASE}
+  .wrap {{ max-width: 520px; }}
+  .card {{ background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 28px 30px; }}
+  label {{ display: block; font-weight: 600; font-size: 0.85rem; margin: 16px 0 6px; }}
+  label:first-of-type {{ margin-top: 0; }}
+  input, textarea {{ width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; font-family: inherit; }}
   input[type=color] {{ padding: 4px; height: 42px; }}
   textarea {{ resize: vertical; min-height: 70px; }}
-  button {{ margin-top: 24px; width: 100%; padding: 12px; background: #0D9488; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }}
+  button {{ margin-top: 24px; width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .15s; }}
+  button:hover {{ background: var(--accent-dark); }}
   button:disabled {{ background: #9ca3af; cursor: wait; }}
   #resultado {{ margin-top: 20px; padding: 14px; border-radius: 8px; display: none; }}
   #resultado.erro {{ background: #fef2f2; border: 1px solid #fca5a5; display: block; }}
 </style>
 </head>
 <body>
+{cabecalho("demo")}
+<div class="wrap">
   <h1>Gerador de Demo DFY</h1>
-  <p class="subtitle">Ferramenta interna — não é o produto final do cliente. <a href="/demo/lista">Ver sites já gerados</a> · <a href="/hunter">Busca Leads</a></p>
+  <p class="subtitle">Ferramenta interna — não é o produto final do cliente</p>
+  <div class="card">
   <form id="form-demo">
     <label>Nome da empresa</label>
     <input name="nome_empresa" required>
@@ -81,6 +87,8 @@ async def formulario_demo(request: Request):
     <button type="submit" id="btn-gerar">Gerar Demo</button>
   </form>
   <div id="resultado"></div>
+  </div>
+</div>
 
 <script>
 const API_KEY = {api_key!r};

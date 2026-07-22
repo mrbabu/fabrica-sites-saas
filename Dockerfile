@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/ backend/
 COPY index.html index.html
 COPY entrypoint.sh entrypoint.sh
+COPY leads/ leads/
 RUN chmod +x entrypoint.sh
 
 WORKDIR /app/backend

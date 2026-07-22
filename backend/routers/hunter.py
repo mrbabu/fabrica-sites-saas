@@ -25,6 +25,7 @@ from openpyxl import Workbook
 
 from auth_demo import exigir_login_demo
 from scripts.buscar_leads_google_maps import buscar_estabelecimentos
+from ui_common import CSS_BASE, cabecalho as cabecalho_nav
 
 router = APIRouter(tags=["Demo DFY (ferramenta interna)"])
 
@@ -63,6 +64,7 @@ def _buscar(nicho: str, local: str, quantidade: int) -> list[dict]:
             "nicho": nicho,
             "local": local,
             "telefone": telefone,
+            "mapa_url": lugar.get("googleMapsUri") or "",
             "mensagem": TEMPLATE_ABORDAGEM.format(nome=nome, local=local, nicho_lower=nicho.lower()),
         })
         if len(leads) >= quantidade:
@@ -82,6 +84,7 @@ def _pagina(nicho: str, local: str, quantidade: int, leads: list[dict] | None, e
             f"""<tr>
                 <td>{esc(l['nome'])}</td>
                 <td>{esc(l['telefone'])}</td>
+                <td>{f'<a class="mapa" href="{esc(l["mapa_url"])}" target="_blank" rel="noopener">Ver no mapa</a>' if l['mapa_url'] else '—'}</td>
                 <td>
                   <button type="button" class="copiar" data-msg="{esc(l['mensagem'])}">Copiar mensagem</button>
                 </td>
@@ -92,7 +95,7 @@ def _pagina(nicho: str, local: str, quantidade: int, leads: list[dict] | None, e
         resultado_html = f"""
           <p class="total">{len(leads)} empresa(s) sem site encontrada(s) — telefone vindo da Google Places, validar WhatsApp manualmente antes de contatar.</p>
           <table>
-            <thead><tr><th>Empresa</th><th>Telefone</th><th>Abordagem</th></tr></thead>
+            <thead><tr><th>Empresa</th><th>Telefone</th><th>Mapa</th><th>Abordagem</th></tr></thead>
             <tbody>{linhas}</tbody>
           </table>
           <a class="exportar" href="{export_url}">Exportar XLS</a>
@@ -105,30 +108,35 @@ def _pagina(nicho: str, local: str, quantidade: int, leads: list[dict] | None, e
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Busca Leads — Fábrica de Sites IA</title>
 <style>
-  body {{ font-family: -apple-system, Inter, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; color: #1f2937; }}
-  h1 {{ font-size: 1.4rem; margin-bottom: 4px; }}
-  p.subtitle {{ color: #6b7280; margin-top: 0; margin-bottom: 24px; }}
-  form {{ display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 24px; }}
-  label {{ display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; }}
-  input {{ padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; }}
+{CSS_BASE}
+  .card {{ background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px 26px; margin-bottom: 24px; }}
+  form {{ display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin: 0; }}
+  label {{ display: block; font-weight: 600; font-size: 0.82rem; margin-bottom: 6px; }}
+  input {{ padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; }}
   input[name=quantidade] {{ width: 90px; }}
-  button[type=submit] {{ padding: 11px 20px; background: #0D9488; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }}
-  table {{ width: 100%; border-collapse: collapse; margin-top: 8px; }}
-  th {{ text-align: left; font-size: 0.85rem; color: #6b7280; padding: 8px 12px; border-bottom: 2px solid #e5e7eb; }}
-  td {{ padding: 10px 12px; border-bottom: 1px solid #f3f4f6; font-size: 0.95rem; }}
+  button[type=submit] {{ padding: 11px 20px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background .15s; }}
+  button[type=submit]:hover {{ background: var(--accent-dark); }}
+  table {{ width: 100%; border-collapse: collapse; margin-top: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }}
+  th {{ text-align: left; font-size: 0.8rem; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--border); background: #f8fafc; }}
+  td {{ padding: 12px 14px; border-bottom: 1px solid #f3f4f6; font-size: 0.92rem; }}
+  tr:last-child td {{ border-bottom: none; }}
   .copiar {{ background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; cursor: pointer; }}
-  .copiar.copiado {{ background: #0D9488; color: white; border-color: #0D9488; }}
+  .copiar.copiado {{ background: var(--accent); color: white; border-color: var(--accent); }}
+  a.mapa {{ color: var(--accent); font-weight: 600; text-decoration: none; font-size: 0.88rem; }}
+  a.mapa:hover {{ text-decoration: underline; }}
   .erro {{ color: #b91c1c; }}
-  .vazio {{ color: #6b7280; }}
-  .total {{ color: #6b7280; font-size: 0.85rem; }}
-  .exportar {{ display: inline-block; margin-top: 16px; color: #0D9488; font-weight: 600; text-decoration: none; }}
+  .vazio {{ color: var(--muted); }}
+  .total {{ color: var(--muted); font-size: 0.85rem; margin: 0 0 10px; }}
+  .exportar {{ display: inline-block; margin-top: 16px; color: var(--accent); font-weight: 600; text-decoration: none; }}
   .exportar:hover {{ text-decoration: underline; }}
-  a.nav {{ color: #0D9488; font-weight: 600; text-decoration: none; }}
 </style>
 </head>
 <body>
+{cabecalho_nav("hunter")}
+<div class="wrap">
   <h1>Busca Leads</h1>
-  <p class="subtitle">Prospecção interna (Google Places) — sem disparo automático, você copia e manda manualmente. <a class="nav" href="/demo/lista">sites gerados</a> · <a class="nav" href="/demo/logout">sair</a></p>
+  <p class="subtitle">Prospecção interna (Google Places) — sem disparo automático, você copia e manda manualmente</p>
+  <div class="card">
   <form method="get" action="/hunter">
     <div>
       <label>Nicho</label>
@@ -144,7 +152,9 @@ def _pagina(nicho: str, local: str, quantidade: int, leads: list[dict] | None, e
     </div>
     <button type="submit">Buscar oportunidades</button>
   </form>
+  </div>
   {resultado_html}
+</div>
 
 <script>
 document.querySelectorAll('.copiar').forEach(btn => {{
@@ -194,12 +204,12 @@ async def exportar_leads(request: Request, nicho: str = "", local: str = "", qua
     wb = Workbook()
     ws = wb.active
     ws.title = "Leads"
-    cabecalho = ["Empresa", "Nicho", "Local", "Telefone", "Mensagem sugerida"]
+    cabecalho = ["Empresa", "Nicho", "Local", "Telefone", "Google Maps", "Mensagem sugerida"]
     ws.append(cabecalho)
     for cell in ws[1]:
         cell.font = cell.font.copy(bold=True)
     for lead in leads:
-        ws.append([lead["nome"], lead["nicho"], lead["local"], lead["telefone"], lead["mensagem"]])
+        ws.append([lead["nome"], lead["nicho"], lead["local"], lead["telefone"], lead["mapa_url"], lead["mensagem"]])
     for col in ws.columns:
         largura = max((len(str(c.value or "")) for c in col), default=10)
         ws.column_dimensions[col[0].column_letter].width = min(largura + 2, 60)

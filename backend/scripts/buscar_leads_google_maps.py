@@ -73,7 +73,7 @@ def buscar_estabelecimentos(nicho: str, bairro: str, api_key: str) -> list[dict]
             "X-Goog-Api-Key": api_key,
             "X-Goog-FieldMask": (
                 "places.displayName,places.nationalPhoneNumber,"
-                "places.websiteUri,places.id"
+                "places.websiteUri,places.id,places.googleMapsUri"
             ),
         },
         json={"textQuery": f"{nicho} em {bairro}", "languageCode": "pt-BR"},
