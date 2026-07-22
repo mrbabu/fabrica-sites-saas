@@ -6,9 +6,7 @@ preview individual). Funciona como "home" das ferramentas internas —
 mostra também contagem real de sites e leads (sem número inventado).
 """
 
-import csv
 import html
-from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
@@ -21,26 +19,6 @@ import repository
 
 router = APIRouter(tags=["Demo DFY (ferramenta interna)"])
 
-PASTA_LEADS = Path(__file__).resolve().parent.parent.parent / "leads"
-CSVS_LEADS = ["clinicas_grande_vitoria.csv", "prestadores_paraty.csv"]
-
-
-def _contar_leads_capturados() -> int:
-    """Soma linhas dos CSVs de leads reais. Nunca quebra a página — se o
-    arquivo não existir (ex.: imagem antiga sem leads/ copiado), conta 0
-    pra aquele CSV em vez de derrubar a listagem inteira."""
-    total = 0
-    for nome in CSVS_LEADS:
-        caminho = PASTA_LEADS / nome
-        if not caminho.exists():
-            continue
-        try:
-            with caminho.open(encoding="utf-8", newline="") as f:
-                total += sum(1 for _ in csv.DictReader(f))
-        except OSError:
-            continue
-    return total
-
 
 @router.get("/demo/lista", response_class=HTMLResponse)
 async def listar_demos(request: Request, db: Session = Depends(get_db)):
@@ -49,7 +27,9 @@ async def listar_demos(request: Request, db: Session = Depends(get_db)):
     if redirect:
         return redirect
     sites = repository.listar_sites(db)
-    total_leads = _contar_leads_capturados()
+    # Postgres é a fonte de verdade dos leads desde 2026-07-22 (ver
+    # docs/hunter_online_spec.md) — antes contava linha de CSV direto.
+    total_leads = repository.contar_leads_hunter(db)
 
     linhas = "".join(
         f"""<tr>
