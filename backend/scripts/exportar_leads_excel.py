@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """
-Exporta o CSV de leads de uma cidade para .xlsx (cabeçalho em negrito,
-colunas ajustadas, primeira linha congelada) — pra abrir direto no Excel.
+Exporta os leads salvos no Postgres (hunter_leads, fonte de verdade desde
+2026-07-22 — ver docs/hunter_online_spec.md) para .xlsx — pra abrir direto
+no Excel. Sem argumento, exporta todos; com cidade, filtra por ela.
 
 Uso: python exportar_leads_excel.py [cidade]
-Cidades disponíveis: as mesmas de buscar_leads_google_maps.py (vitoria, paraty).
 """
 
-import csv
 import sys
 from pathlib import Path
 
@@ -15,48 +14,65 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from buscar_leads_google_maps import CIDADES
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from db import SessionLocal
+import repository
+
+PASTA_LEADS = Path(__file__).resolve().parent.parent.parent / "leads"
+
+CABECALHO = ["Empresa", "Nicho", "Cidade", "Bairro", "Telefone", "Status", "Google Maps", "Salvo em"]
 
 
-def exportar(csv_path: Path) -> Path:
-    with csv_path.open(encoding="utf-8", newline="") as f:
-        rows = list(csv.reader(f))
-
+def exportar(leads: list, destino: Path) -> Path:
     wb = Workbook()
     ws = wb.active
     ws.title = "Leads"
-
-    for r in rows:
-        ws.append(r)
-
+    ws.append(CABECALHO)
     for cell in ws[1]:
         cell.font = Font(bold=True)
 
-    for i, _ in enumerate(rows[0], 1):
-        largura = max(len(str(row[i - 1])) for row in rows) + 2
-        ws.column_dimensions[get_column_letter(i)].width = min(largura, 60)
+    for lead in leads:
+        ws.append([
+            lead.nome_empresa,
+            lead.nicho,
+            lead.cidade,
+            lead.bairro or "",
+            lead.telefone or "a validar",
+            lead.status,
+            lead.google_maps_url or "",
+            lead.created_at.strftime("%d/%m/%Y %H:%M"),
+        ])
+
+    for i, titulo in enumerate(CABECALHO, 1):
+        largura = max([len(titulo)] + [len(str(row[i - 1].value or "")) for row in ws.iter_rows(min_row=2)])
+        ws.column_dimensions[get_column_letter(i)].width = min(largura + 2, 60)
 
     ws.freeze_panes = "A2"
-
-    xlsx_path = csv_path.with_suffix(".xlsx")
-    wb.save(xlsx_path)
-    return xlsx_path
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    wb.save(destino)
+    return destino
 
 
 def main():
-    cidade = sys.argv[1] if len(sys.argv) > 1 else "vitoria"
-    if cidade not in CIDADES:
-        print(f"Erro: cidade '{cidade}' desconhecida. Opções: {', '.join(CIDADES)}")
+    if SessionLocal is None:
+        print("Erro: DATABASE_URL não configurada.")
         sys.exit(1)
 
-    csv_path = CIDADES[cidade]["csv"]
-    if not csv_path.exists():
-        print(f"Erro: {csv_path} não existe ainda. Rode buscar_leads_google_maps.py {cidade} primeiro.")
+    cidade = sys.argv[1] if len(sys.argv) > 1 else None
+
+    db = SessionLocal()
+    try:
+        leads = repository.listar_leads_hunter(db, cidade=cidade)
+    finally:
+        db.close()
+
+    if not leads:
+        print("Nenhum lead encontrado" + (f" pra '{cidade}'" if cidade else "") + " no banco.")
         sys.exit(1)
 
-    xlsx_path = exportar(csv_path)
-    print(f"Exportado: {xlsx_path}")
+    nome_arquivo = f"leads_{cidade}.xlsx".replace(" ", "_").lower() if cidade else "leads_todos.xlsx"
+    destino = exportar(leads, PASTA_LEADS / nome_arquivo)
+    print(f"Exportado: {destino} ({len(leads)} lead(s))")
 
 
 if __name__ == "__main__":

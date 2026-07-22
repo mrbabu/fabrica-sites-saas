@@ -8,7 +8,7 @@ usado pelo Agente Construtor (ver CLAUDE.md) - nada é normalizado em tabelas
 próprias.
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, func
+from sqlalchemy import Column, ForeignKey, Integer, String, Text, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 
 from db import Base
@@ -47,5 +47,52 @@ class Site(Base):
     nome_empresa = Column(String(100), nullable=False)
     nicho = Column(String(100), nullable=False)
     config = Column(JSONB, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class HunterBusca(Base):
+    """Uma execução de busca no Hunter (ver backend/routers/hunter.py) —
+    histórico permanente de pesquisas, mesmo que não tenham encontrado
+    nada aproveitável."""
+
+    __tablename__ = "hunter_buscas"
+
+    id = Column(Integer, primary_key=True)
+    nicho = Column(String(150), nullable=False)
+    cidade = Column(String(150), nullable=False)
+    bairro = Column(String(150), nullable=True)
+    raio_km = Column(Integer, nullable=True)
+    quantidade_solicitada = Column(Integer, nullable=False)
+    quantidade_encontrada = Column(Integer, nullable=False, default=0)
+    origem = Column(String(30), nullable=False, default="hunter_web")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class HunterLead(Base):
+    """
+    Um lead encontrado pelo Hunter (Google Places) ou importado dos CSVs
+    legados — fonte de verdade agora é esta tabela; CSV vira só mecanismo
+    de import/export (decisão de produto 2026-07-22).
+
+    status começa em "pendente" e avança manualmente (contatado, respondeu,
+    demo_enviada, cliente, descartado) — nunca avançado sozinho pelo
+    sistema, mesmo guardrail de não-automação de contato do resto do projeto.
+    """
+
+    __tablename__ = "hunter_leads"
+
+    id = Column(Integer, primary_key=True)
+    busca_id = Column(Integer, ForeignKey("hunter_buscas.id"), nullable=True)
+    place_id = Column(String(150), nullable=True, index=True)
+    nome_empresa = Column(String(200), nullable=False)
+    nicho = Column(String(150), nullable=False)
+    cidade = Column(String(150), nullable=False)
+    bairro = Column(String(150), nullable=True)
+    telefone = Column(String(30), nullable=True)
+    google_maps_url = Column(Text, nullable=True)
+    status = Column(String(30), nullable=False, default="pendente")
+    slug_demo = Column(String(150), nullable=True)
+    origem = Column(String(30), nullable=False, default="google_places")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

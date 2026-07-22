@@ -123,6 +123,8 @@ def gerar_leads(buscas: list[dict], api_key: str, csv_path: Path) -> list[dict]:
                 "whatsapp": lugar.get("nationalPhoneNumber", "a validar"),
                 "status": "pendente",
                 "data_contato": "",
+                "place_id": lugar.get("id"),
+                "google_maps_url": lugar.get("googleMapsUri"),
             })
             existentes.add((nome, bairro))
 
@@ -132,15 +134,56 @@ def gerar_leads(buscas: list[dict], api_key: str, csv_path: Path) -> list[dict]:
 
 
 def salvar_no_csv(leads: list[dict], csv_path: Path) -> None:
+    """CSV agora é só export/backup — a fonte de verdade é o Postgres (ver
+    persistir_no_banco). extrasaction='ignore' porque os leads carregam
+    place_id/google_maps_url, que não fazem parte das colunas do CSV."""
     if not leads:
         return
     arquivo_existe = csv_path.exists()
     csv_path.parent.mkdir(parents=True, exist_ok=True)
     with csv_path.open("a", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=CAMPOS_CSV)
+        writer = csv.DictWriter(f, fieldnames=CAMPOS_CSV, extrasaction="ignore")
         if not arquivo_existe:
             writer.writeheader()
         writer.writerows(leads)
+
+
+def persistir_no_banco(leads: list[dict], cidade: str) -> int:
+    """Persiste os leads encontrados no Postgres (hunter_leads/hunter_buscas
+    — fonte de verdade, decisão de produto 2026-07-22). Se DATABASE_URL não
+    estiver configurada (ex.: rodando localmente sem banco), avisa e segue
+    sem quebrar o script — o CSV continua sendo escrito de qualquer jeito."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from db import SessionLocal
+    import repository
+
+    if SessionLocal is None:
+        print("  ! DATABASE_URL não configurada — leads salvos só no CSV, não no banco.")
+        return 0
+
+    db = SessionLocal()
+    try:
+        nichos_unicos = ", ".join(sorted({l["nicho"] for l in leads})) or "vários"
+        busca = repository.criar_busca_hunter(
+            db, nicho=nichos_unicos, cidade=cidade, bairro=None, raio_km=None,
+            quantidade_solicitada=len(leads), origem="cli_script",
+        )
+        leads_convertidos = [
+            {
+                "place_id": l.get("place_id"),
+                "nome_empresa": l["nome"],
+                "nicho": l["nicho"],
+                "cidade": cidade,
+                "bairro": l.get("bairro"),
+                "telefone": None if l.get("whatsapp") == "a validar" else l.get("whatsapp"),
+                "google_maps_url": l.get("google_maps_url"),
+            }
+            for l in leads
+        ]
+        salvos = repository.salvar_leads_hunter(db, busca.id, leads_convertidos, origem="cli_script")
+        return len(salvos)
+    finally:
+        db.close()
 
 
 def main():
@@ -157,8 +200,11 @@ def main():
     config = CIDADES[cidade]
     leads = gerar_leads(config["buscas"], api_key, config["csv"])
     salvar_no_csv(leads, config["csv"])
+    salvos_no_banco = persistir_no_banco(leads, cidade) if leads else 0
 
     print(f"\n{len(leads)} lead(s) novo(s) adicionados a {config['csv']}")
+    if leads:
+        print(f"{salvos_no_banco} lead(s) salvo(s) no Postgres (fonte de verdade).")
     print("Contato continua manual — valide o WhatsApp antes de enviar qualquer mensagem.")
 
 

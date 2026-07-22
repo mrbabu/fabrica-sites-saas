@@ -17,6 +17,7 @@ servidor) em vez do fetch() client-side atual.
 """
 
 import os
+from html import escape as esc
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
@@ -28,8 +29,14 @@ router = APIRouter(tags=["Demo DFY (ferramenta interna)"])
 
 
 @router.get("/demo", response_class=HTMLResponse)
-async def formulario_demo(request: Request):
-    """Formulário de geração de demo DFY — nome, nicho, localização e WhatsApp obrigatórios."""
+async def formulario_demo(request: Request, nome_empresa: str = "", nicho: str = "", localizacao: str = "", lead_id: str = ""):
+    """
+    Formulário de geração de demo DFY — nome, nicho, localização e WhatsApp
+    obrigatórios. Aceita pré-preenchimento vindo de um lead do Hunter
+    (?nome_empresa=&nicho=&localizacao=&lead_id=) — WhatsApp nunca é
+    pré-preenchido: o telefone que o Hunter traz é comercial, não
+    confirmado como WhatsApp, precisa ser validado manualmente antes.
+    """
     redirect = exigir_login_demo(request)
     if redirect:
         return redirect
@@ -63,14 +70,15 @@ async def formulario_demo(request: Request):
   <p class="subtitle">Ferramenta interna — não é o produto final do cliente</p>
   <div class="card">
   <form id="form-demo">
+    <input type="hidden" name="lead_id" value="{esc(lead_id)}">
     <label>Nome da empresa</label>
-    <input name="nome_empresa" required>
+    <input name="nome_empresa" value="{esc(nome_empresa)}" required>
 
     <label>Tipo de negócio</label>
-    <input name="nicho" required placeholder="Ex.: Odontologia, Restaurante, Pousada">
+    <input name="nicho" value="{esc(nicho)}" required placeholder="Ex.: Odontologia, Restaurante, Pousada">
 
     <label>Cidade</label>
-    <input name="localizacao" required placeholder="Ex.: Vitória - ES">
+    <input name="localizacao" value="{esc(localizacao)}" required placeholder="Ex.: Vitória - ES">
 
     <label>WhatsApp (obrigatório, número real)</label>
     <input name="whatsapp_contato" required placeholder="+55 27 99999-9999">
@@ -113,6 +121,8 @@ document.getElementById('form-demo').addEventListener('submit', async (e) => {{
   const portfolioUrls = (dados.portfolio_urls_raw || '').split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
   delete dados.portfolio_urls_raw;
   if (portfolioUrls.length > 0) dados.portfolio_urls = portfolioUrls;
+  const leadId = dados.lead_id;
+  delete dados.lead_id;
 
   btn.disabled = true;
   btn.textContent = 'Gerando... (~30-60s)';
@@ -126,6 +136,16 @@ document.getElementById('form-demo').addEventListener('submit', async (e) => {{
     }});
     const json = await resp.json();
     if (!resp.ok) throw new Error(formatarErroDetail(json.detail));
+
+    if (leadId) {{
+      try {{
+        await fetch(`/hunter/leads/${{leadId}}/vincular-demo`, {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ slug: json.slug }}),
+        }});
+      }} catch (e) {{ /* não bloqueia o fluxo se isso falhar */ }}
+    }}
 
     window.location.href = json.preview_url;
   }} catch (err) {{
