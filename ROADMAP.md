@@ -189,7 +189,9 @@ cada um. Nenhum destes bloqueia venda no plano base hoje.
   pra prospecção com parâmetros dinâmicos, score de oportunidade e
   exportação XLS. Ferramenta interna (login já existente), nunca exposta
   ao cliente. Instagram/Facebook seguem fora da coleta automática (regra
-  já vigente no `ROADMAP.md`). Critério de saída do backlog: só depois do
+  já vigente no `ROADMAP.md`). **O "Vendedor" só sugere mensagem — sem
+  disparo automático de WhatsApp, mesma política do guardrail #1**
+  (spec seção 11). Critério de saída do backlog: só depois do
   gate de 15-20 vendas e quando geração de leads virar o gargalo real —
   hoje o gargalo é contato/conversão, não volume de leads.
 

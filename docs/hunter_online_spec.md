@@ -149,7 +149,69 @@ Acesso só via o login interno já existente (`/demo/login`), mesma sessão
 de 15 minutos — não um sistema de auth separado. Nunca exposto sem
 autenticação.
 
-## 11. Não implementado
+## 11. Política de abordagem comercial — sem disparo automático
+
+**Regra que define a arquitetura inteira: não existe envio automático de
+mensagem.** O "Vendedor" aqui não é um agente que dispara WhatsApp sozinho
+— é um assistente que prepara texto pra um humano copiar, revisar e
+enviar manualmente. Isso não é uma limitação temporária, é a mesma
+política já vigente pro guardrail #1 do `ROADMAP.md` (nunca outbound
+automatizado no WhatsApp, risco de banimento sem API oficial/opt-in) —
+esta seção só deixa explícito que ela também vale aqui, pra não ser
+reinterpretada no futuro como "o Vendedor manda mensagem sozinho".
+
+O sistema:
+- ✅ gera sugestão de mensagem (inicial, follow-up, resposta a objeção),
+  adaptada ao lead encontrado;
+- ✅ permite copiar e editar o texto;
+- ✅ registra status manual (contatado, respondeu, etc.).
+
+O sistema não:
+- ❌ envia WhatsApp automaticamente;
+- ❌ acessa a conta de WhatsApp do usuário;
+- ❌ dispara campanhas ou controla agenda de contatos;
+- ❌ decide sozinho quem abordar ou quando.
+
+Fluxo real:
+
+```
+Lead encontrado
+      |
+      v
+IA sugere abordagem
+      |
+      v
+Humano revisa e edita
+      |
+      v
+Humano envia (fora do sistema, no próprio WhatsApp)
+      |
+      v
+Humano atualiza status
+```
+
+## 12. Estrutura da página interna (esboço, não implementar ainda)
+
+```
+/demo/login
+      |
+      v
+Dashboard interno
+      |
+      +-- Site Constructor (já existe: /demo, /demo/lista)
+      |     - criar demo, selecionar nicho, gerar site, preview
+      |
+      +-- Busca Leads (esta spec)
+            - selecionar nicho + região, executar busca
+            - qualificar oportunidades (score)
+            - exportar XLS
+            - Assistente Comercial: sugestão de mensagem (seção 11),
+              nunca envio automático
+```
+
+Não vira CRM completo agora — só as duas frentes acima.
+
+## 13. Não implementado
 
 Documento apenas. Nenhum código, agente, endpoint, migration ou dependência
 nova foi criado a partir desta spec.
