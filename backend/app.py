@@ -42,6 +42,7 @@ try:
     from routers.demo_lista import router as demo_lista_router
     from routers.demo_login import router as demo_login_router
     from routers.demo import router as demo_router
+    from routers.hunter import router as hunter_router
 except ImportError as e:
     print(f"❌ Erro ao importar módulos locais: {e}")
     sys.exit(1)
@@ -112,6 +113,7 @@ app.include_router(demo_preview_router)
 app.include_router(demo_lista_router)
 app.include_router(demo_login_router)
 app.include_router(demo_router)
+app.include_router(hunter_router)
 
 # Inicializar agente (singleton)
 try:

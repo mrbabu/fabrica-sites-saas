@@ -66,7 +66,7 @@ async def listar_demos(request: Request, db: Session = Depends(get_db)):
 </head>
 <body>
   <h1>Sites gerados</h1>
-  <p class="subtitle">Histórico de todas as demos DFY criadas — <a href="/demo">gerar uma nova</a> · <a href="/demo/logout">sair</a></p>
+  <p class="subtitle">Histórico de todas as demos DFY criadas — <a href="/demo">gerar uma nova</a> · <a href="/hunter">Busca Leads</a> · <a href="/demo/logout">sair</a></p>
   <table>
     <thead><tr><th>Empresa</th><th>Nicho</th><th>Gerado em</th><th></th></tr></thead>
     <tbody>{corpo}</tbody>

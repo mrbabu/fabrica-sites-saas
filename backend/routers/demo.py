@@ -55,7 +55,7 @@ async def formulario_demo(request: Request):
 </head>
 <body>
   <h1>Gerador de Demo DFY</h1>
-  <p class="subtitle">Ferramenta interna — não é o produto final do cliente. <a href="/demo/lista">Ver sites já gerados</a></p>
+  <p class="subtitle">Ferramenta interna — não é o produto final do cliente. <a href="/demo/lista">Ver sites já gerados</a> · <a href="/hunter">Busca Leads</a></p>
   <form id="form-demo">
     <label>Nome da empresa</label>
     <input name="nome_empresa" required>
