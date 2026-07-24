@@ -58,8 +58,10 @@ correspondentes. Ver também `CLAUDE.md` para o estado atual do código.
 - [x] Persistência em Postgres (tabela `sites`, SQLAlchemy + Alembic)
       substituindo `configs/*.json`
 - [x] Frontend estático (`index.html` + `site-config.json`) no ar via Vercel
-- [ ] Backend FastAPI hospedado em produção (Render/Railway) — hoje só roda
-      local
+- [x] Backend FastAPI hospedado em produção — VM Oracle Cloud própria,
+      arquitetura Zero Trust (Tailscale + Cloudflare Tunnel, sem porta
+      exposta à internet; ver `infra/zero_trust_deploy.md`). Render/Railway
+      foram cogitados e descartados.
 - [ ] **Cobrança recorrente + régua de inadimplência + auto-suspensão** —
       pesquisa e recomendação prontas em
       `docs/fluxo_financeiro_recorrencia.md` (Asaas recomendado sobre
