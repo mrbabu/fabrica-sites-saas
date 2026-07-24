@@ -39,6 +39,20 @@ TEMPLATE_ABORDAGEM = (
     "hoje como é que um cliente novo acha vocês, além de indicação?"
 )
 
+# Mensagem de follow-up pra depois que o lead já respondeu (status "respondeu"
+# em diante) — preço e benefícios têm que continuar batendo com
+# vendas-config.json.pricing.base, é a mesma oferta que a landing mostra.
+TEMPLATE_OFERTA = (
+    "Oi, {nome}! Que bom que respondeu 🙂 Deixa eu te contar rapidinho como funciona:\n\n"
+    "🌐 *Site profissional no ar*, feito especialmente pro seu negócio — não é modelo pronto\n"
+    "💬 *WhatsApp integrado* em todo o site, pro cliente já cair direto na conversa\n"
+    "🔍 *Aparece no Google* — SEO local desde o primeiro dia\n\n"
+    "A partir de *R$149/mês*, com hospedagem e manutenção inclusas. Dá pra começar já no "
+    "plano base, sem precisar contratar mais nada além disso.\n\n"
+    "Se topar, eu já preparo uma demonstração pronta do jeito que ficaria o site de vocês — "
+    "você só decide depois de ver."
+)
+
 ROTULOS_STATUS = {
     "pendente": "Pendente",
     "contatado": "Contatado",
@@ -48,6 +62,10 @@ ROTULOS_STATUS = {
     "descartado": "Descartado",
 }
 
+# Só libera a mensagem de oferta depois que o lead já respondeu o 1º contato —
+# evita queimar a abordagem mandando a oferta antes da hora.
+STATUS_LIBERA_OFERTA = {"respondeu", "demo_enviada", "cliente"}
+
 
 class ErroBuscaLeads(Exception):
     pass
@@ -55,6 +73,10 @@ class ErroBuscaLeads(Exception):
 
 def _mensagem(nome: str, local: str, nicho: str) -> str:
     return TEMPLATE_ABORDAGEM.format(nome=nome, local=local, nicho_lower=nicho.lower())
+
+
+def _mensagem_oferta(nome: str) -> str:
+    return TEMPLATE_OFERTA.format(nome=nome)
 
 
 def _buscar_google(nicho: str, local: str, quantidade: int) -> list[dict]:
@@ -231,7 +253,8 @@ def _pagina_leads(leads: list, buscas: list, filtros: dict, stats: dict) -> str:
             <td>{f'<a class="mapa" href="{esc(l.google_maps_url)}" target="_blank" rel="noopener">mapa</a>' if l.google_maps_url else '—'}</td>
             <td><a class="mapa" href="/demo?nome_empresa={esc(l.nome_empresa)}&nicho={esc(l.nicho)}&localizacao={esc(l.cidade)}&lead_id={l.id}">gerar demo</a></td>
             <td>
-              <button type="button" class="copiar" data-msg="{esc(_mensagem(l.nome_empresa, l.cidade, l.nicho))}">Copiar</button>
+              <button type="button" class="copiar" data-msg="{esc(_mensagem(l.nome_empresa, l.cidade, l.nicho))}">1º contato</button>
+              {f'<button type="button" class="copiar" data-msg="{esc(_mensagem_oferta(l.nome_empresa))}">Oferta</button>' if l.status in STATUS_LIBERA_OFERTA else '<button type="button" class="copiar" disabled title="Libera depois que o status virar Respondeu">Oferta</button>'}
             </td>
         </tr>"""
         for l in leads
@@ -274,6 +297,7 @@ def _pagina_leads(leads: list, buscas: list, filtros: dict, stats: dict) -> str:
   a.mapa {{ color: var(--accent); font-weight: 600; text-decoration: none; font-size: 0.85rem; }}
   .copiar {{ background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; padding: 5px 9px; font-size: 0.8rem; cursor: pointer; }}
   .copiar.copiado {{ background: var(--accent); color: white; border-color: var(--accent); }}
+  .copiar:disabled {{ opacity: 0.45; cursor: not-allowed; }}
   .exportar {{ display: inline-block; margin-top: 14px; color: var(--accent); font-weight: 600; text-decoration: none; }}
 </style>
 </head>
