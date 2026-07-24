@@ -16,8 +16,11 @@ de IA novo — a "mensagem sugerida" é template estático, não LLM.
 """
 
 import io
+import json
 import os
+from functools import lru_cache
 from html import escape as esc
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -32,6 +35,22 @@ import repository
 
 router = APIRouter(tags=["Demo DFY (ferramenta interna)"])
 
+# vendas-config.json é a única fonte de verdade pro preço público (é o que
+# vendas.html mostra) — o Hunter lê o mesmo arquivo em vez de duplicar o
+# valor, pra nunca ficar dessincronizado.
+_VENDAS_CONFIG_PATH = Path(__file__).resolve().parents[2] / "vendas-config.json"
+
+
+@lru_cache(maxsize=1)
+def _vendas_config() -> dict:
+    with open(_VENDAS_CONFIG_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _preco_base() -> str:
+    base = _vendas_config()["pricing"]["base"]
+    return f"{base['price']}{base['period']}"
+
 TEMPLATE_ABORDAGEM = (
     "Oi! Vi a {nome} aqui em {local} e reparei que vocês não têm site — só "
     "o Google/Instagram. Sou da área de tecnologia, trabalho criando sites "
@@ -40,14 +59,14 @@ TEMPLATE_ABORDAGEM = (
 )
 
 # Mensagem de follow-up pra depois que o lead já respondeu (status "respondeu"
-# em diante) — preço e benefícios têm que continuar batendo com
-# vendas-config.json.pricing.base, é a mesma oferta que a landing mostra.
+# em diante) — o preço vem de vendas-config.json (ver _preco_base), é a
+# mesma oferta que a landing mostra.
 TEMPLATE_OFERTA = (
     "Oi, {nome}! Que bom que respondeu 🙂 Deixa eu te contar rapidinho como funciona:\n\n"
     "🌐 *Site profissional no ar*, feito especialmente pro seu negócio — não é modelo pronto\n"
     "💬 *WhatsApp integrado* em todo o site, pro cliente já cair direto na conversa\n"
     "🔍 *Aparece no Google* — SEO local desde o primeiro dia\n\n"
-    "A partir de *R$149/mês*, com hospedagem e manutenção inclusas. Dá pra começar já no "
+    "A partir de *{preco}*, com hospedagem e manutenção inclusas. Dá pra começar já no "
     "plano base, sem precisar contratar mais nada além disso.\n\n"
     "Se topar, eu já preparo uma demonstração pronta do jeito que ficaria o site de vocês — "
     "você só decide depois de ver."
@@ -76,7 +95,7 @@ def _mensagem(nome: str, local: str, nicho: str) -> str:
 
 
 def _mensagem_oferta(nome: str) -> str:
-    return TEMPLATE_OFERTA.format(nome=nome)
+    return TEMPLATE_OFERTA.format(nome=nome, preco=_preco_base())
 
 
 def _buscar_google(nicho: str, local: str, quantidade: int) -> list[dict]:
