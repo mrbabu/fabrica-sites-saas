@@ -67,6 +67,7 @@ prompt_teste_lovable.txt
 !/package.json
 !/package-lock.json
 !backend/data/niches.json
+!backend/data/buscas_leads.json
 
 # Métricas e dados
 metrics.json

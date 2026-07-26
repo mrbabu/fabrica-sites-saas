@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from buscar_leads_google_maps import CIDADES
+from buscar_leads_google_maps import carregar_cidades
 
 HORAS_LIMITE_FOLLOWUP = 48
 
@@ -60,8 +60,8 @@ def gancho_followup(nome: str) -> str:
     )
 
 
-def carregar_leads(cidade_key: str) -> list[dict]:
-    csv_path = CIDADES[cidade_key]["csv"]
+def carregar_leads(cidade_key: str, cidades: dict) -> list[dict]:
+    csv_path = cidades[cidade_key]["csv"]
     if not csv_path.exists():
         return []
     with csv_path.open(encoding="utf-8", newline="") as f:
@@ -76,10 +76,11 @@ def montar_checklist() -> tuple[list[dict], list[dict]]:
     agora = datetime.now()
     nunca_contatados = []
     parados = []
+    cidades = carregar_cidades()
 
-    for cidade_key in CIDADES:
+    for cidade_key in cidades:
         regiao = NOME_CIDADE.get(cidade_key, cidade_key)
-        for lead in carregar_leads(cidade_key):
+        for lead in carregar_leads(cidade_key, cidades):
             base = {
                 "nome": lead["nome"],
                 "cidade": regiao,

@@ -1,0 +1,21 @@
+{
+  "vitoria": {
+    "csv": "clinicas_grande_vitoria.csv",
+    "buscas": [
+      {"nicho": "Odontologia", "bairro": "Jardim da Penha, Vitória - ES"},
+      {"nicho": "Fisioterapia", "bairro": "Praia do Canto, Vitória - ES"},
+      {"nicho": "Odontologia", "bairro": "Centro, Vila Velha - ES"},
+      {"nicho": "Fisioterapia", "bairro": "Centro, Vila Velha - ES"}
+    ]
+  },
+  "paraty": {
+    "csv": "prestadores_paraty.csv",
+    "buscas": [
+      {"nicho": "Pousada", "bairro": "Paraty, RJ"},
+      {"nicho": "Restaurante", "bairro": "Paraty, RJ"},
+      {"nicho": "Agência de Turismo", "bairro": "Paraty, RJ"},
+      {"nicho": "Pedreiro", "bairro": "Paraty, RJ"},
+      {"nicho": "Estacionamento", "bairro": "Paraty, RJ"}
+    ]
+  }
+}

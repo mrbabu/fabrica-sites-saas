@@ -4,7 +4,15 @@ Busca leads (estabelecimentos sem site) via Google Places API (Text Search)
 e adiciona ao CSV de leads da cidade/mercado escolhido (ROADMAP.md, Fase 2:
 "Geração de leads... filtrando quem não tem site").
 
-Uso: python buscar_leads_google_maps.py [cidade]
+Uso:
+  python buscar_leads_google_maps.py [cidade]
+  python buscar_leads_google_maps.py [cidade] --nicho "X" --bairro "Y"
+
+Sem --nicho/--bairro, roda a lista inteira de buscas configurada pra cidade
+em backend/data/buscas_leads.json. Com ambos, roda só essa busca pontual
+(não precisa editar o JSON pra testar um nicho/bairro novo) — ainda salva
+no CSV/Postgres da cidade informada.
+
 Cidades disponíveis: vitoria (padrão, nicho Fase 0: clínicas médicas/saúde),
 paraty (mercado adicional: pousadas/restaurantes/turismo/prestadores gerais).
 
@@ -14,7 +22,9 @@ humano (guardrail #1 do ROADMAP.md: nunca outbound automatizado no WhatsApp).
 Requer GOOGLE_MAPS_API_KEY no .env (Google Places API, New).
 """
 
+import argparse
 import csv
+import json
 import os
 import sys
 import time
@@ -30,57 +40,60 @@ except ImportError:
 
 PASTA_RAIZ = Path(__file__).resolve().parent.parent.parent
 PASTA_LEADS = PASTA_RAIZ / "leads"
+ARQUIVO_BUSCAS = PASTA_RAIZ / "backend" / "data" / "buscas_leads.json"
 CAMPOS_CSV = ["nome", "bairro", "nicho", "whatsapp", "status", "data_contato"]
 
-# Cada cidade é um mercado próprio: CSV separado + lista de buscas (nicho+bairro).
-CIDADES = {
-    # Fase 0 (ROADMAP.md) e portfólio semente (gerar_portfolio_lovable.py) —
-    # Clínicas Médicas/Saúde na Grande Vitória-ES.
-    "vitoria": {
-        "csv": PASTA_LEADS / "clinicas_grande_vitoria.csv",
-        "buscas": [
-            {"nicho": "Odontologia", "bairro": "Jardim da Penha, Vitória - ES"},
-            {"nicho": "Fisioterapia", "bairro": "Praia do Canto, Vitória - ES"},
-            {"nicho": "Odontologia", "bairro": "Centro, Vila Velha - ES"},
-            {"nicho": "Fisioterapia", "bairro": "Centro, Vila Velha - ES"},
-        ],
-    },
-    # Mercado adicional (2026-07-11): prestadores de serviço em geral,
-    # perfil turístico da cidade — nicho diferente de Vitória por decisão
-    # explícita do usuário, não segue o critério de baixa sazonalidade da
-    # Fase 0 original.
-    "paraty": {
-        "csv": PASTA_LEADS / "prestadores_paraty.csv",
-        "buscas": [
-            {"nicho": "Pousada", "bairro": "Paraty, RJ"},
-            {"nicho": "Restaurante", "bairro": "Paraty, RJ"},
-            {"nicho": "Agência de Turismo", "bairro": "Paraty, RJ"},
-            {"nicho": "Pedreiro", "bairro": "Paraty, RJ"},
-            {"nicho": "Estacionamento", "bairro": "Paraty, RJ"},
-        ],
-    },
-}
-
 PLACES_TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
+FIELD_MASK = (
+    "places.displayName,places.nationalPhoneNumber,places.websiteUri,"
+    "places.id,places.googleMapsUri,places.businessStatus,nextPageToken"
+)
+MAX_PAGINAS = 3  # Places API (New) pagina até 60 resultados (3x20) por busca.
+STATUS_FECHADO = {"CLOSED_PERMANENTLY", "CLOSED_TEMPORARILY"}
+
+
+def carregar_cidades() -> dict:
+    """Cada cidade é um mercado próprio: CSV separado + lista de buscas
+    (nicho+bairro), configurados em backend/data/buscas_leads.json — editável
+    sem tocar em código pra testar um bairro/nicho novo."""
+    with ARQUIVO_BUSCAS.open(encoding="utf-8") as f:
+        cidades = json.load(f)
+    for dados in cidades.values():
+        dados["csv"] = PASTA_LEADS / dados["csv"]
+    return cidades
 
 
 def buscar_estabelecimentos(nicho: str, bairro: str, api_key: str) -> list[dict]:
-    """Text Search da Places API (New) para um nicho+bairro."""
-    resp = requests.post(
-        PLACES_TEXT_SEARCH_URL,
-        headers={
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": api_key,
-            "X-Goog-FieldMask": (
-                "places.displayName,places.nationalPhoneNumber,"
-                "places.websiteUri,places.id,places.googleMapsUri"
-            ),
-        },
-        json={"textQuery": f"{nicho} em {bairro}", "languageCode": "pt-BR"},
-        timeout=15,
-    )
-    resp.raise_for_status()
-    return resp.json().get("places", [])
+    """Text Search da Places API (New) para um nicho+bairro, paginando até
+    MAX_PAGINAS (a API exige um pequeno intervalo antes do pageToken virar
+    válido, daí o sleep antes de reusar)."""
+    todos = []
+    page_token = None
+    for pagina in range(MAX_PAGINAS):
+        body = {"textQuery": f"{nicho} em {bairro}", "languageCode": "pt-BR"}
+        if page_token:
+            body["pageToken"] = page_token
+
+        resp = requests.post(
+            PLACES_TEXT_SEARCH_URL,
+            headers={
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": api_key,
+                "X-Goog-FieldMask": FIELD_MASK,
+            },
+            json=body,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        dados = resp.json()
+        todos.extend(dados.get("places", []))
+
+        page_token = dados.get("nextPageToken")
+        if not page_token:
+            break
+        time.sleep(2)  # pageToken só fica válido após um pequeno intervalo
+
+    return todos
 
 
 def carregar_slugs_existentes(csv_path: Path) -> set[tuple[str, str]]:
@@ -108,6 +121,8 @@ def gerar_leads(buscas: list[dict], api_key: str, csv_path: Path) -> list[dict]:
         for lugar in estabelecimentos:
             if lugar.get("websiteUri"):
                 continue  # já tem site — fora do critério de lead
+            if lugar.get("businessStatus") in STATUS_FECHADO:
+                continue  # fechado (permanente ou temporário) — não vale contato
 
             nome = lugar.get("displayName", {}).get("text", "").strip()
             if not nome or (nome, bairro) in existentes:
@@ -192,15 +207,31 @@ def main():
         print("Erro: defina GOOGLE_MAPS_API_KEY no .env (Google Places API).")
         sys.exit(1)
 
-    cidade = sys.argv[1] if len(sys.argv) > 1 else "vitoria"
-    if cidade not in CIDADES:
-        print(f"Erro: cidade '{cidade}' desconhecida. Opções: {', '.join(CIDADES)}")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("cidade", nargs="?", default="vitoria")
+    parser.add_argument("--nicho", help="roda só essa busca pontual, junto com --bairro")
+    parser.add_argument("--bairro", help="roda só essa busca pontual, junto com --nicho")
+    args = parser.parse_args()
+
+    cidades = carregar_cidades()
+    if args.cidade not in cidades:
+        print(f"Erro: cidade '{args.cidade}' desconhecida. Opções: {', '.join(cidades)}")
+        sys.exit(1)
+    if bool(args.nicho) != bool(args.bairro):
+        print("Erro: --nicho e --bairro precisam ser usados juntos.")
         sys.exit(1)
 
-    config = CIDADES[cidade]
-    leads = gerar_leads(config["buscas"], api_key, config["csv"])
+    config = cidades[args.cidade]
+    buscas = [{"nicho": args.nicho, "bairro": args.bairro}] if args.nicho else config["buscas"]
+    leads = gerar_leads(buscas, api_key, config["csv"])
     salvar_no_csv(leads, config["csv"])
-    salvos_no_banco = persistir_no_banco(leads, cidade) if leads else 0
+
+    salvos_no_banco = 0
+    if leads:
+        try:
+            salvos_no_banco = persistir_no_banco(leads, args.cidade)
+        except Exception as e:
+            print(f"  ! Erro ao salvar no Postgres ({e}) — leads já estão salvos no CSV.")
 
     print(f"\n{len(leads)} lead(s) novo(s) adicionados a {config['csv']}")
     if leads:
