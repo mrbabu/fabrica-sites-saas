@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from auth_demo import exigir_login_demo
 from db import get_db
+from lovable_adapter import montar_url_lovable
 from ui_common import CSS_BASE, cabecalho
 import repository
 
@@ -36,7 +37,10 @@ async def listar_demos(request: Request, db: Session = Depends(get_db)):
             <td>{html.escape(site.nome_empresa)}</td>
             <td>{html.escape(site.nicho)}</td>
             <td>{site.created_at.strftime('%d/%m/%Y %H:%M')}</td>
-            <td><a href="/demo/preview/{html.escape(site.slug)}" target="_blank">ver site</a></td>
+            <td>
+                <a href="/demo/preview/{html.escape(site.slug)}" target="_blank">ver site</a>
+                · <a href="{html.escape(montar_url_lovable(site.config))}" target="_blank" rel="noopener" title="Benchmark: compare com a versão do Lovable pro mesmo cliente">gerar no Lovable</a>
+            </td>
         </tr>"""
         for site in sites
     )
