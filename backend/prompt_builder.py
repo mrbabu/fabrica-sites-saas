@@ -10,11 +10,36 @@ duplicar a extração de dados do site-config.
 
 Não cria categoria/conhecimento novo: só lê os campos que o gerador já
 produziu.
+
+Guardrail de imagens (pedido explícito do usuário): nenhuma imagem
+produzida pelo nosso Image Engine (Unsplash) ou pelos fallbacks
+determinísticos (LoremFlickr, ui-avatars) é enviada como referência
+visual pra plataforma nenhuma — são stock photo/avatar genérico, não a
+identidade real do cliente, e mandar isso como "referência de marca"
+confundiria a IA da plataforma de destino. Só company.logo e as imagens
+de hero/seção são candidatas a "brand asset", e só entram se NÃO vierem
+de um domínio conhecido do Image Engine/fallback (ou seja, só quando são
+uma URL real fornecida pela equipe via logo_url/portfolio_urls).
 """
 
 from dataclasses import dataclass, field
+from urllib.parse import urlparse
 
 FORMATOS_IMAGEM_RECUSADOS = (".svg", ".gif")
+
+# Domínios do próprio Image Engine/fallbacks determinísticos — nunca são
+# identidade visual real do cliente, nunca viram brand asset.
+DOMINIOS_IMAGEM_GERADA = (
+    "images.unsplash.com",
+    "loremflickr.com",
+    "ui-avatars.com",
+    "i.pravatar.cc",
+)
+
+
+def _e_imagem_gerada(url: str) -> bool:
+    host = urlparse(url).netloc.lower()
+    return any(host == d or host.endswith(f".{d}") for d in DOMINIOS_IMAGEM_GERADA)
 
 
 @dataclass
@@ -32,7 +57,8 @@ class EspecificacaoSite:
     whatsapp: str | None = None
     endereco: str | None = None
     google_maps_url: str | None = None
-    imagens: list[str] = field(default_factory=list)
+    brand_assets: list[str] = field(default_factory=list)  # logo/fachada/equipe/produtos REAIS do cliente — nunca Image Engine
+    instrucao_identidade_visual: str | None = None
 
 
 def construir_especificacao(config: dict) -> EspecificacaoSite:
@@ -43,12 +69,21 @@ def construir_especificacao(config: dict) -> EspecificacaoSite:
     cores = config.get("colors", {})
     cta = config.get("cta", {})
 
-    candidatas = [config.get("hero", {}).get("backgroundImage", "")]
-    candidatas += [s.get("image", "") for s in (config.get("sections") or [])[:2]]
-    imagens = [
+    candidatas = [company.get("logo", "")]
+    candidatas.append(config.get("hero", {}).get("backgroundImage", ""))
+    candidatas += [s.get("image", "") for s in (config.get("sections") or [])]
+    brand_assets = [
         url for url in candidatas
-        if url and not url.lower().split("?")[0].endswith(FORMATOS_IMAGEM_RECUSADOS)
+        if url
+        and not url.lower().split("?")[0].endswith(FORMATOS_IMAGEM_RECUSADOS)
+        and not _e_imagem_gerada(url)
     ]
+
+    instrucao_identidade_visual = (
+        "Utilize estas imagens como referência principal da identidade "
+        "visual deste negócio e gere o restante do site mantendo "
+        "consistência com elas."
+    ) if brand_assets else None
 
     return EspecificacaoSite(
         nome=company.get("name", ""),
@@ -63,5 +98,6 @@ def construir_especificacao(config: dict) -> EspecificacaoSite:
         whatsapp=contact.get("whatsapp"),
         endereco=contact.get("address"),
         google_maps_url=contact.get("googleMapsUrl"),
-        imagens=imagens,
+        brand_assets=brand_assets,
+        instrucao_identidade_visual=instrucao_identidade_visual,
     )

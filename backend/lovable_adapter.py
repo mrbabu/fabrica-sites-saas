@@ -30,15 +30,20 @@ def montar_prompt(spec: EspecificacaoSite) -> str:
         f"WhatsApp de contato: {spec.whatsapp} (inclua um botão visível de WhatsApp)." if spec.whatsapp else "",
         f"Endereço: {spec.endereco}." if spec.endereco else "",
         f'Link do Google Maps do negócio: {spec.google_maps_url} (inclua um mapa ou botão "como chegar" apontando pra esse link).' if spec.google_maps_url else "",
+        spec.instrucao_identidade_visual or "",
         "Sem depoimentos fictícios — não invente avaliações de clientes.",
     ]
     return "\n\n".join(p for p in partes if p)
 
 
 def montar_url(spec: EspecificacaoSite) -> str:
+    """Só envia brand_assets reais do cliente (logo/fachada/equipe/
+    portfólio) como referência visual — nunca imagem gerada pelo Image
+    Engine (ver guardrail em prompt_builder.py). Sem brand_assets, o
+    Lovable gera as imagens e o layout inteiro sozinho."""
     prompt = montar_prompt(spec)
     hash_partes = [f"prompt={quote(prompt)}"]
-    for img in spec.imagens[:MAX_REFERENCIAS]:
+    for img in spec.brand_assets[:MAX_REFERENCIAS]:
         hash_partes.append(f"images={quote(img)}")
     return "https://lovable.dev/?autosubmit=true#" + "&".join(hash_partes)
 
