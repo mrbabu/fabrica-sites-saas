@@ -241,7 +241,8 @@ class Contact(BaseModel):
     email: Optional[str] = Field(default=None, description="Email principal (opcional — só se fornecido, nunca inventado)")
     phone: str = Field(..., min_length=10, description="Telefone")
     whatsapp: str = Field(..., min_length=10, description="WhatsApp")
-    address: str = Field(..., min_length=5, description="Endereço")
+    address: Optional[str] = Field(default=None, description="Endereço/cidade do negócio (opcional — só se fornecido, nunca um endereço genérico)")
+    googleMapsUrl: Optional[str] = Field(default=None, description="Link direto do Google Maps do negócio (opcional — mais preciso que endereço em texto)")
     social: Social = Field(default_factory=Social, description="Redes sociais")
 
     @validator('email')

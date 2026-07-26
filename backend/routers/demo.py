@@ -29,13 +29,15 @@ router = APIRouter(tags=["Demo DFY (ferramenta interna)"])
 
 
 @router.get("/demo", response_class=HTMLResponse)
-async def formulario_demo(request: Request, nome_empresa: str = "", nicho: str = "", localizacao: str = "", lead_id: str = ""):
+async def formulario_demo(request: Request, nome_empresa: str = "", nicho: str = "", localizacao: str = "", lead_id: str = "", google_maps_url: str = ""):
     """
     Formulário de geração de demo DFY — nome, nicho, localização e WhatsApp
     obrigatórios. Aceita pré-preenchimento vindo de um lead do Hunter
-    (?nome_empresa=&nicho=&localizacao=&lead_id=) — WhatsApp nunca é
-    pré-preenchido: o telefone que o Hunter traz é comercial, não
+    (?nome_empresa=&nicho=&localizacao=&lead_id=&google_maps_url=) — WhatsApp
+    nunca é pré-preenchido: o telefone que o Hunter traz é comercial, não
     confirmado como WhatsApp, precisa ser validado manualmente antes.
+    google_maps_url vem do próprio Hunter (link real do Places) — nunca
+    digitado à mão, garante que o mapa do site aponte pro lugar certo.
     """
     redirect = exigir_login_demo(request)
     if redirect:
@@ -71,6 +73,7 @@ async def formulario_demo(request: Request, nome_empresa: str = "", nicho: str =
   <div class="card">
   <form id="form-demo">
     <input type="hidden" name="lead_id" value="{esc(lead_id)}">
+    <input type="hidden" name="google_maps_url" value="{esc(google_maps_url)}">
     <label>Nome da empresa</label>
     <input name="nome_empresa" value="{esc(nome_empresa)}" required>
 

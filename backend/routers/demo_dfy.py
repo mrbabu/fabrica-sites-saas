@@ -49,6 +49,11 @@ class DemoDfyRequest(BaseModel):
     cor_primaria: str = Field(default="#0D9488", description="Cor primária em hexadecimal")
     logo_url: Optional[str] = Field(default=None, description="URL pública de imagem já existente — nunca upload")
     descricao_negocio: Optional[str] = Field(default=None, max_length=2000, description="Contexto livre sobre o negócio, informado pelo cliente")
+    google_maps_url: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="Link real do Google Maps do negócio (vindo do Hunter ou colado manualmente) — nunca inventar endereço; se ausente, o site fica sem seção de localização",
+    )
     portfolio_urls: Optional[list[str]] = Field(
         default=None,
         max_length=8,
@@ -67,6 +72,13 @@ class DemoDfyRequest(BaseModel):
         if not re.match(r"^#[0-9a-fA-F]{6}$", v):
             raise ValueError("Cor deve estar em formato hex válido: #RRGGBB")
         return v.lower()
+
+    @field_validator("google_maps_url")
+    @classmethod
+    def validar_google_maps_url(cls, v: Optional[str]) -> Optional[str]:
+        if v and not re.match(r"^https?://", v, re.IGNORECASE):
+            raise ValueError("google_maps_url deve ser um link http(s) válido")
+        return v
 
     @field_validator("portfolio_urls")
     @classmethod
@@ -116,6 +128,7 @@ async def gerar_demo(payload: DemoDfyRequest, db: Session = Depends(get_db)):
             logo_url=payload.logo_url,
             descricao_negocio=payload.descricao_negocio,
             portfolio_urls=payload.portfolio_urls,
+            google_maps_url=payload.google_maps_url,
             caminho_saida=str(PASTA_CONFIGS / f"{slug}.json"),
         )
         repository.upsert_site(db, slug, payload.nome_empresa, payload.nicho, config)

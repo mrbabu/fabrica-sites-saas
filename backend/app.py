@@ -180,6 +180,7 @@ class OnboardingWhatsApp(BaseModel):
     localizacao: str = Field(..., min_length=2, max_length=150, description="Cidade/região do negócio")
     whatsapp_contato: str = Field(..., min_length=10, max_length=20, description="WhatsApp de contato do cliente")
     cor_preferida: Optional[str] = Field(default="#6366f1", description="Cor primária em hexadecimal (opcional)")
+    google_maps_url: Optional[str] = Field(default=None, description="Link real do Google Maps do negócio (opcional) — nunca inventar endereço")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -489,6 +490,7 @@ async def webhook_whatsapp(
             localizacao=payload.localizacao,
             whatsapp_contato=payload.whatsapp_contato,
             logo_url=logo_normalizado,
+            google_maps_url=payload.google_maps_url,
         )
 
         # Validar schema

@@ -20,6 +20,7 @@ import json
 import os
 from functools import lru_cache
 from html import escape as esc
+from urllib.parse import quote
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
@@ -270,7 +271,7 @@ def _pagina_leads(leads: list, buscas: list, filtros: dict, stats: dict) -> str:
               </form>
             </td>
             <td>{f'<a class="mapa" href="{esc(l.google_maps_url)}" target="_blank" rel="noopener">mapa</a>' if l.google_maps_url else '—'}</td>
-            <td><a class="mapa" href="/demo?nome_empresa={esc(l.nome_empresa)}&nicho={esc(l.nicho)}&localizacao={esc(l.cidade)}&lead_id={l.id}">gerar demo</a></td>
+            <td><a class="mapa" href="{esc(f'/demo?nome_empresa={quote(l.nome_empresa)}&nicho={quote(l.nicho)}&localizacao={quote(l.cidade)}&lead_id={l.id}&google_maps_url={quote(l.google_maps_url or "")}')}">gerar demo</a></td>
             <td>
               <button type="button" class="copiar" data-msg="{esc(_mensagem(l.nome_empresa, l.cidade, l.nicho))}">1º contato</button>
               {f'<button type="button" class="copiar" data-msg="{esc(_mensagem_oferta(l.nome_empresa))}">Oferta</button>' if l.status in STATUS_LIBERA_OFERTA else '<button type="button" class="copiar" disabled title="Libera depois que o status virar Respondeu">Oferta</button>'}

@@ -130,6 +130,7 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
         logo_url: Optional[str] = None,
         descricao_negocio: Optional[str] = None,
         portfolio_urls: list[str] | None = None,
+        google_maps_url: Optional[str] = None,
     ) -> dict:
         """
         Gera configuração completa de site usando o AIProvider, com SEO by design
@@ -141,6 +142,10 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
             localizacao: Cidade/região do negócio, usada para SEO local (opcional)
             whatsapp_contato: Número de WhatsApp do cliente (opcional)
             logo_url: URL/caminho do logo já normalizado (opcional)
+            google_maps_url: Link real do Google Maps do negócio (do Hunter ou
+                colado manualmente) — opcional. Nunca inventado: se ausente,
+                contact.address/googleMapsUrl ficam vazios no site gerado em
+                vez de um endereço genérico (ver _preencher_fallbacks)
             descricao_negocio: Contexto livre sobre o negócio, informado pelo
                 próprio cliente (opcional) — usado só para enriquecer a copy,
                 nunca para inventar dados factuais (contato/redes/depoimentos)
@@ -312,7 +317,7 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
     "email": null,
     "phone": "{contato_phone_prompt}",
     "whatsapp": "{contato_whatsapp_prompt}",
-    "address": "{localizacao or 'São Paulo, SP - Brasil'}",
+    "address": "{localizacao or ''}",
     "social": {{}}
   }},
   "cta": {{
@@ -359,6 +364,8 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 tem_logo_explicito=bool(logo_url),
                 whatsapp_contato=whatsapp_contato,
                 portfolio_urls=portfolio_urls,
+                localizacao=localizacao,
+                google_maps_url=google_maps_url,
             )
 
             # Validar schema básico (campos obrigatórios presentes)
@@ -416,6 +423,8 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         tem_logo_explicito: bool = False,
         whatsapp_contato: Optional[str] = None,
         portfolio_urls: list[str] | None = None,
+        localizacao: Optional[str] = None,
+        google_maps_url: Optional[str] = None,
     ) -> dict:
         """
         Garante que nenhum campo de imagem/SEO derivado fique vazio ou quebrado
@@ -522,6 +531,12 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         if whatsapp_contato:
             contact["whatsapp"] = whatsapp_contato
             contact["phone"] = whatsapp_contato
+        # Guardrail: endereço nunca é fabricado (nada de cidade genérica tipo
+        # "São Paulo, SP" quando não informado) — só o dado real do cliente,
+        # ou ausente. googleMapsUrl (do Hunter ou colado manualmente) é
+        # preferível por apontar pro lugar exato, não uma busca por texto.
+        contact["address"] = localizacao or None
+        contact["googleMapsUrl"] = google_maps_url or None
         config["testimonials"] = []
 
         # SEO/OG derivados sempre de metadata/hero já preenchidos acima
@@ -629,6 +644,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         logo_url: Optional[str] = None,
         descricao_negocio: Optional[str] = None,
         portfolio_urls: list[str] | None = None,
+        google_maps_url: Optional[str] = None,
     ) -> dict:
         """
         Executa o pipeline completo de geração
@@ -673,6 +689,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 logo_url=logo_url,
                 descricao_negocio=descricao_negocio,
                 portfolio_urls=portfolio_urls,
+                google_maps_url=google_maps_url,
             )
 
             # Validação final (config já passou por isso dentro de gerar_config_site,
