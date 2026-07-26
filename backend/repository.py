@@ -37,6 +37,20 @@ def obter_site(db: Session, slug: str) -> Optional[Site]:
     return db.query(Site).filter(Site.slug == slug).one_or_none()
 
 
+def mapa_lovable_url_por_slug(db: Session, slugs: list[str]) -> dict:
+    """Busca em lote o link do Lovable já salvo (se houver) pros slugs de
+    demo informados — usado pra embutir na mensagem de oferta do Hunter
+    quando for o link publicado (ver _e_link_publicado_lovable em hunter.py)."""
+    if not slugs:
+        return {}
+    sites = db.query(Site).filter(Site.slug.in_(slugs)).all()
+    return {
+        site.slug: site.config.get("lovableResultUrl")
+        for site in sites
+        if site.config.get("lovableResultUrl")
+    }
+
+
 def salvar_lovable_url(db: Session, slug: str, url: str) -> Optional[Site]:
     """Guarda o link do projeto real já gerado no Lovable (depois que a
     equipe passou pelo fluxo manual) dentro do próprio config JSON — sem

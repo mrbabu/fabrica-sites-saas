@@ -18,6 +18,7 @@ de IA novo — a "mensagem sugerida" é template estático, não LLM.
 import io
 import json
 import os
+import re
 from functools import lru_cache
 from html import escape as esc
 from urllib.parse import quote
@@ -95,8 +96,17 @@ def _mensagem(nome: str, local: str, nicho: str) -> str:
     return TEMPLATE_ABORDAGEM.format(nome=nome, local=local, nicho_lower=nicho.lower())
 
 
-def _mensagem_oferta(nome: str) -> str:
-    return TEMPLATE_OFERTA.format(nome=nome, preco=_preco_base())
+def _e_link_publicado_lovable(url: str) -> bool:
+    """Só o link publicado (*.lovable.app, público, sem login) — nunca o
+    link privado do editor (lovable.dev/projects/..., exige convite)."""
+    return bool(re.match(r"^https://([a-z0-9-]+\.)?lovable\.app/?", url, re.IGNORECASE))
+
+
+def _mensagem_oferta(nome: str, link_lovable: str | None = None) -> str:
+    mensagem = TEMPLATE_OFERTA.format(nome=nome, preco=_preco_base())
+    if link_lovable and _e_link_publicado_lovable(link_lovable):
+        mensagem += f"\n\n{link_lovable}"
+    return mensagem
 
 
 def _buscar_google(nicho: str, local: str, quantidade: int) -> list[dict]:
@@ -251,7 +261,7 @@ async def busca_leads(request: Request, nicho: str = "", local: str = "", quanti
 # /hunter/leads — revisão dos leads já salvos (filtros, status, export)
 # ============================================================================
 
-def _pagina_leads(leads: list, buscas: list, filtros: dict, stats: dict) -> str:
+def _pagina_leads(leads: list, buscas: list, filtros: dict, stats: dict, links_lovable: dict) -> str:
     opcoes_status = "".join(
         f'<option value="{chave}" {"selected" if filtros.get("status") == chave else ""}>{rotulo}</option>'
         for chave, rotulo in ROTULOS_STATUS.items()
@@ -274,7 +284,7 @@ def _pagina_leads(leads: list, buscas: list, filtros: dict, stats: dict) -> str:
             <td><a class="mapa" href="{esc(f'/demo?nome_empresa={quote(l.nome_empresa)}&nicho={quote(l.nicho)}&localizacao={quote(l.cidade)}&lead_id={l.id}&google_maps_url={quote(l.google_maps_url or "")}')}">gerar demo</a></td>
             <td>
               <button type="button" class="copiar" data-msg="{esc(_mensagem(l.nome_empresa, l.cidade, l.nicho))}">1º contato</button>
-              {f'<button type="button" class="copiar" data-msg="{esc(_mensagem_oferta(l.nome_empresa))}">Oferta</button>' if l.status in STATUS_LIBERA_OFERTA else '<button type="button" class="copiar" disabled title="Libera depois que o status virar Respondeu">Oferta</button>'}
+              {f'<button type="button" class="copiar" data-msg="{esc(_mensagem_oferta(l.nome_empresa, links_lovable.get(l.slug_demo)))}">Oferta</button>' if l.status in STATUS_LIBERA_OFERTA else '<button type="button" class="copiar" disabled title="Libera depois que o status virar Respondeu">Oferta</button>'}
             </td>
         </tr>"""
         for l in leads
@@ -401,7 +411,9 @@ async def leads_salvos(
     }
 
     filtros = {"nicho": nicho, "cidade": cidade, "status": status, "busca_texto": busca_texto}
-    return _pagina_leads(leads, buscas, filtros, stats)
+    slugs_demo = [l.slug_demo for l in leads if l.slug_demo]
+    links_lovable = repository.mapa_lovable_url_por_slug(db, slugs_demo)
+    return _pagina_leads(leads, buscas, filtros, stats, links_lovable)
 
 
 @router.post("/hunter/leads/{lead_id}/status")
