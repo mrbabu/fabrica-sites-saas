@@ -40,14 +40,15 @@ def parse_data_contato(valor: str):
     return None
 
 
-def gancho_abertura(nome: str, bairro: str, regiao: str) -> str:
-    """Script 1 de docs/fase2_scripts_whatsapp.md — primeiro contato."""
+def gancho_abertura(nome: str, bairro: str, nicho: str) -> str:
+    """Script 1 de docs/fase2_scripts_whatsapp.md — primeiro contato. Mesmo
+    texto de TEMPLATE_ABORDAGEM (backend/routers/hunter.py) — mantenha os
+    dois em sincronia se mudar a mensagem."""
     return (
-        f'"Oi! Tudo bem? Vi a {nome} aqui em {bairro} e reparei que vocês '
-        f'não têm site próprio — só o que aparece no Google/Instagram. '
-        f'Sou da área de tecnologia aqui de {regiao}, trabalho criando '
-        f'sites pra negócios locais. Não é nada empurrado, só queria '
-        f'entender: hoje como um cliente novo acha vocês, além de indicação?"'
+        f'"Oi! Vi a {nome} aqui em {bairro} — reparei que vocês não têm '
+        f'site ainda, só redes sociais. Ajudo negócios de {nicho.lower()} '
+        f'a aparecer no Google pra quem pesquisa antes de decidir. Faz '
+        f'sentido eu te mostrar rapidinho como ficaria, sem compromisso?"'
     )
 
 
@@ -91,7 +92,7 @@ def montar_checklist() -> tuple[list[dict], list[dict]]:
             data_contato = parse_data_contato(lead.get("data_contato", ""))
 
             if data_contato is None:
-                base["gancho"] = gancho_abertura(lead["nome"], lead["bairro"], regiao)
+                base["gancho"] = gancho_abertura(lead["nome"], lead["bairro"], lead["nicho"])
                 nunca_contatados.append(base)
             else:
                 horas = (agora - data_contato).total_seconds() / 3600

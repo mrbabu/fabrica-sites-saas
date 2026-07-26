@@ -52,10 +52,10 @@ def _preco_base() -> str:
     return f"{base['price']}{base['period']}"
 
 TEMPLATE_ABORDAGEM = (
-    "Oi! Vi a {nome} aqui em {local} e reparei que vocês não têm site — só "
-    "o Google/Instagram. Sou da área de tecnologia, trabalho criando sites "
-    "pra {nicho_lower} da região. Não é nada empurrado, só queria entender: "
-    "hoje como é que um cliente novo acha vocês, além de indicação?"
+    "Oi! Vi a {nome} aqui em {local} — reparei que vocês não têm site ainda, "
+    "só redes sociais. Ajudo negócios de {nicho_lower} a aparecer no Google "
+    "pra quem pesquisa antes de decidir. Faz sentido eu te mostrar rapidinho "
+    "como ficaria, sem compromisso?"
 )
 
 # Mensagem de follow-up pra depois que o lead já respondeu (status "respondeu"
