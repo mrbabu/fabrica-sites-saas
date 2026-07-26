@@ -1,0 +1,469 @@
+{
+  "version": 2,
+  "_readme": "Base de conhecimento de nichos, consumida por image_utils.py (carregar_base_nichos). Editar este arquivo NUNCA exige tocar em código: cada categoria tem aliases (com peso de especificidade), conceitos (documentação), base_queries (curadas em inglês, nunca texto livre do cliente), attributes (variantes opcionais, uma categoria pode casar com mais de uma ao mesmo tempo), global_attributes (nomes referenciando o banco compartilhado abaixo, evita redigitar o mesmo atributo em várias categorias) e forbidden (termos que penalizam uma foto retornada no ranking). Ver CATEGORIAS_TIER em image_utils.py para a ordem de prioridade (specific > generic > default). Campo 'version' é validado em tempo de carga (VERSAO_SUPORTADA em image_utils.py) — mudanças incompatíveis de schema exigem incrementar esse número e atualizar o loader.",
+
+  "global_attributes": {
+    "premium": {
+      "keywords": ["premium", "luxo", "alto padrao", "sofisticado"],
+      "queries": ["upscale elegant interior, premium quality design, sophisticated atmosphere"]
+    },
+    "corporativo": {
+      "keywords": ["corporativ", "empresarial", "corporate"],
+      "queries": ["corporate professional setting, formal business atmosphere"]
+    }
+  },
+  "global_synonyms": {},
+  "global_forbidden": ["generic office", "empty room", "abstract"],
+
+  "categories": {
+
+  "medical_clinic": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "clinica", "weight": 7},
+      {"text": "consultorio", "weight": 11},
+      {"text": "odontolog", "weight": 9},
+      {"text": "dentist", "weight": 7},
+      {"text": "fisioterap", "weight": 10},
+      {"text": "dermatolog", "weight": 10},
+      {"text": "psicolog", "weight": 8},
+      {"text": "nutricion", "weight": 9},
+      {"text": "farmacia", "weight": 8},
+      {"text": "saude", "weight": 5}
+    ],
+    "concepts": ["medical office", "dentist", "doctor consultation", "healthcare"],
+    "base_queries": [
+      "modern medical office reception, dentist office interior, doctor consultation room"
+    ],
+    "forbidden": ["storefront", "retail shelf"]
+  },
+  "wellness_spa": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "spa", "weight": 3},
+      {"text": "bem estar", "weight": 9},
+      {"text": "wellness", "weight": 8},
+      {"text": "massoterap", "weight": 10}
+    ],
+    "concepts": ["spa", "massage room", "wellness retreat"],
+    "base_queries": ["spa wellness center, relaxing massage room, wellness retreat interior"],
+    "forbidden": ["office", "storefront"]
+  },
+  "pet_shop": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "pet shop", "weight": 8},
+      {"text": "petshop", "weight": 7},
+      {"text": "veterinari", "weight": 10},
+      {"text": "banho e tosa", "weight": 12}
+    ],
+    "concepts": ["pet shop", "veterinary clinic", "dog grooming"],
+    "base_queries": ["pet shop interior, veterinary clinic, dog grooming"],
+    "forbidden": ["office", "restaurant"]
+  },
+  "bakery": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "padaria", "weight": 7},
+      {"text": "confeitari", "weight": 10},
+      {"text": "doceria", "weight": 7},
+      {"text": "panificadora", "weight": 13}
+    ],
+    "concepts": ["bakery", "artisan bread", "pastry shop"],
+    "base_queries": ["bakery interior, artisan bread, pastry shop storefront"],
+    "forbidden": ["office", "construction"]
+  },
+  "restaurant": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "restaurante", "weight": 11},
+      {"text": "lanchonete", "weight": 10},
+      {"text": "pizzaria", "weight": 8},
+      {"text": "hamburgueria", "weight": 12},
+      {"text": "cafeteria", "weight": 9}
+    ],
+    "concepts": ["restaurant", "chef cooking", "plated food"],
+    "base_queries": ["restaurant interior, chef cooking, plated food"],
+    "forbidden": ["office", "construction"]
+  },
+  "ice_cream_shop": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "sorveteria", "weight": 10},
+      {"text": "gelato", "weight": 6},
+      {"text": "picole", "weight": 6}
+    ],
+    "concepts": ["ice cream shop", "gelato counter"],
+    "base_queries": ["ice cream shop interior, gelato counter, ice cream parlor"],
+    "forbidden": ["office"]
+  },
+  "auto_repair": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "oficina", "weight": 7},
+      {"text": "mecanica", "weight": 8},
+      {"text": "auto center", "weight": 11},
+      {"text": "funilaria", "weight": 9},
+      {"text": "auto eletric", "weight": 12},
+      {"text": "borrachari", "weight": 10}
+    ],
+    "concepts": ["auto repair shop", "mechanic garage", "car workshop"],
+    "base_queries": ["auto repair shop, mechanic garage, car workshop"],
+    "forbidden": ["office meeting", "retail"]
+  },
+  "car_wash": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "lavajato", "weight": 8},
+      {"text": "lavagem de veiculo", "weight": 18},
+      {"text": "estetica automotiv", "weight": 18}
+    ],
+    "concepts": ["car wash", "car detailing"],
+    "base_queries": ["car wash service, car detailing, vehicle cleaning station"],
+    "forbidden": ["office"]
+  },
+  "construction": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "construcao", "weight": 10},
+      {"text": "reforma", "weight": 7},
+      {"text": "engenharia", "weight": 10},
+      {"text": "marcenaria", "weight": 10},
+      {"text": "pedreiro", "weight": 8},
+      {"text": "eletricista", "weight": 11},
+      {"text": "encanador", "weight": 9},
+      {"text": "serralheria", "weight": 11},
+      {"text": "serralharia", "weight": 11},
+      {"text": "pintor", "weight": 6},
+      {"text": "limpeza de ambiente", "weight": 19},
+      {"text": "dedetiz", "weight": 7}
+    ],
+    "concepts": ["construction site", "contractor", "renovation", "building"],
+    "base_queries": [
+      "construction site, contractor working, home renovation, tradesperson toolbox"
+    ],
+    "attributes": {
+      "residential": {
+        "keywords": ["residencial", "casa", "reforma de casa", "familiar"],
+        "queries": ["home renovation, house construction, residential contractor, family home"]
+      },
+      "commercial": {
+        "keywords": ["comercial", "escritorio", "predio", "loja comercial"],
+        "queries": ["commercial building construction, office renovation, warehouse contractor"]
+      }
+    },
+    "forbidden": ["storefront", "office meeting", "retail"]
+  },
+  "architecture_office": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "arquitetura", "weight": 11},
+      {"text": "arquiteto", "weight": 9}
+    ],
+    "concepts": ["architecture firm", "blueprint design"],
+    "base_queries": ["architecture firm office, blueprint design table, modern building design"],
+    "forbidden": ["construction site", "storefront"]
+  },
+  "solar_energy": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "energia solar", "weight": 13},
+      {"text": "fotovoltaic", "weight": 11},
+      {"text": "painel solar", "weight": 12}
+    ],
+    "concepts": ["solar panel", "renewable energy"],
+    "base_queries": ["solar panel installation, rooftop solar energy, renewable energy technician"],
+    "forbidden": ["office", "storefront"]
+  },
+  "hotel": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "pousada", "weight": 7},
+      {"text": "hotel", "weight": 5},
+      {"text": "hospedagem", "weight": 10}
+    ],
+    "concepts": ["hotel room", "cozy inn", "guesthouse"],
+    "base_queries": ["hotel room interior, cozy inn, guesthouse"],
+    "global_attributes": ["premium"],
+    "forbidden": ["office", "construction"]
+  },
+  "tourism_agency": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "turismo", "weight": 7},
+      {"text": "agencia de viagens", "weight": 18},
+      {"text": "excursao", "weight": 8},
+      {"text": "passeio turistico", "weight": 17}
+    ],
+    "concepts": ["travel agency", "tour guide"],
+    "base_queries": ["travel agency office, tour guide desk, tourism office interior"],
+    "forbidden": ["construction"]
+  },
+  "beauty_salon": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "salao", "weight": 5},
+      {"text": "beleza", "weight": 6},
+      {"text": "estetica", "weight": 8},
+      {"text": "barbearia", "weight": 9},
+      {"text": "manicure", "weight": 8},
+      {"text": "pedicure", "weight": 8}
+    ],
+    "concepts": ["hair salon", "beauty spa", "barbershop"],
+    "base_queries": ["hair salon interior, beauty spa, barbershop"],
+    "global_attributes": ["premium"],
+    "forbidden": ["office", "construction"]
+  },
+  "law_office": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "advocacia", "weight": 9},
+      {"text": "advogad", "weight": 7},
+      {"text": "juridic", "weight": 7}
+    ],
+    "concepts": ["law office", "lawyer meeting room"],
+    "base_queries": ["law office interior, lawyer meeting room"],
+    "global_attributes": ["corporativo"],
+    "forbidden": ["storefront", "construction"]
+  },
+  "accounting_office": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "contabilidade", "weight": 13},
+      {"text": "contador", "weight": 8}
+    ],
+    "concepts": ["accounting office", "financial consultant"],
+    "base_queries": ["accounting office interior, financial consultant meeting"],
+    "global_attributes": ["corporativo"],
+    "forbidden": ["storefront", "construction"]
+  },
+  "real_estate": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "imobiliaria", "weight": 11},
+      {"text": "aluguel de imove", "weight": 16},
+      {"text": "corretor de imove", "weight": 17},
+      {"text": "corretagem", "weight": 10}
+    ],
+    "concepts": ["real estate office", "house for sale"],
+    "base_queries": ["real estate office, modern house exterior, property for sale sign"],
+    "global_attributes": ["corporativo"],
+    "forbidden": ["construction site"]
+  },
+  "gym": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "academia", "weight": 8},
+      {"text": "fitness", "weight": 7},
+      {"text": "personal trainer", "weight": 16},
+      {"text": "crossfit", "weight": 8},
+      {"text": "pilates", "weight": 7}
+    ],
+    "concepts": ["gym", "fitness training", "personal trainer"],
+    "base_queries": ["gym interior, fitness training, personal trainer"],
+    "global_attributes": ["premium"],
+    "forbidden": ["office", "storefront"]
+  },
+  "sports_training_center": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "centro de treinamento", "weight": 21},
+      {"text": "escolinha de futebol", "weight": 20},
+      {"text": "campo de futebol", "weight": 16},
+      {"text": "quadra esportiva", "weight": 16},
+      {"text": "clube esportivo", "weight": 15},
+      {"text": "escola de futebol", "weight": 17}
+    ],
+    "concepts": ["soccer training", "football academy", "sports field"],
+    "base_queries": ["soccer training field, football training center, sports field"],
+    "attributes": {
+      "futebol": {
+        "keywords": ["futebol", "soccer", "football"],
+        "queries": ["soccer training center, football academy, coach training players, green grass pitch"]
+      }
+    },
+    "forbidden": ["office", "storefront"]
+  },
+  "events_venue": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "festa", "weight": 5},
+      {"text": "buffet", "weight": 6},
+      {"text": "salao de festas", "weight": 15},
+      {"text": "espaco de eventos", "weight": 17},
+      {"text": "casa de festas", "weight": 14},
+      {"text": "casamento", "weight": 9},
+      {"text": "cerimonial", "weight": 10},
+      {"text": "aniversario", "weight": 11},
+      {"text": "dj para festas", "weight": 14},
+      {"text": "dj services", "weight": 11}
+    ],
+    "concepts": ["party venue", "event hall", "celebration"],
+    "base_queries": ["party venue interior, event hall decoration, celebration setup"],
+    "attributes": {
+      "infantil": {
+        "keywords": ["infantil", "crianca", "kids", "aniversario infantil"],
+        "queries": ["kids birthday party, birthday decoration, children celebration, party balloons, family birthday"]
+      },
+      "corporativo": {
+        "keywords": ["corporativo", "empresarial", "corporate"],
+        "queries": ["corporate event, conference room, business meeting, office event, networking event"]
+      },
+      "casamento": {
+        "keywords": ["casamento", "cerimonial", "noiva"],
+        "queries": ["wedding reception venue, wedding decoration, elegant event hall"]
+      }
+    },
+    "global_attributes": ["premium"],
+    "forbidden": ["office meeting", "storefront"]
+  },
+  "photography_studio": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "fotografia", "weight": 10},
+      {"text": "fotograf", "weight": 8},
+      {"text": "filmagem", "weight": 8},
+      {"text": "videomaker", "weight": 10},
+      {"text": "estudio fotografico", "weight": 19}
+    ],
+    "concepts": ["photography studio", "camera equipment"],
+    "base_queries": ["photography studio, professional camera equipment, photographer at work"],
+    "forbidden": ["office", "construction"]
+  },
+  "florist_shop": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "floricultura", "weight": 12},
+      {"text": "florista", "weight": 8}
+    ],
+    "concepts": ["flower shop", "florist"],
+    "base_queries": ["flower shop interior, florist arranging bouquet, flower store display"],
+    "forbidden": ["office", "construction"]
+  },
+  "education_school": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "escola de idioma", "weight": 16},
+      {"text": "curso online", "weight": 12},
+      {"text": "escola de arte", "weight": 14},
+      {"text": "curso de culinaria", "weight": 18},
+      {"text": "escola de musica", "weight": 16},
+      {"text": "cursinho", "weight": 8}
+    ],
+    "concepts": ["classroom", "students learning"],
+    "base_queries": ["classroom interior, students learning, education workshop"],
+    "forbidden": ["storefront"]
+  },
+  "tech_software": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "software", "weight": 8},
+      {"text": "saas", "weight": 4},
+      {"text": "desenvolvimento web", "weight": 19},
+      {"text": "web design", "weight": 10},
+      {"text": "programador", "weight": 11},
+      {"text": "consultoria tecnologica", "weight": 23},
+      {"text": "tecnologia da informacao", "weight": 24}
+    ],
+    "concepts": ["software development", "tech startup", "programmers"],
+    "base_queries": ["software development office, tech startup workspace, programmers coding"],
+    "global_attributes": ["corporativo"],
+    "forbidden": ["construction", "storefront"]
+  },
+  "marketing_creative": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "marketing", "weight": 9},
+      {"text": "publicidade", "weight": 11},
+      {"text": "social media", "weight": 12},
+      {"text": "estudio de design", "weight": 17},
+      {"text": "estudio criativo", "weight": 16},
+      {"text": "design grafico", "weight": 14},
+      {"text": "agencia de marketing", "weight": 20}
+    ],
+    "concepts": ["creative agency", "marketing team", "design studio"],
+    "base_queries": ["creative agency office, marketing team brainstorming, design studio workspace"],
+    "global_attributes": ["corporativo"],
+    "forbidden": ["construction"]
+  },
+  "clothing_store": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "loja de roupas", "weight": 14},
+      {"text": "sapataria", "weight": 9},
+      {"text": "sapetaria", "weight": 9},
+      {"text": "brecho", "weight": 6},
+      {"text": "boutique", "weight": 8},
+      {"text": "loja de calcados", "weight": 16}
+    ],
+    "concepts": ["clothing boutique", "fashion store"],
+    "base_queries": ["clothing boutique interior, fashion store display, retail clothing rack"],
+    "forbidden": ["office", "construction"]
+  },
+  "parking": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "estacionamento", "weight": 14},
+      {"text": "garagem", "weight": 7}
+    ],
+    "concepts": ["parking lot", "parking garage"],
+    "base_queries": ["parking lot, parking garage, car park attendant"],
+    "forbidden": ["office"]
+  },
+
+  "retail_general": {
+    "tier": "generic",
+    "aliases": [
+      {"text": "loja", "weight": 4},
+      {"text": "comerci", "weight": 7},
+      {"text": "varejo", "weight": 6}
+    ],
+    "concepts": ["retail store"],
+    "base_queries": ["modern retail store interior, shop display, storefront"],
+    "forbidden": []
+  },
+  "professional_office": {
+    "tier": "generic",
+    "aliases": [
+      {"text": "escritorio", "weight": 10},
+      {"text": "assessoria", "weight": 10},
+      {"text": "consultoria", "weight": 11}
+    ],
+    "concepts": ["professional office"],
+    "base_queries": ["modern professional office, business meeting room, corporate workspace"],
+    "forbidden": []
+  },
+  "workshop_industrial": {
+    "tier": "generic",
+    "aliases": [
+      {"text": "fabrica", "weight": 7},
+      {"text": "industria", "weight": 9},
+      {"text": "distribuidora", "weight": 13},
+      {"text": "deposito", "weight": 8},
+      {"text": "galpao", "weight": 6}
+    ],
+    "concepts": ["industrial workshop"],
+    "base_queries": ["industrial workshop, factory warehouse, manufacturing facility"],
+    "forbidden": []
+  },
+  "creative_studio": {
+    "tier": "generic",
+    "aliases": [
+      {"text": "atelie", "weight": 6},
+      {"text": "espaco criativo", "weight": 15}
+    ],
+    "concepts": ["creative studio"],
+    "base_queries": ["creative studio interior, artistic workspace, design atelier"],
+    "forbidden": []
+  },
+
+  "default_business": {
+    "tier": "default",
+    "aliases": [],
+    "concepts": ["professional business"],
+    "base_queries": ["modern professional business interior, welcoming storefront, quality local service"],
+    "forbidden": []
+  }
+
+  }
+}
