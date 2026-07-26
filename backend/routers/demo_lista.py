@@ -32,6 +32,12 @@ async def listar_demos(request: Request, db: Session = Depends(get_db)):
     # docs/hunter_online_spec.md) — antes contava linha de CSV direto.
     total_leads = repository.contar_leads_hunter(db)
 
+    def _link_lovable(site) -> str:
+        url_real = (site.config or {}).get("lovableResultUrl")
+        if url_real:
+            return f'<a href="{html.escape(url_real)}" target="_blank" rel="noopener" title="Resultado real já gerado no Lovable">ver no Lovable</a>'
+        return f'<a href="{html.escape(montar_url_lovable(site.config))}" target="_blank" rel="noopener" title="Benchmark: compare com a versão do Lovable pro mesmo cliente">gerar no Lovable</a>'
+
     linhas = "".join(
         f"""<tr>
             <td>{html.escape(site.nome_empresa)}</td>
@@ -39,7 +45,7 @@ async def listar_demos(request: Request, db: Session = Depends(get_db)):
             <td>{site.created_at.strftime('%d/%m/%Y %H:%M')}</td>
             <td>
                 <a href="/demo/preview/{html.escape(site.slug)}" target="_blank">ver site</a>
-                · <a href="{html.escape(montar_url_lovable(site.config))}" target="_blank" rel="noopener" title="Benchmark: compare com a versão do Lovable pro mesmo cliente">gerar no Lovable</a>
+                · {_link_lovable(site)}
             </td>
         </tr>"""
         for site in sites

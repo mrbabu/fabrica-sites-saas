@@ -140,3 +140,27 @@ async def gerar_demo(payload: DemoDfyRequest, db: Session = Depends(get_db)):
         "site_title": config.get("metadata", {}).get("siteTitle", ""),
         "preview_url": f"/demo/preview/{slug}",
     }
+
+
+class LovableUrlRequest(BaseModel):
+    """URL real do projeto já gerado no Lovable (depois que a equipe passou
+    pelo fluxo manual de "gerar no Lovable") — nunca gerado por nós."""
+    url: str = Field(..., min_length=10, max_length=500)
+
+    @field_validator("url")
+    @classmethod
+    def validar_url_lovable(cls, v: str) -> str:
+        if not re.match(r"^https://([a-z0-9-]+\.)*lovable\.(dev|app)/", v, re.IGNORECASE):
+            raise ValueError("url deve ser um link real do Lovable (lovable.dev/... ou *.lovable.app)")
+        return v
+
+
+@router.post("/api/v1/demo-dfy/{slug}/lovable-url", dependencies=[Depends(verificar_api_key)])
+async def salvar_link_lovable(slug: str, payload: LovableUrlRequest, db: Session = Depends(get_db)):
+    """Guarda o link do resultado real já gerado no Lovable pra essa demo —
+    /demo/lista passa a mostrar esse link em vez do link de "gerar no
+    Lovable" pra essa linha (ver demo_lista.py)."""
+    site = repository.salvar_lovable_url(db, slug, payload.url)
+    if site is None:
+        raise HTTPException(status_code=404, detail=f"Demo '{slug}' não encontrada")
+    return {"slug": slug, "lovableResultUrl": payload.url}

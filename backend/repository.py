@@ -37,6 +37,19 @@ def obter_site(db: Session, slug: str) -> Optional[Site]:
     return db.query(Site).filter(Site.slug == slug).one_or_none()
 
 
+def salvar_lovable_url(db: Session, slug: str, url: str) -> Optional[Site]:
+    """Guarda o link do projeto real já gerado no Lovable (depois que a
+    equipe passou pelo fluxo manual) dentro do próprio config JSON — sem
+    coluna/migration nova. None se o slug não existir."""
+    site = db.query(Site).filter(Site.slug == slug).one_or_none()
+    if site is None:
+        return None
+    site.config = {**site.config, "lovableResultUrl": url}
+    db.commit()
+    db.refresh(site)
+    return site
+
+
 def listar_sites(db: Session) -> list[Site]:
     """Lista todos os sites salvos, mais recente primeiro"""
     return db.query(Site).order_by(Site.created_at.desc()).all()
