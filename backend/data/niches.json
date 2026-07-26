@@ -70,8 +70,8 @@
       {"text": "panificadora", "weight": 13}
     ],
     "concepts": ["bakery", "artisan bread", "pastry shop"],
-    "base_queries": ["bakery interior, artisan bread, pastry shop storefront"],
-    "forbidden": ["office", "construction"]
+    "base_queries": ["bakery interior, artisan bread, pastry shop counter, freshly baked bread"],
+    "forbidden": ["office", "construction", "storefront", "shopfront", "street sign"]
   },
   "restaurant": {
     "tier": "specific",
