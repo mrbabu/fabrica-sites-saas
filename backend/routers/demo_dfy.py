@@ -46,7 +46,10 @@ class DemoDfyRequest(BaseModel):
     nicho: str = Field(..., min_length=3, max_length=100, description='Rótulo na UI: "Tipo de negócio"')
     localizacao: str = Field(..., min_length=2, max_length=150)
     whatsapp_contato: str = Field(..., min_length=10, max_length=20, description="WhatsApp REAL do negócio, obrigatório")
-    cor_primaria: str = Field(default="#0D9488", description="Cor primária em hexadecimal")
+    cor_primaria: Optional[str] = Field(
+        default=None,
+        description="Cor primária em hexadecimal — opcional; se ausente, é derivada automaticamente do tipo de negócio (ver niches.json)",
+    )
     logo_url: Optional[str] = Field(default=None, description="URL pública de imagem já existente — nunca upload")
     descricao_negocio: Optional[str] = Field(default=None, max_length=2000, description="Contexto livre sobre o negócio, informado pelo cliente")
     google_maps_url: Optional[str] = Field(
@@ -68,7 +71,9 @@ class DemoDfyRequest(BaseModel):
 
     @field_validator("cor_primaria")
     @classmethod
-    def validar_cor_hex(cls, v: str) -> str:
+    def validar_cor_hex(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
         if not re.match(r"^#[0-9a-fA-F]{6}$", v):
             raise ValueError("Cor deve estar em formato hex válido: #RRGGBB")
         return v.lower()

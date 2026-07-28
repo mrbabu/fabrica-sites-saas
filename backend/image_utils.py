@@ -111,6 +111,8 @@ CATEGORIA_PADRAO = "default_business"
 
 TIERS_VALIDOS = {"specific", "generic", "default"}
 CAMPOS_OBRIGATORIOS_CATEGORIA = ("tier", "aliases", "base_queries")
+REGEX_COR_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+COR_PRIMARIA_PADRAO = "#0D9488"  # usada quando a categoria não define primary_color (compatibilidade)
 
 
 def _validar_definicao_atributo(dado_attr: object, prefixo_attr: str) -> None:
@@ -209,6 +211,15 @@ def _validar_base_nichos(dados: dict) -> None:
         ):
             raise ErroBaseNichos(f"{prefixo}: campo 'base_queries' deve ser uma lista não vazia de strings não vazias")
 
+        # Opcional (compatibilidade com categorias antigas sem cor definida —
+        # obter_cor_primaria() cai pra COR_PRIMARIA_PADRAO nesse caso), mas
+        # formato estrito quando presente, mesmo rigor dos outros campos.
+        if "primary_color" in dado and not REGEX_COR_HEX.match(dado["primary_color"] or ""):
+            raise ErroBaseNichos(
+                f"{prefixo}: campo 'primary_color' deve estar em formato hex válido "
+                f"#RRGGBB (recebido {dado['primary_color']!r})"
+            )
+
         nomes_atributos_inline = set()
         if "attributes" in dado:
             atributos = dado["attributes"]
@@ -269,6 +280,7 @@ def _construir_estruturas(dados: dict) -> dict:
     concepts_por_categoria: dict[str, list[str]] = {}
     forbidden_por_categoria: dict[str, list[str]] = {}
     categorias_dados: dict[str, dict] = {}
+    cor_por_categoria: dict[str, str] = {}
 
     for nome, dado in categorias.items():
         pares_aliases = [(a["text"], a["weight"]) for a in dado["aliases"]]
@@ -284,6 +296,8 @@ def _construir_estruturas(dados: dict) -> dict:
         concepts_por_categoria[nome] = concepts
         forbidden_por_categoria[nome] = dado.get("forbidden", [])
         categorias_dados[nome] = {"base_query": base_query, "concepts": concepts}
+        if "primary_color" in dado:
+            cor_por_categoria[nome] = dado["primary_color"]
 
         # Une atributos definidos inline na categoria com os referenciados do
         # banco compartilhado (global_attributes) — validado previamente que
@@ -311,6 +325,7 @@ def _construir_estruturas(dados: dict) -> dict:
         "forbidden_por_categoria": forbidden_por_categoria,
         "categorias_dados": categorias_dados,
         "global_forbidden": global_forbidden,
+        "cor_por_categoria": cor_por_categoria,
     }
 
 
@@ -610,6 +625,23 @@ def mapear_categoria(nicho: str) -> str:
     tempo_ms = round((time.perf_counter() - tempo_inicio) * 1000, 3)
     _registrar_telemetria_categorizacao(nicho, CATEGORIA_PADRAO, "default", [], [], tempo_ms)
     return CATEGORIA_PADRAO
+
+
+def obter_cor_primaria(categoria: str) -> str:
+    """Cor primária (hex) sugerida pra categoria, cadastrada em
+    niches.json (campo "primary_color"). Reaproveita a mesma categoria
+    que mapear_categoria() já resolveu pra imagem — nenhuma categorização
+    nova, nenhuma duplicação entre nichos que compartilham categoria (ex.:
+    "Odontologia" e "Fisioterapia" caem ambos em medical_clinic e usam a
+    mesma cor).
+
+    categoria pode ser composta ("categoria_base__atributo1__atributo2") —
+    a cor sempre vem da categoria BASE (atributos não têm cor própria,
+    são variantes visuais/textuais da mesma categoria, não identidades
+    visuais diferentes). Cai pra COR_PRIMARIA_PADRAO se a categoria base
+    não tiver primary_color definido (compatibilidade)."""
+    categoria_base = categoria.split("__", 1)[0]
+    return _ESTRUTURAS["cor_por_categoria"].get(categoria_base, COR_PRIMARIA_PADRAO)
 
 
 def _carregar_cache_imagens() -> dict:

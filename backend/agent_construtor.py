@@ -26,7 +26,7 @@ except ImportError:
 from schema_validator import ValidadorSchema, FONT_PAIRS_VALIDOS
 from metrics import obter_metricas
 from ai_provider import obter_ai_provider, ErroProvedorIA
-from image_utils import _slugify, mapear_categoria, obter_imagens_categoria, ErroBancoImagens
+from image_utils import _slugify, mapear_categoria, obter_imagens_categoria, obter_cor_primaria, ErroBancoImagens
 
 
 MAX_TENTATIVAS_GERACAO = 3
@@ -124,7 +124,7 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
         self,
         nome_empresa: str,
         nicho: str,
-        cor_primaria: str,
+        cor_primaria: Optional[str] = None,
         localizacao: Optional[str] = None,
         whatsapp_contato: Optional[str] = None,
         logo_url: Optional[str] = None,
@@ -138,7 +138,9 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
         Args:
             nome_empresa: Nome da empresa
             nicho: Nicho/ramo de atuação (ex: ramo_atividade do onboarding)
-            cor_primaria: Cor primária em hex
+            cor_primaria: Cor primária em hex (opcional) — se ausente, é
+                derivada automaticamente do nicho via obter_cor_primaria()
+                (mesma categorização de mapear_categoria(), ver niches.json)
             localizacao: Cidade/região do negócio, usada para SEO local (opcional)
             whatsapp_contato: Número de WhatsApp do cliente (opcional)
             logo_url: URL/caminho do logo já normalizado (opcional)
@@ -163,6 +165,9 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
         Returns:
             Dicionário com configuração completa do site
         """
+        if not cor_primaria:
+            cor_primaria = obter_cor_primaria(mapear_categoria(nicho))
+
         # Gerar paleta de cores
         print(f"🎨 Gerando paleta de cores complementares para {cor_primaria}...")
         cores = self.gerar_paleta_cores(cor_primaria)
@@ -657,7 +662,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         self,
         nome_empresa: str,
         nicho: str,
-        cor_primaria: str,
+        cor_primaria: Optional[str] = None,
         caminho_saida: str = "site-config.json",
         localizacao: Optional[str] = None,
         whatsapp_contato: Optional[str] = None,
@@ -672,7 +677,8 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         Args:
             nome_empresa: Nome da empresa
             nicho: Nicho/ramo de atuação
-            cor_primaria: Cor primária em hex
+            cor_primaria: Cor primária em hex (opcional) — se ausente, é
+                derivada automaticamente do nicho (ver gerar_config_site)
             caminho_saida: Caminho do arquivo de saída
             localizacao: Cidade/região do negócio (opcional, para SEO local)
             whatsapp_contato: WhatsApp do cliente (opcional)
@@ -696,7 +702,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         print(f"  • Empresa: {nome_empresa}")
         print(f"  • Nicho: {nicho}")
         print(f"  • Localização: {localizacao or 'não informada'}")
-        print(f"  • Cor Primária: {cor_primaria}")
+        print(f"  • Cor Primária: {cor_primaria or '(automática por nicho)'}")
         print(f"\n{'='*60}\n")
 
         try:
@@ -773,14 +779,12 @@ def main():
 
     localizacao = input("📍 Localização (cidade/região, opcional): ").strip() or None
 
-    cor_primaria = input("🎨 Cor de Preferência em HEX (ex: #6366f1): ").strip()
-    if not cor_primaria:
-        cor_primaria = "#6366f1"
+    cor_primaria = input("🎨 Cor de Preferência em HEX (ex: #6366f1, deixe em branco pra automática por nicho): ").strip() or None
 
-    # Validar cor
-    if not re.match(r'^#[0-9a-fA-F]{6}$', cor_primaria):
-        print(f"⚠️  Cor inválida. Usando padrão #6366f1")
-        cor_primaria = "#6366f1"
+    # Validar cor (None passa direto - gerar_config_site resolve automaticamente pelo nicho)
+    if cor_primaria and not re.match(r'^#[0-9a-fA-F]{6}$', cor_primaria):
+        print(f"⚠️  Cor inválida. Usando automática por nicho")
+        cor_primaria = None
 
     try:
         agente = AgenteConstrutor()

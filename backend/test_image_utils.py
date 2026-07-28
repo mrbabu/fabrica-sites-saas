@@ -20,7 +20,10 @@ import sys
 os.environ["IMAGE_ENGINE_LLM_FALLBACK"] = "0"
 
 import image_utils
-from image_utils import mapear_categoria, CATEGORIAS_ALIASES, SINAIS_GENERICOS, CATEGORIA_PADRAO, _montar_query
+from image_utils import (
+    mapear_categoria, CATEGORIAS_ALIASES, SINAIS_GENERICOS, CATEGORIA_PADRAO, _montar_query,
+    obter_cor_primaria, REGEX_COR_HEX, COR_PRIMARIA_PADRAO,
+)
 
 # (nicho, categoria_esperada) — cobre os 50 nichos de test_agentes.py mais
 # os casos reais reportados como incompatíveis e variações de escrita.
@@ -263,6 +266,47 @@ def checar_fallback_llm() -> bool:
     return True
 
 
+def checar_cor_primaria_por_categoria() -> bool:
+    """Fase 1 da identidade visual automática (2026-07-28): toda categoria
+    (specific/generic/default) precisa resolver pra uma cor hex válida via
+    obter_cor_primaria(), seja a cadastrada em niches.json ou o fallback
+    COR_PRIMARIA_PADRAO — nenhum nicho pode ficar sem cor nem gerar uma cor
+    mal formatada. Cobre também categorias compostas (com atributo) e um
+    nome de categoria totalmente desconhecido (fallback puro)."""
+    from image_utils import _ESTRUTURAS
+
+    falhas = []
+    todas_categorias = list(CATEGORIAS_ALIASES) + list(SINAIS_GENERICOS) + [CATEGORIA_PADRAO]
+    for categoria in todas_categorias:
+        cor = obter_cor_primaria(categoria)
+        if not REGEX_COR_HEX.match(cor):
+            falhas.append(f"{categoria}: cor {cor!r} não é hex válido")
+
+    # categoria composta (com atributo) usa a cor da categoria base
+    cor_base = obter_cor_primaria("sports_training_center")
+    cor_composta = obter_cor_primaria("sports_training_center__infantil__futebol")
+    if cor_base != cor_composta:
+        falhas.append(f"categoria composta deveria herdar a cor da base: {cor_base!r} != {cor_composta!r}")
+
+    # categoria totalmente desconhecida -> fallback, nunca erro
+    cor_desconhecida = obter_cor_primaria("categoria_que_nao_existe")
+    if cor_desconhecida != COR_PRIMARIA_PADRAO:
+        falhas.append(f"categoria desconhecida deveria cair no fallback {COR_PRIMARIA_PADRAO!r}, veio {cor_desconhecida!r}")
+
+    # toda categoria em niches.json realmente tem primary_color cadastrado
+    # (a Fase 1 seed cobriu 100% - se uma categoria nova for adicionada sem
+    # cor, isso não falha aqui de propósito, só confirma o fallback funciona)
+    sem_cor_cadastrada = [c for c in todas_categorias if c not in _ESTRUTURAS["cor_por_categoria"]]
+
+    if falhas:
+        for f in falhas:
+            print(normalizar_erro(f))
+        return False
+    print(f"✅ Todas as {len(todas_categorias)} categorias resolvem pra uma cor hex válida "
+          f"({len(todas_categorias) - len(sem_cor_cadastrada)} cadastradas, {len(sem_cor_cadastrada)} via fallback).\n")
+    return True
+
+
 def checar_integridade_bancos() -> bool:
     """Toda categoria referenciada em CATEGORIAS_ALIASES/SINAIS_GENERICOS e
     CATEGORIA_PADRAO precisa ter uma query correspondente — evita o erro
@@ -286,4 +330,5 @@ if __name__ == "__main__":
     passou = rodar_testes()
     dedup_ok = checar_dedup_query_preserva_termo_central()
     llm_ok = checar_fallback_llm()
-    sys.exit(0 if (integro and passou and dedup_ok and llm_ok) else 1)
+    cor_ok = checar_cor_primaria_por_categoria()
+    sys.exit(0 if (integro and passou and dedup_ok and llm_ok and cor_ok) else 1)

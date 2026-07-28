@@ -19,6 +19,7 @@
 
   "medical_clinic": {
     "tier": "specific",
+    "primary_color": "#0EA5E9",
     "aliases": [
       {"text": "clinica", "weight": 7},
       {"text": "consultorio", "weight": 11},
@@ -41,6 +42,7 @@
   },
   "wellness_spa": {
     "tier": "specific",
+    "primary_color": "#4F9A94",
     "aliases": [
       {"text": "spa", "weight": 3},
       {"text": "bem estar", "weight": 9},
@@ -53,6 +55,7 @@
   },
   "pet_shop": {
     "tier": "specific",
+    "primary_color": "#65A30D",
     "aliases": [
       {"text": "pet shop", "weight": 8},
       {"text": "petshop", "weight": 7},
@@ -65,6 +68,7 @@
   },
   "bakery": {
     "tier": "specific",
+    "primary_color": "#EA580C",
     "aliases": [
       {"text": "padaria", "weight": 7},
       {"text": "confeitari", "weight": 10},
@@ -77,6 +81,7 @@
   },
   "restaurant": {
     "tier": "specific",
+    "primary_color": "#DC2626",
     "aliases": [
       {"text": "restaurante", "weight": 11},
       {"text": "marmitaria", "weight": 12},
@@ -102,6 +107,7 @@
   },
   "ice_cream_shop": {
     "tier": "specific",
+    "primary_color": "#F472B6",
     "aliases": [
       {"text": "sorveteria", "weight": 10},
       {"text": "acaiteria", "weight": 10},
@@ -120,6 +126,7 @@
   },
   "auto_repair": {
     "tier": "specific",
+    "primary_color": "#374151",
     "aliases": [
       {"text": "oficina", "weight": 7},
       {"text": "mecanica", "weight": 8},
@@ -134,6 +141,7 @@
   },
   "car_wash": {
     "tier": "specific",
+    "primary_color": "#0284C7",
     "aliases": [
       {"text": "lavajato", "weight": 8},
       {"text": "lavagem de veiculo", "weight": 18},
@@ -145,6 +153,7 @@
   },
   "construction": {
     "tier": "specific",
+    "primary_color": "#F59E0B",
     "aliases": [
       {"text": "construcao", "weight": 10},
       {"text": "reforma", "weight": 7},
@@ -184,6 +193,7 @@
   },
   "architecture_office": {
     "tier": "specific",
+    "primary_color": "#1F2937",
     "aliases": [
       {"text": "arquitetura", "weight": 11},
       {"text": "arquiteto", "weight": 9}
@@ -194,6 +204,7 @@
   },
   "solar_energy": {
     "tier": "specific",
+    "primary_color": "#FACC15",
     "aliases": [
       {"text": "energia solar", "weight": 13},
       {"text": "fotovoltaic", "weight": 11},
@@ -205,6 +216,7 @@
   },
   "hotel": {
     "tier": "specific",
+    "primary_color": "#1F5745",
     "aliases": [
       {"text": "pousada", "weight": 7},
       {"text": "hotel", "weight": 5},
@@ -218,6 +230,7 @@
   },
   "tourism_agency": {
     "tier": "specific",
+    "primary_color": "#0891B2",
     "aliases": [
       {"text": "turismo", "weight": 7},
       {"text": "agencia de viagens", "weight": 18},
@@ -233,6 +246,7 @@
   },
   "beauty_salon": {
     "tier": "specific",
+    "primary_color": "#DB2777",
     "aliases": [
       {"text": "salao", "weight": 5},
       {"text": "beleza", "weight": 6},
@@ -257,6 +271,7 @@
   },
   "law_office": {
     "tier": "specific",
+    "primary_color": "#1E3A5F",
     "aliases": [
       {"text": "advocacia", "weight": 9},
       {"text": "advogad", "weight": 7},
@@ -269,6 +284,7 @@
   },
   "accounting_office": {
     "tier": "specific",
+    "primary_color": "#1E40AF",
     "aliases": [
       {"text": "contabilidade", "weight": 13},
       {"text": "contador", "weight": 8}
@@ -280,6 +296,7 @@
   },
   "real_estate": {
     "tier": "specific",
+    "primary_color": "#065F46",
     "aliases": [
       {"text": "imobiliaria", "weight": 11},
       {"text": "aluguel de imove", "weight": 16},
@@ -293,6 +310,7 @@
   },
   "gym": {
     "tier": "specific",
+    "primary_color": "#991B1B",
     "aliases": [
       {"text": "academia", "weight": 8},
       {"text": "fitness", "weight": 7},
@@ -313,6 +331,7 @@
   },
   "sports_training_center": {
     "tier": "specific",
+    "primary_color": "#16A34A",
     "aliases": [
       {"text": "centro de treinamento", "weight": 21},
       {"text": "escolinha de futebol", "weight": 20},
@@ -338,6 +357,7 @@
   },
   "events_venue": {
     "tier": "specific",
+    "primary_color": "#9333EA",
     "aliases": [
       {"text": "festa", "weight": 5},
       {"text": "buffet", "weight": 6},
@@ -372,6 +392,7 @@
   },
   "photography_studio": {
     "tier": "specific",
+    "primary_color": "#111827",
     "aliases": [
       {"text": "fotografia", "weight": 10},
       {"text": "fotograf", "weight": 8},
@@ -385,6 +406,7 @@
   },
   "florist_shop": {
     "tier": "specific",
+    "primary_color": "#E11D48",
     "aliases": [
       {"text": "floricultura", "weight": 12},
       {"text": "florista", "weight": 8}
@@ -395,6 +417,7 @@
   },
   "education_school": {
     "tier": "specific",
+    "primary_color": "#2563EB",
     "aliases": [
       {"text": "escola de idioma", "weight": 16},
       {"text": "curso online", "weight": 12},
@@ -420,6 +443,7 @@
   },
   "tech_software": {
     "tier": "specific",
+    "primary_color": "#6366F1",
     "aliases": [
       {"text": "software", "weight": 8},
       {"text": "saas", "weight": 4},
@@ -436,6 +460,7 @@
   },
   "marketing_creative": {
     "tier": "specific",
+    "primary_color": "#D946EF",
     "aliases": [
       {"text": "marketing", "weight": 9},
       {"text": "publicidade", "weight": 11},
@@ -452,6 +477,7 @@
   },
   "clothing_store": {
     "tier": "specific",
+    "primary_color": "#BE185D",
     "aliases": [
       {"text": "loja de roupas", "weight": 14},
       {"text": "sapataria", "weight": 9},
@@ -466,6 +492,7 @@
   },
   "parking": {
     "tier": "specific",
+    "primary_color": "#475569",
     "aliases": [
       {"text": "estacionamento", "weight": 14},
       {"text": "garagem", "weight": 7}
@@ -477,6 +504,7 @@
 
   "retail_general": {
     "tier": "generic",
+    "primary_color": "#7C3AED",
     "aliases": [
       {"text": "loja", "weight": 4},
       {"text": "comerci", "weight": 7},
@@ -490,6 +518,7 @@
   },
   "optical_shop": {
     "tier": "specific",
+    "primary_color": "#0369A1",
     "aliases": [
       {"text": "otica", "weight": 10},
       {"text": "oticas", "weight": 10}
@@ -500,6 +529,7 @@
   },
   "professional_office": {
     "tier": "generic",
+    "primary_color": "#334155",
     "aliases": [
       {"text": "escritorio", "weight": 10},
       {"text": "assessoria", "weight": 10},
@@ -511,6 +541,7 @@
   },
   "workshop_industrial": {
     "tier": "generic",
+    "primary_color": "#B45309",
     "aliases": [
       {"text": "fabrica", "weight": 7},
       {"text": "industria", "weight": 9},
@@ -524,6 +555,7 @@
   },
   "creative_studio": {
     "tier": "generic",
+    "primary_color": "#C026D3",
     "aliases": [
       {"text": "atelie", "weight": 6},
       {"text": "espaco criativo", "weight": 15}
@@ -535,6 +567,7 @@
 
   "default_business": {
     "tier": "default",
+    "primary_color": "#0D9488",
     "aliases": [],
     "concepts": ["professional business"],
     "base_queries": ["modern professional business interior, welcoming storefront, quality local service"],

@@ -86,9 +86,6 @@ async def formulario_demo(request: Request, nome_empresa: str = "", nicho: str =
     <label>WhatsApp (obrigatório, número real)</label>
     <input name="whatsapp_contato" required placeholder="+55 27 99999-9999">
 
-    <label>Cor principal</label>
-    <input name="cor_primaria" type="color" value="#0D9488">
-
     <label>Me conte sobre seu negócio (opcional)</label>
     <textarea name="descricao_negocio" placeholder="O que torna esse negócio especial? Diferenciais, história, público-alvo..."></textarea>
 
