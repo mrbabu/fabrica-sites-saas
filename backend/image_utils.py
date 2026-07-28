@@ -643,8 +643,9 @@ def _montar_query(categoria: str) -> str:
         return QUERY_POR_CATEGORIA[CATEGORIA_PADRAO]
 
     partes = [dado_base["base_query"]]
-    if dado_base["concepts"]:
-        partes.append(", ".join(dado_base["concepts"]))
+    # concepts NÃO entram na query — são usados apenas como sinais de
+    # ranking em _rankear_imagens (chamada por buscar_imagens). Adicioná-los
+    # aqui redundancia com base_query e infla a query desnecessariamente.
 
     queries_attr = _ESTRUTURAS["atributos_query"].get(categoria_base, {})
     for nome_attr in nomes_atributos:
@@ -652,9 +653,25 @@ def _montar_query(categoria: str) -> str:
         if fragmento:
             partes.append(fragmento)
 
-    vistas = set()
-    unicas = [p for p in partes if p and not (p in vistas or vistas.add(p))]
-    return ", ".join(unicas)
+    # Dedup por palavras individuais (não por frase inteira).
+    # Ex.: "medical office, dentist, doctor consultation room" deveria
+    # manter "medical" mas remover "dentist" e "doctor" se já foram
+    # cobertos por "medical office".
+    palavras_vistas: set[str] = set()
+    tokens_final: list[str] = []
+    for frase in partes:
+        for t in frase.split(","):
+            t = t.strip()
+            if not t:
+                continue
+            palavras = t.split()
+            filtradas = [w for w in palavras if w.lower() not in palavras_vistas]
+            palavras_vistas.update(w.lower() for w in palavras)
+            frase_filtrada = " ".join(filtradas)
+            if frase_filtrada:
+                tokens_final.append(frase_filtrada)
+
+    return ", ".join(tokens_final)
 
 
 def _termos_atributos(categoria: str) -> list[str]:
