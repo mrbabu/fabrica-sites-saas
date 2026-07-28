@@ -77,7 +77,7 @@ CASOS_ESPERADOS: list[tuple[str, str]] = [
     # --- Variações de plural / gênero / grafia (Etapa 1 do pedido) ---
     ("Clínica Veterinária", "pet_shop"),  # mais específico vence o genérico
     ("Consultório Odontológico", "medical_clinic"),
-    ("Escolinha de Futebol", "sports_training_center__futebol"),  # atributo "futebol" bate no keyword
+    ("Escolinha de Futebol", "sports_training_center__infantil__futebol"),  # "escolinha" bate no atributo infantil também (2026-07-28: atributo infantil generalizado, achado do benchmark visual)
     ("Advogada", "law_office"),
     ("Contador", "accounting_office"),
     ("Contadores Associados", "accounting_office"),

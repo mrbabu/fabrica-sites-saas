@@ -92,6 +92,12 @@
     ],
     "concepts": ["restaurant", "chef cooking", "plated food"],
     "base_queries": ["restaurant interior, chef cooking, plated food"],
+    "attributes": {
+      "cafeteria": {
+        "keywords": ["cafeteria", "cafe", "coffee shop"],
+        "queries": ["coffee shop counter, barista making coffee, espresso machine, cozy cafe interior"]
+      }
+    },
     "forbidden": ["office", "construction"]
   },
   "ice_cream_shop": {
@@ -104,6 +110,12 @@
     ],
     "concepts": ["ice cream shop", "gelato counter"],
     "base_queries": ["ice cream shop interior, gelato counter, ice cream parlor"],
+    "attributes": {
+      "acai": {
+        "keywords": ["acai", "acaiteria"],
+        "queries": ["acai bowl, purple acai cream, granola and banana toppings, acai smoothie bowl"]
+      }
+    },
     "forbidden": ["office"]
   },
   "auto_repair": {
@@ -290,6 +302,12 @@
     ],
     "concepts": ["gym", "fitness training", "personal trainer"],
     "base_queries": ["gym interior, fitness training, personal trainer"],
+    "attributes": {
+      "pilates": {
+        "keywords": ["pilates"],
+        "queries": ["pilates studio, reformer machine, stretching mat, pilates class"]
+      }
+    },
     "global_attributes": ["premium"],
     "forbidden": ["office", "storefront"]
   },
@@ -310,9 +328,13 @@
       "futebol": {
         "keywords": ["futebol", "soccer", "football"],
         "queries": ["soccer training center, football academy, coach training players, green grass pitch"]
+      },
+      "infantil": {
+        "keywords": ["infantil", "crianca", "kids", "escolinha"],
+        "queries": ["kids soccer training, youth sports practice, children playing sports, community sports field"]
       }
     },
-    "forbidden": ["office", "storefront"]
+    "forbidden": ["office", "storefront", "stadium", "empty stands"]
   },
   "events_venue": {
     "tier": "specific",
@@ -388,7 +410,13 @@
     ],
     "concepts": ["classroom", "students learning"],
     "base_queries": ["classroom interior, students learning, education workshop"],
-    "forbidden": ["storefront"]
+    "attributes": {
+      "infantil": {
+        "keywords": ["infantil", "crianca", "kids", "pre-escola"],
+        "queries": ["colorful preschool classroom, children playing and learning, kindergarten, kids education"]
+      }
+    },
+    "forbidden": ["storefront", "empty classroom", "dark room"]
   },
   "tech_software": {
     "tier": "specific",
