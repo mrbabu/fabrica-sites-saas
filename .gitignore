@@ -12,6 +12,10 @@
 # Lembrete local de acesso à VM (IP Tailscale, caminho de chave privada)
 ACESSO-VM-TAILSCALE.txt
 
+# Benchmark local do Image Engine (script + thumbnails baixadas do Unsplash
+# pra diagnostico manual) — dado de trabalho local, nao faz parte do produto
+_benchmark_image_engine/
+
 # Python
 __pycache__/
 *.py[cod]
