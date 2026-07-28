@@ -9,8 +9,17 @@ estacionamento) e variações de plural/gênero/acentuação.
 Uso: python test_image_utils.py
 """
 
+import os
 import sys
 
+# Desliga o fallback via LLM (image_utils._reclassificar_nicho_via_ia) antes de
+# importar/rodar qualquer coisa - mantém esta suíte 100% determinística e sem
+# rede (senão "Xyz Abstrato Sem Sentido" e outros casos de CATEGORIA_PADRAO
+# chamariam um provedor de IA de verdade a cada execução). O comportamento do
+# fallback em si é testado à parte, com um mock, em checar_fallback_llm().
+os.environ["IMAGE_ENGINE_LLM_FALLBACK"] = "0"
+
+import image_utils
 from image_utils import mapear_categoria, CATEGORIAS_ALIASES, SINAIS_GENERICOS, CATEGORIA_PADRAO, _montar_query
 
 # (nicho, categoria_esperada) — cobre os 50 nichos de test_agentes.py mais
@@ -176,6 +185,84 @@ def checar_dedup_query_preserva_termo_central() -> bool:
     return True
 
 
+def checar_fallback_llm() -> bool:
+    """Achado real 2026-07-28: nomes próprios que não batem em nenhum alias
+    (ex.: "Botafogo Futebol Clube") caiam direto em CATEGORIA_PADRAO. Testa
+    o novo 4º nível (_reclassificar_nicho_via_ia) com um mock — nunca chama
+    um provedor de IA de verdade nesta suíte. Cobre: sucesso (LLM reescreve
+    pra algo que bate), falha graciosa (LLM indisponível/erro -> comportamento
+    idêntico ao de antes) e cache (não chama o mock 2x pro mesmo texto)."""
+    nicho_teste = "Botafogo Futebol Clube"
+    assert mapear_categoria(nicho_teste) == CATEGORIA_PADRAO, (
+        "pré-condição do teste: sem LLM, esse nicho precisa cair no fallback padrão"
+    )
+
+    falhas = []
+
+    # --- Caso 1: LLM reescreve com sucesso -> categoria correta ---
+    image_utils._CACHE_RECLASSIFICACAO_LLM.clear()
+    chamadas = []
+
+    def _mock_sucesso(nicho: str):
+        chamadas.append(nicho)
+        return "escola de futebol"
+
+    original = image_utils._reclassificar_nicho_via_ia
+    image_utils._reclassificar_nicho_via_ia = _mock_sucesso
+    try:
+        obtido = mapear_categoria(nicho_teste)
+        if obtido != "sports_training_center__futebol":
+            falhas.append(f"caso sucesso: esperado 'sports_training_center__futebol', obtido {obtido!r}")
+    finally:
+        image_utils._reclassificar_nicho_via_ia = original
+
+    # --- Caso 2: LLM falha/indisponível (retorna None) -> comportamento igual ao de sempre ---
+    def _mock_falha(nicho: str):
+        return None
+
+    image_utils._reclassificar_nicho_via_ia = _mock_falha
+    try:
+        obtido = mapear_categoria(nicho_teste)
+        if obtido != CATEGORIA_PADRAO:
+            falhas.append(f"caso falha graciosa: esperado {CATEGORIA_PADRAO!r}, obtido {obtido!r}")
+    finally:
+        image_utils._reclassificar_nicho_via_ia = original
+
+    # --- Caso 3: cache real (a função de produção, não o mock) não chama o
+    # provedor 2x pro mesmo texto normalizado ---
+    image_utils._CACHE_RECLASSIFICACAO_LLM.clear()
+    contador = {"n": 0}
+
+    class _ProvedorFake:
+        def gerar_json(self, prompt, max_tokens=100):
+            contador["n"] += 1
+            return {"tipo_negocio": "escola de futebol"}
+
+    # Este sub-caso testa a função real (não um mock dela), então precisa
+    # religar a flag que o topo do arquivo desliga globalmente pra suíte
+    # inteira não bater rede - só pelo tempo deste bloco.
+    import ai_provider
+    original_obter = ai_provider.obter_ai_provider
+    ai_provider.obter_ai_provider = lambda: _ProvedorFake()
+    os.environ["IMAGE_ENGINE_LLM_FALLBACK"] = "1"
+    try:
+        image_utils.mapear_categoria(nicho_teste)
+        image_utils.mapear_categoria(nicho_teste)
+        if contador["n"] != 1:
+            falhas.append(f"cache: provedor foi chamado {contador['n']}x pro mesmo nicho, esperado 1x")
+    finally:
+        os.environ["IMAGE_ENGINE_LLM_FALLBACK"] = "0"
+        ai_provider.obter_ai_provider = original_obter
+        image_utils._CACHE_RECLASSIFICACAO_LLM.clear()
+
+    if falhas:
+        for f in falhas:
+            print(normalizar_erro(f))
+        return False
+    print("✅ Fallback via LLM: reescreve nome próprio corretamente, falha graciosamente sem LLM, e cacheia por nicho.\n")
+    return True
+
+
 def checar_integridade_bancos() -> bool:
     """Toda categoria referenciada em CATEGORIAS_ALIASES/SINAIS_GENERICOS e
     CATEGORIA_PADRAO precisa ter uma query correspondente — evita o erro
@@ -198,4 +285,5 @@ if __name__ == "__main__":
     integro = checar_integridade_bancos()
     passou = rodar_testes()
     dedup_ok = checar_dedup_query_preserva_termo_central()
-    sys.exit(0 if (integro and passou and dedup_ok) else 1)
+    llm_ok = checar_fallback_llm()
+    sys.exit(0 if (integro and passou and dedup_ok and llm_ok) else 1)

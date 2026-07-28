@@ -437,6 +437,106 @@ def _registrar_nicho_desconhecido(nicho: str, tokens: list[str]) -> None:
     })
 
 
+_CACHE_RECLASSIFICACAO_LLM: dict[str, Optional[str]] = {}
+_ENV_LLM_FALLBACK_ATIVO = "IMAGE_ENGINE_LLM_FALLBACK"
+
+
+def _llm_fallback_ativo() -> bool:
+    return os.getenv(_ENV_LLM_FALLBACK_ATIVO, "1").strip().lower() not in ("0", "false", "off")
+
+
+def _vocabulario_reclassificacao() -> dict[str, str]:
+    """1 alias representativo (o de maior peso) por categoria conhecida
+    (specific + generic) — é exatamente o vocabulário fechado que o LLM pode
+    escolher em _reclassificar_nicho_via_ia. Usar o próprio texto do alias
+    (não o nome técnico da categoria) garante que, se o LLM escolher um
+    item dessa lista, ele necessariamente bate em _melhor_categoria depois
+    - elimina o caso de "clube de futebol" (sinônimo plausível mas nunca
+    cadastrado) passar sem achar nada."""
+    vocabulario: dict[str, str] = {}
+    for banco in (_ESTRUTURAS["categorias_aliases"], _ESTRUTURAS["sinais_genericos"]):
+        for categoria, pares in banco.items():
+            if not pares:
+                continue
+            melhor_alias = max(pares, key=lambda par: par[1])[0]
+            vocabulario[categoria] = melhor_alias
+    return vocabulario
+
+
+_VOCABULARIO_RECLASSIFICACAO = _vocabulario_reclassificacao()
+
+
+def _reclassificar_nicho_via_ia(nicho: str) -> Optional[str]:
+    """Último recurso ANTES do fallback pro CATEGORIA_PADRAO — só entra em
+    jogo quando nem categoria específica nem sinal genérico bateram (ver
+    mapear_categoria). Pede ao AIProvider (mesma cadeia gemini/nvidia_nim/
+    anthropic/ollama de ai_provider.py, já usada em agent_construtor.py) pra
+    ESCOLHER, dentre o vocabulário fechado de _vocabulario_reclassificacao()
+    (aliases já cadastrados em niches.json), qual mais se parece com o texto
+    livre recebido - que pode ser um NOME PRÓPRIO (ex.: "Botafogo Futebol
+    Clube"), não uma descrição de negócio. Nunca pede texto livre/gerado:
+    a saída só é aceita se for EXATAMENTE um item do vocabulário (checado
+    depois da resposta) - isso garante que, se aceita, o resultado bate em
+    _melhor_categoria depois (mesmo alias, mesmo texto). Achado real
+    2026-07-28: pedir pro LLM parafrasear livremente ("clube de futebol")
+    produzia texto plausível mas que não batia em nenhum alias existente
+    ("clube esportivo"/"time de futebol") - restringir ao vocabulário fechado
+    resolve isso sem enfraquecer o matcher determinístico.
+
+    Nunca levanta exceção - qualquer falha (provedor indisponível, timeout,
+    resposta inválida ou fora do vocabulário) retorna None e quem chama
+    segue pro CATEGORIA_PADRAO, exatamente como se esta função não
+    existisse. Cacheado em memória por texto de nicho (normalizado), nunca
+    chama o LLM duas vezes pro mesmo texto no mesmo processo. Desligável via
+    env var IMAGE_ENGINE_LLM_FALLBACK=0, sem precisar mudar código."""
+    if not _llm_fallback_ativo():
+        return None
+
+    chave_cache = nicho.strip().lower()
+    if chave_cache in _CACHE_RECLASSIFICACAO_LLM:
+        return _CACHE_RECLASSIFICACAO_LLM[chave_cache]
+
+    resultado: Optional[str] = None
+    try:
+        from ai_provider import obter_ai_provider  # import local: caminho comum de mapear_categoria nunca depende de IA
+
+        opcoes = sorted(set(_VOCABULARIO_RECLASSIFICACAO.values()))
+        lista_opcoes = "\n".join(f"- {op}" for op in opcoes)
+        prompt = (
+            "O texto abaixo é o que um usuario digitou como \"tipo de negocio\" de "
+            "uma empresa, mas pode ser na verdade o NOME PROPRIO da empresa (ex.: "
+            "nome de clube, marca ou fantasia), nao uma descricao do que ela faz.\n\n"
+            f'Texto: "{nicho}"\n\n'
+            "Aqui esta a lista FECHADA de tipos de negocio que o sistema conhece:\n"
+            f"{lista_opcoes}\n\n"
+            'Responda em JSON com um unico campo "tipo_negocio": copie EXATAMENTE '
+            "(mesma grafia, sem mudar nenhuma palavra) o item da lista acima mais "
+            "parecido com o texto. Nunca invente um item novo, nunca combine dois "
+            "itens, nunca traduza ou reescreva - copie um item literal da lista. "
+            "Se nenhum item da lista se aplicar razoavelmente, responda "
+            '{"tipo_negocio": null}.'
+        )
+        resposta = obter_ai_provider().gerar_json(prompt, max_tokens=100)
+        tipo = resposta.get("tipo_negocio")
+        if isinstance(tipo, str) and tipo.strip().lower() in {op.lower() for op in opcoes}:
+            resultado = tipo.strip()
+        elif tipo:
+            logger.debug(
+                "Reclassificação via LLM para nicho '%s' devolveu item fora do "
+                "vocabulário fechado (%r) - descartado, segue fallback normal",
+                nicho, tipo,
+            )
+    except Exception:
+        logger.debug(
+            "Reclassificação via LLM falhou para nicho '%s' (fallback normal segue)",
+            nicho, exc_info=True,
+        )
+        resultado = None
+
+    _CACHE_RECLASSIFICACAO_LLM[chave_cache] = resultado
+    return resultado
+
+
 def mapear_categoria(nicho: str) -> str:
     """Mapeia o texto livre de nicho para uma categoria controlada de imagens.
 
@@ -472,6 +572,33 @@ def mapear_categoria(nicho: str) -> str:
         tempo_ms = round((time.perf_counter() - tempo_inicio) * 1000, 3)
         _registrar_telemetria_categorizacao(nicho, generica.categoria, "generic", generica.aliases_batidos, [], tempo_ms)
         return generica.categoria
+
+    tipo_reescrito = _reclassificar_nicho_via_ia(nicho)
+    if tipo_reescrito:
+        texto_llm = _normalizar_texto(tipo_reescrito)
+        palavras_llm = texto_llm.split()
+
+        especifica_llm = _melhor_categoria(texto_llm, palavras_llm, _ESTRUTURAS["categorias_aliases"])
+        if especifica_llm.categoria:
+            atributos = _atributos_batidos(texto_llm, palavras_llm, especifica_llm.categoria)
+            categoria_final = "__".join([especifica_llm.categoria, *atributos])
+            logger.info(
+                "Nicho '%s' sem match direto -> LLM reescreveu como '%s' -> categoria específica '%s'",
+                nicho, tipo_reescrito, categoria_final,
+            )
+            tempo_ms = round((time.perf_counter() - tempo_inicio) * 1000, 3)
+            _registrar_telemetria_categorizacao(nicho, categoria_final, "specific_llm", especifica_llm.aliases_batidos, atributos, tempo_ms)
+            return categoria_final
+
+        generica_llm = _melhor_categoria(texto_llm, palavras_llm, _ESTRUTURAS["sinais_genericos"])
+        if generica_llm.categoria:
+            logger.info(
+                "Nicho '%s' sem match direto -> LLM reescreveu como '%s' -> sinal genérico '%s'",
+                nicho, tipo_reescrito, generica_llm.categoria,
+            )
+            tempo_ms = round((time.perf_counter() - tempo_inicio) * 1000, 3)
+            _registrar_telemetria_categorizacao(nicho, generica_llm.categoria, "generic_llm", generica_llm.aliases_batidos, [], tempo_ms)
+            return generica_llm.categoria
 
     logger.warning(
         "Nicho '%s' não bateu em nenhuma categoria específica nem sinal "
