@@ -322,12 +322,12 @@
       {"text": "escola de futebol", "weight": 17},
       {"text": "time de futebol", "weight": 17}
     ],
-    "concepts": ["soccer training", "football academy", "sports field"],
-    "base_queries": ["soccer training field, football training center, sports field"],
+    "concepts": ["soccer training", "soccer academy", "sports field"],
+    "base_queries": ["soccer training field, soccer club training, sports field"],
     "attributes": {
       "futebol": {
         "keywords": ["futebol", "soccer", "football"],
-        "queries": ["football academy, coach training players, green grass pitch, soccer training center"]
+        "queries": ["soccer academy, coach training players, green grass pitch, soccer training center"]
       },
       "infantil": {
         "keywords": ["infantil", "crianca", "kids", "escolinha"],
