@@ -285,11 +285,30 @@ class CTA(BaseModel):
         }]
 
 
+FONT_PAIRS_VALIDOS = {"modern", "editorial", "clean", "creative", "luxury", "energetic"}
+
+
+class Typography(BaseModel):
+    """Par tipográfico do site — nomeado por personalidade, nunca nome de
+    fonte solto (o mapeamento pra fonte real vive só em index.html)."""
+    fontPair: str = Field(default="modern", description=f"Uma de: {sorted(FONT_PAIRS_VALIDOS)}")
+
+    @validator('fontPair')
+    def validate_font_pair(cls, v):
+        if v not in FONT_PAIRS_VALIDOS:
+            raise ValueError(f"fontPair deve ser um de {sorted(FONT_PAIRS_VALIDOS)}, recebido: {v}")
+        return v
+
+    class Config:
+        examples = [{"fontPair": "editorial"}]
+
+
 class SiteConfig(BaseModel):
     """Schema completo de site-config.json"""
     metadata: Metadata
     company: Company
     colors: Colors
+    typography: Typography = Field(default_factory=Typography)
     hero: Hero
     sections: List[Section] = Field(default_factory=list, max_items=10, description="Seções de conteúdo")
     services: List[Service] = Field(..., min_items=1, max_items=10, description="Serviços")

@@ -23,7 +23,7 @@ try:
 except ImportError:
     pass
 
-from schema_validator import ValidadorSchema
+from schema_validator import ValidadorSchema, FONT_PAIRS_VALIDOS
 from metrics import obter_metricas
 from ai_provider import obter_ai_provider, ErroProvedorIA
 from image_utils import _slugify, mapear_categoria, obter_imagens_categoria, ErroBancoImagens
@@ -218,6 +218,9 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
     "logo": "string - URL placeholder"
   }},
   "colors": {json.dumps(cores)},
+  "typography": {{
+    "fontPair": "string OBRIGATÓRIO - exatamente um destes valores: {', '.join(sorted(FONT_PAIRS_VALIDOS))} - escolha o que melhor combina com a personalidade do nicho \"{nicho}\" (ex.: luxury/editorial para hotelaria e negócios sofisticados, clean para saúde/clínicas, energetic para academia/fitness, creative para negócios criativos/design, modern como opção neutra padrão)"
+  }},
   "hero": {{
     "title": "string (mínimo 10, máximo 200 caracteres) - Título principal impactante (funciona como H1: inclua a palavra-chave do nicho{' e a localização' if localizacao else ''})",
     "subtitle": "string (mínimo 10, máximo 300 caracteres) - Subtítulo persuasivo",
@@ -343,6 +346,7 @@ ATENÇÃO:
 - NUNCA use "via.placeholder.com" ou qualquer outro serviço de placeholder para os campos de imagem (hero.backgroundImage, sections[].image, testimonials[].avatar, company.logo). Se não souber uma URL de imagem real, deixe o campo como string vazia "" — o sistema preenche automaticamente com uma imagem real depois.
 - NUNCA invente contact.email ou contact.social (instagram/facebook/linkedin/twitter). Retorne sempre "email": null e "social": {{}}.
 - NÃO gere depoimentos (testimonials) — retorne sempre "testimonials": [].
+- "typography.fontPair" PRECISA ser exatamente um dos valores listados (nunca um nome de fonte livre, nunca vazio).
 
 Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
 
@@ -402,6 +406,10 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         site_title = (metadata.get("siteTitle") or "").strip()
         if len(site_title) > 60:
             metadata["siteTitle"] = _truncar_para_limite(site_title, 60)
+
+        typography = config.setdefault("typography", {})
+        if typography.get("fontPair") not in FONT_PAIRS_VALIDOS:
+            typography["fontPair"] = "modern"
 
         for i, servico in enumerate(config.get("services", []) or []):
             icon = (servico.get("icon") or "").strip()

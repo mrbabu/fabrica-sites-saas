@@ -122,6 +122,7 @@
             `;
 
             applyThemeColors();
+            applyTypography();
             setupNavBehavior();
             initScrollReveal();
             initWhatsAppLabel();
@@ -133,6 +134,38 @@
         function setFavicon(emoji) {
             const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="0.9em" font-size="90">${emoji}</text></svg>`;
             document.getElementById('favicon-link').setAttribute('href', 'data:image/svg+xml,' + encodeURIComponent(svg));
+        }
+
+        // Pares tipográficos pré-curados — nomeados por personalidade, nunca
+        // nome de fonte solto no schema/prompt. "modern" é o par já carregado
+        // estaticamente no <head> (zero requisição extra); os demais carregam
+        // 1 <link> a mais sob demanda, só quando o site pede um par diferente.
+        const FONT_PAIRS = {
+            modern:    { display: "'Bricolage Grotesque', sans-serif", body: "'Inter', sans-serif" },
+            editorial: { display: "'Playfair Display', serif", body: "'Inter', sans-serif", googleFontsQuery: "family=Playfair+Display:ital,wght@0,400..900;1,400..900" },
+            clean:     { display: "'Manrope', sans-serif", body: "'Inter', sans-serif", googleFontsQuery: "family=Manrope:wght@400;500;600;700;800" },
+            creative:  { display: "'Space Grotesk', sans-serif", body: "'Inter', sans-serif", googleFontsQuery: "family=Space+Grotesk:wght@400;500;600;700" },
+            luxury:    { display: "'Cormorant Garamond', serif", body: "'Inter', sans-serif", googleFontsQuery: "family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400..700" },
+            energetic: { display: "'Bebas Neue', sans-serif", body: "'Inter', sans-serif", googleFontsQuery: "family=Bebas+Neue" },
+        };
+
+        function applyTypography() {
+            const chave = (config.typography && FONT_PAIRS[config.typography.fontPair]) ? config.typography.fontPair : 'modern';
+            const par = FONT_PAIRS[chave];
+
+            if (par.googleFontsQuery) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = `https://fonts.googleapis.com/css2?${par.googleFontsQuery}&display=swap`;
+                document.head.appendChild(link);
+            }
+
+            const style = document.createElement('style');
+            style.textContent = `
+                * { font-family: ${par.body}; }
+                .font-display { font-family: ${par.display}; }
+            `;
+            document.head.appendChild(style);
         }
 
         function applyThemeColors() {

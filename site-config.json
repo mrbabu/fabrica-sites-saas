@@ -20,6 +20,9 @@
     "description": "Nossa equipe de treinadores experientes e motivados está aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico. Agende sua consulta hoje mesmo!",
     "logo": "https://loremflickr.com/400/400/academia-e-personal-trainer,logo"
   },
+  "typography": {
+    "fontPair": "energetic"
+  },
   "colors": {
     "primary": "#7c3aed",
     "primaryDark": "#5f249f",
