@@ -29,7 +29,9 @@
       {"text": "psicolog", "weight": 8},
       {"text": "nutricion", "weight": 9},
       {"text": "farmacia", "weight": 8},
-      {"text": "saude", "weight": 5}
+      {"text": "saude", "weight": 5},
+      {"text": "fonoaudiolog", "weight": 10},
+      {"text": "terapia ocupacional", "weight": 16}
     ],
     "concepts": ["medical office", "dentist", "doctor consultation", "healthcare"],
     "base_queries": [
@@ -81,7 +83,12 @@
       {"text": "lanchonete", "weight": 10},
       {"text": "pizzaria", "weight": 8},
       {"text": "hamburgueria", "weight": 12},
-      {"text": "cafeteria", "weight": 9}
+      {"text": "cafeteria", "weight": 9},
+      {"text": "pastelaria", "weight": 11},
+      {"text": "espetinho", "weight": 10},
+      {"text": "food truck", "weight": 12},
+      {"text": "rotisseria", "weight": 11},
+      {"text": "casa de sucos", "weight": 14}
     ],
     "concepts": ["restaurant", "chef cooking", "plated food"],
     "base_queries": ["restaurant interior, chef cooking, plated food"],
@@ -140,7 +147,12 @@
       {"text": "marmoraria", "weight": 11},
       {"text": "pintor", "weight": 6},
       {"text": "limpeza de ambiente", "weight": 19},
-      {"text": "dedetiz", "weight": 7}
+      {"text": "dedetiz", "weight": 7},
+      {"text": "chaveir", "weight": 9},
+      {"text": "vidracaria", "weight": 10},
+      {"text": "limpeza de estofados", "weight": 19},
+      {"text": "desentupidora", "weight": 12},
+      {"text": "ar condicionado", "weight": 15}
     ],
     "concepts": ["construction site", "contractor", "renovation", "building"],
     "base_queries": [
@@ -184,7 +196,8 @@
     "aliases": [
       {"text": "pousada", "weight": 7},
       {"text": "hotel", "weight": 5},
-      {"text": "hospedagem", "weight": 10}
+      {"text": "hospedagem", "weight": 10},
+      {"text": "hostel", "weight": 8}
     ],
     "concepts": ["hotel room", "cozy inn", "guesthouse"],
     "base_queries": ["hotel room interior, cozy inn, guesthouse"],
@@ -197,7 +210,10 @@
       {"text": "turismo", "weight": 7},
       {"text": "agencia de viagens", "weight": 18},
       {"text": "excursao", "weight": 8},
-      {"text": "passeio turistico", "weight": 17}
+      {"text": "passeio turistico", "weight": 17},
+      {"text": "receptivo turistico", "weight": 17},
+      {"text": "passeio de barco", "weight": 17},
+      {"text": "agencia de passeios", "weight": 18}
     ],
     "concepts": ["travel agency", "tour guide"],
     "base_queries": ["travel agency office, tour guide desk, tourism office interior"],
@@ -215,7 +231,12 @@
       {"text": "cabeleireir", "weight": 9},
       {"text": "nail design", "weight": 14},
       {"text": "maquiagem", "weight": 8},
-      {"text": "cilios", "weight": 10}
+      {"text": "cilios", "weight": 10},
+      {"text": "esmalteria", "weight": 10},
+      {"text": "micropigmentacao", "weight": 12},
+      {"text": "depilacao", "weight": 9},
+      {"text": "sobrancelhas", "weight": 10},
+      {"text": "podologia", "weight": 11}
     ],
     "concepts": ["hair salon", "beauty spa", "barbershop"],
     "base_queries": ["hair salon interior, beauty spa, barbershop"],
@@ -362,7 +383,8 @@
       {"text": "escola infantil", "weight": 16},
       {"text": "escola particular", "weight": 15},
       {"text": "curso de ingles", "weight": 18},
-      {"text": "reforco escolar", "weight": 16}
+      {"text": "reforco escolar", "weight": 16},
+      {"text": "curso profissionalizante", "weight": 20}
     ],
     "concepts": ["classroom", "students learning"],
     "base_queries": ["classroom interior, students learning, education workshop"],
@@ -430,7 +452,10 @@
     "aliases": [
       {"text": "loja", "weight": 4},
       {"text": "comerci", "weight": 7},
-      {"text": "varejo", "weight": 6}
+      {"text": "varejo", "weight": 6},
+      {"text": "otica", "weight": 8},
+      {"text": "papelaria", "weight": 9},
+      {"text": "assistencia tecnica", "weight": 16}
     ],
     "concepts": ["retail store"],
     "base_queries": ["modern retail store interior, shop display, storefront"],
