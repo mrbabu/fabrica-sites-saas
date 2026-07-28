@@ -165,26 +165,75 @@ class ProvedorAnthropic:
 
 
 class ProvedorOllama:
-    """Chama um modelo local via Ollama (fallback de desenvolvimento, opcional)"""
+    """Chama um modelo local via Ollama (fallback de desenvolvimento, opcional).
+
+    NÃO baixa modelos automaticamente. Se o modelo configurado não existir
+    localmente, levanta ErroProvedorIA com instruções de instalação manual.
+    """
 
     nome = "ollama"
 
-    def __init__(self):
-        import requests
+    def __init__(self, _requests_module=None):
+        if _requests_module is None:
+            import requests as _requests_module
+        self._requests = _requests_module
 
-        self._requests = requests
         self.ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
         self.model = os.getenv("OLLAMA_MODEL", "llama3")
         self.api_endpoint = f"{self.ollama_url}/api/generate"
 
         try:
-            resp = requests.get(f"{self.ollama_url}/api/tags", timeout=2)
+            resp = self._requests.get(f"{self.ollama_url}/api/tags", timeout=2)
             if resp.status_code != 200:
                 raise ErroProvedorIA("Ollama respondeu com erro")
         except ErroProvedorIA:
             raise
         except Exception as e:
-            raise ErroProvedorIA(f"Ollama local não disponível em {self.ollama_url}: {e}") from e
+            raise ErroProvedorIA(
+                f"Ollama local não disponível em {self.ollama_url}: {e}"
+            ) from e
+
+        self._validar_modelo_local()
+
+    def _validar_modelo_local(self) -> None:
+        """Verifica se o modelo existe localmente antes de tentar usá-lo.
+
+        O servidor Ollama baixa automaticamente modelos ausentes ao receber
+        requisições em /api/generate. Para evitar downloads acidentais de
+        vários GB, esta validação é feita explicitamente antes.
+        """
+        try:
+            resp = self._requests.get(f"{self.ollama_url}/api/tags", timeout=2)
+            resp.raise_for_status()
+            modelos = [m["name"] for m in resp.json().get("models", [])]
+        except Exception:
+            # Se não conseguir listar, deixa o erro explodir na chamada real
+            return
+
+        if self.model in modelos:
+            return
+
+        # Normalizar nomes para comparação (llama3 vs llama3:latest)
+        modelos_normalizados = {}
+        for m in modelos:
+            # "llama3:latest" -> "llama3", "llama3:8b" -> "llama3:8b"
+            base = m.split(":")[0] if ":" in m else m
+            modelos_normalizados.setdefault(base, []).append(m)
+
+        modelo_base = self.model.split(":")[0] if ":" in self.model else self.model
+
+        if modelo_base in modelos_normalizados:
+            versoes = modelos_normalizados[modelo_base]
+            sugestao = f"Modelo '{self.model}' não encontrado. Versões disponíveis: {', '.join(versoes)}"
+        else:
+            disponiveis = ", ".join(modelos[:10]) if modelos else "(nenhum modelo instalado)"
+            sugestao = (
+                f"Modelo '{self.model}' não encontrado localmente.\n"
+                f"Modelos disponíveis: {disponiveis}\n"
+                f"Para instalar, execute manualmente: ollama pull {self.model}"
+            )
+
+        raise ErroProvedorIA(sugestao)
 
     def gerar_json(self, prompt: str, max_tokens: int = 4096) -> dict:
         response = self._requests.post(

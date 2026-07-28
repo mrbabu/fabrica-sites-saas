@@ -36,6 +36,7 @@ existe como referência pontual, gerada quando pedida.
     ├── exemplo_uso.py                  # exemplo de uso do AgenteConstrutor
     ├── test_agentes.py                 # bateria de testes do motor (retry/confiabilidade)
     ├── test_api.py                     # testes de API via HTTP
+    ├── test_ollama_provider.py         # smoke tests do OllamaProvider (validação de modelo)
     ├── agents/                         # agentes especializados (Fase 2)
     │   ├── __init__.py
     │   ├── hunter.py                   # AgenteHunter — qualifica leads
@@ -86,6 +87,7 @@ existe como referência pontual, gerada quando pedida.
 | `scripts/buscar_leads_google_maps.py` | — (expõe `CIDADES`) | `scripts/checklist_followup.py`, `scripts/exportar_leads_excel.py` |
 | `exemplo_uso.py` | `agent_construtor` | — |
 | `test_agentes.py` | `agent_construtor`, `schema_validator` | — |
+| `test_ollama_provider.py` | `ai_provider` | — |
 | `alembic/env.py` | `db`, `models_db` | — (entrypoint do Alembic) |
 
 ## Diagrama
@@ -117,6 +119,7 @@ graph TD
     simular_esteira[scripts/simular_esteira.py]
     exemplo_uso[exemplo_uso.py]
     test_agentes[test_agentes.py]
+    test_ollama[test_ollama_provider.py]
     alembic_env[alembic/env.py]
 
     app --> agent_construtor
@@ -195,3 +198,42 @@ nada que dependa dele de volta.
 - `models_db.py` registra `Site`/`Lead` em `Base.metadata` só por ser
   importado (mesmo sem uso direto) em `alembic/env.py:23` — necessário para o
   autogenerate do Alembic enxergar as tabelas.
+
+---
+
+## Changelog (hardening de segurança operacional)
+
+### 2026-07-26 — OllamaProvider: remoção de auto-pull
+
+**Arquivo:** `backend/ai_provider.py` (classe `ProvedorOllama`)
+
+**Problema:** O servidor Ollama baixa automaticamente modelos ausentes ao receber
+requisições em `/api/generate`. Se o modelo configurado não existisse localmente,
+o `ProvedorOllama` iniciava silenciosamente um download de vários GB sem aviso.
+
+**Solução:** Validação explícita no `__init__` via `/api/tags` — verifica se o
+modelo existe antes de qualquer chamada. Se ausente, levanta `ErroProvedorIA`
+com:
+- nome do modelo solicitado
+- lista de modelos disponíveis localmente
+- comando manual para instalar (`ollama pull <modelo>`)
+
+**O que mudou:**
+- `ProvedorOllama.__init__` agora aceita `_requests_module` para testabilidade
+- Novo método `_validar_modelo_local()` — checagem explícita antes de gerar
+- Nenhuma chamada a `/api/generate` é feita se o modelo não existe
+
+**O que NÃO mudou:**
+- Ordem de fallback (gemini → nvidia_nim → anthropic → ollama)
+- Configuração via env vars (`OLLAMA_MODEL`, `OLLAMA_URL`)
+- Compatibilidade com `llama3:latest` (modelo padrão)
+
+**Testes:** `backend/test_ollama_provider.py` — 8 cenários:
+1. Modelo existe → init OK
+2. Modelo com tag (:8b) existe → init OK
+3. Modelo inexistente → `ErroProvedorIA` com instrução de pull
+4. Erro lista modelos disponíveis
+5. Modelo inexistente → `/api/generate` nunca chamado
+6. Modelo existe → `gerar_json` funciona
+7. Modelo custom com `:latest` existe → init OK
+8. Modelo sem tag mas tag disponível → erro com sugestão de versão
