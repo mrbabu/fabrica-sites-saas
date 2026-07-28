@@ -481,13 +481,22 @@
       {"text": "loja", "weight": 4},
       {"text": "comerci", "weight": 7},
       {"text": "varejo", "weight": 6},
-      {"text": "otica", "weight": 8},
       {"text": "papelaria", "weight": 9},
       {"text": "assistencia tecnica", "weight": 16}
     ],
     "concepts": ["retail store"],
     "base_queries": ["modern retail store interior, shop display, storefront"],
     "forbidden": []
+  },
+  "optical_shop": {
+    "tier": "specific",
+    "aliases": [
+      {"text": "otica", "weight": 10},
+      {"text": "oticas", "weight": 10}
+    ],
+    "concepts": ["optical shop", "eyeglasses store"],
+    "base_queries": ["optical shop display, eyeglasses store interior, glasses frames on display"],
+    "forbidden": ["clothing rack", "apparel store"]
   },
   "professional_office": {
     "tier": "generic",
