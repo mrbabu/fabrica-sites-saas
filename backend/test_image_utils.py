@@ -11,7 +11,7 @@ Uso: python test_image_utils.py
 
 import sys
 
-from image_utils import mapear_categoria, CATEGORIAS_ALIASES, SINAIS_GENERICOS, CATEGORIA_PADRAO
+from image_utils import mapear_categoria, CATEGORIAS_ALIASES, SINAIS_GENERICOS, CATEGORIA_PADRAO, _montar_query
 
 # (nicho, categoria_esperada) — cobre os 50 nichos de test_agentes.py mais
 # os casos reais reportados como incompatíveis e variações de escrita.
@@ -147,6 +147,35 @@ def rodar_testes() -> bool:
     return True
 
 
+def checar_dedup_query_preserva_termo_central() -> bool:
+    """Regressão do bug encontrado no benchmark visual 2026-07-28: dedup por
+    palavra individual (versão antiga de _montar_query) apagava o termo
+    central de um atributo/categoria quando ele se repetia entre clauses
+    (ex.: "acai smoothie bowl" -> "smoothie", "law books" -> "books").
+    Dedup por clause idêntica não deve mais fazer isso."""
+    casos = [
+        # (categoria, termo que precisa sobreviver na query final)
+        ("ice_cream_shop__acai", "acai"),
+        ("law_office", "law"),
+    ]
+    falhas = []
+    for categoria, termo in casos:
+        query = _montar_query(categoria)
+        ocorrencias = query.lower().count(termo.lower())
+        if ocorrencias < 2:
+            falhas.append((categoria, termo, ocorrencias, query))
+
+    if falhas:
+        for categoria, termo, ocorrencias, query in falhas:
+            print(normalizar_erro(
+                f"_montar_query({categoria!r}): termo {termo!r} apareceu só "
+                f"{ocorrencias}x (esperado >=2) -> query={query!r}"
+            ))
+        return False
+    print("✅ _montar_query preserva termos centrais repetidos entre clauses (dedup por clause, não por palavra).\n")
+    return True
+
+
 def checar_integridade_bancos() -> bool:
     """Toda categoria referenciada em CATEGORIAS_ALIASES/SINAIS_GENERICOS e
     CATEGORIA_PADRAO precisa ter uma query correspondente — evita o erro
@@ -168,4 +197,5 @@ def checar_integridade_bancos() -> bool:
 if __name__ == "__main__":
     integro = checar_integridade_bancos()
     passou = rodar_testes()
-    sys.exit(0 if (integro and passou) else 1)
+    dedup_ok = checar_dedup_query_preserva_termo_central()
+    sys.exit(0 if (integro and passou and dedup_ok) else 1)

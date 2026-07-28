@@ -520,6 +520,7 @@ def _append_telemetria(evento: dict) -> None:
 def _registrar_telemetria_busca_imagens(
     categoria: str, query: Optional[str], candidatos: int, mantidas: int,
     melhor_score: Optional[float], tempo_ms: float, cache_hit: bool,
+    tentativa: Optional[int] = None,
 ) -> None:
     _append_telemetria({
         "evento": "busca_imagens",
@@ -531,6 +532,12 @@ def _registrar_telemetria_busca_imagens(
         "melhor_score": melhor_score,
         "tempo_ms": tempo_ms,
         "cache_hit": cache_hit,
+        # Nível de _construir_niveis_query que trouxe resultado (1=query
+        # completa, 2=1ª clause de cada fragmento, 3=só 1ª clause da base) —
+        # None em cache_hit, onde nenhuma busca nova foi feita. Dado real pra
+        # decidir depois, com número, se vale reescrever base_queries longas.
+        "tentativa": tentativa,
+        "palavras_query": len(query.split()) if query else None,
     })
 
 
@@ -633,8 +640,9 @@ def _montar_query(categoria: str) -> str:
     conceitos + fragmento de query de cada atributo batido (ver
     mapear_categoria) — nunca texto livre do cliente nem tradução
     automática, tudo a partir do que já está cadastrado em niches.json.
-    Fragmentos repetidos são deduplicados (uma categoria com N atributos
-    combinados não gera uma query artificialmente maior que o necessário)."""
+    Clauses idênticas repetidas são deduplicadas (uma categoria com N
+    atributos combinados não gera uma query artificialmente maior que o
+    necessário)."""
     nomes = categoria.split("__")
     categoria_base, nomes_atributos = nomes[0], nomes[1:]
 
@@ -653,25 +661,69 @@ def _montar_query(categoria: str) -> str:
         if fragmento:
             partes.append(fragmento)
 
-    # Dedup por palavras individuais (não por frase inteira).
-    # Ex.: "medical office, dentist, doctor consultation room" deveria
-    # manter "medical" mas remover "dentist" e "doctor" se já foram
-    # cobertos por "medical office".
-    palavras_vistas: set[str] = set()
+    # Dedup por clause inteira e idêntica (case-insensitive) — nunca remove
+    # uma palavra isolada de dentro de uma clause. Quem escreveu niches.json
+    # decidiu a composição de cada clause de propósito (ex.: repetir "acai"/
+    # "law" em mais de uma clause reforça o termo central do atributo ou da
+    # categoria); dedup por palavra individual mutilava essas clauses em
+    # fragmentos sem sentido (ex.: "acai smoothie bowl" virava só "smoothie").
+    clauses_vistas: set[str] = set()
     tokens_final: list[str] = []
     for frase in partes:
         for t in frase.split(","):
             t = t.strip()
             if not t:
                 continue
-            palavras = t.split()
-            filtradas = [w for w in palavras if w.lower() not in palavras_vistas]
-            palavras_vistas.update(w.lower() for w in palavras)
-            frase_filtrada = " ".join(filtradas)
-            if frase_filtrada:
-                tokens_final.append(frase_filtrada)
+            chave = t.lower()
+            if chave in clauses_vistas:
+                continue
+            clauses_vistas.add(chave)
+            tokens_final.append(t)
 
     return ", ".join(tokens_final)
+
+
+def _primeira_clausula(frase: str) -> str:
+    return frase.split(",", 1)[0].strip()
+
+
+def _construir_niveis_query(categoria: str) -> list[str]:
+    """3 níveis fixos de query, do mais completo pro mais restrito — usados
+    em ordem por obter_imagens_categoria quando a Unsplash zera resultado
+    (confirmado empiricamente 2026-07-28: acima de ~6 palavras a taxa de
+    zero-resultado sobe muito). Cada nível remove o mínimo de informação
+    necessário pra reduzir o tamanho, nunca uma cadeia aberta de tentativas:
+
+      1. _montar_query(categoria) — base_query + query de cada atributo
+         batido, clauses deduplicadas (nível padrão, sem nenhum corte).
+      2. só a 1ª clause da base_query + só a 1ª clause de cada atributo —
+         mais curta, mas ainda carrega o termo central de cada atributo
+         (ex.: "ice cream shop interior, acai bowl", não só a base).
+      3. só a 1ª clause da base_query — última tentativa, sem atributo.
+
+    Níveis idênticos ao anterior (ex.: categoria sem atributo, onde o nível
+    2 e o nível 3 seriam a mesma coisa) não são repetidos."""
+    nomes = categoria.split("__")
+    categoria_base, nomes_atributos = nomes[0], nomes[1:]
+
+    dado_base = _ESTRUTURAS["categorias_dados"].get(categoria_base)
+    if dado_base is None:
+        return [QUERY_POR_CATEGORIA[CATEGORIA_PADRAO]]
+
+    nivel1 = _montar_query(categoria)
+
+    queries_attr = _ESTRUTURAS["atributos_query"].get(categoria_base, {})
+    fragmentos_attr = [queries_attr[nome] for nome in nomes_atributos if nome in queries_attr]
+    partes_nivel2 = [_primeira_clausula(dado_base["base_query"])] + [_primeira_clausula(f) for f in fragmentos_attr]
+    nivel2 = ", ".join(dict.fromkeys(p for p in partes_nivel2 if p))
+
+    nivel3 = _primeira_clausula(dado_base["base_query"])
+
+    niveis = [nivel1]
+    for nivel in (nivel2, nivel3):
+        if nivel and nivel not in niveis:
+            niveis.append(nivel)
+    return niveis
 
 
 def _termos_atributos(categoria: str) -> list[str]:
@@ -733,6 +785,17 @@ def gerar_estatisticas() -> dict:
         if query:
             contagem_queries[query] = contagem_queries.get(query, 0) + 1
 
+    # Quantas buscas (não cache_hit) resolveram em cada nível de
+    # _construir_niveis_query — dado real pra decidir depois, com número, se
+    # vale reescrever base_queries longas em vez de continuar dependendo do
+    # fallback (pedido do usuário 2026-07-28, ver project_image_engine_evolution).
+    contagem_tentativas: dict[str, int] = {}
+    for evento in buscas:
+        tentativa = evento.get("tentativa")
+        if tentativa is not None:
+            chave = f"nivel_{tentativa}"
+            contagem_tentativas[chave] = contagem_tentativas.get(chave, 0) + 1
+
     total_categorizacoes = len(categorizacoes)
     total_fallback = contagem_categorias.get(CATEGORIA_PADRAO, 0)
     taxa_fallback = round(total_fallback / total_categorizacoes, 4) if total_categorizacoes else 0.0
@@ -751,6 +814,7 @@ def gerar_estatisticas() -> dict:
         "categorias_desconhecidas": _ordenado(contagem_desconhecidos),
         "atributos_mais_usados": _ordenado(contagem_atributos),
         "queries_mais_usadas": _ordenado(contagem_queries),
+        "buscas_por_nivel_fallback": _ordenado(contagem_tentativas),
     }
 
 
@@ -782,7 +846,6 @@ def obter_imagens_categoria(categoria: str) -> list[str]:
         _registrar_telemetria_busca_imagens(categoria, None, 0, len(cache[categoria]), None, tempo_ms, True)
         return cache[categoria]
 
-    query = _montar_query(categoria)
     categoria_base = categoria.split("__", 1)[0]
     concepts = _ESTRUTURAS["concepts_por_categoria"].get(categoria_base, [])
     atributos_termos = _termos_atributos(categoria)
@@ -790,23 +853,30 @@ def obter_imagens_categoria(categoria: str) -> list[str]:
         _ESTRUTURAS["forbidden_por_categoria"].get(categoria_base, []) + _ESTRUTURAS["global_forbidden"]
     ))
 
-    try:
-        candidatos = _buscar_candidatos_unsplash(query)
-    except ErroBancoImagens as e:
-        # Confirmado empiricamente (benchmark 2026-07-28): a Unsplash retorna
-        # cada vez menos resultados conforme a query cresce em número de
-        # palavras (não é sobre vírgula nem duplicação — "dentist office" (2
-        # palavras) traz dezenas de resultados, qualquer combinação de 6+
-        # palavras tende a zerar). Categorias com base_query de múltiplas
-        # cláusulas (ex.: medical_clinic, beauty_salon) zeram mesmo com query
-        # já deduplicada. Antes de desistir pro fallback do chamador, tenta
-        # de novo só com a primeira cláusula (mais curta, mais específica de
-        # menos palavras) — sem custo de API extra em quem não precisa disso,
-        # já que só entra aqui quando a query completa já falhou.
-        primeira_clausula = query.split(",", 1)[0].strip()
-        if "não retornou imagens" not in str(e) or not primeira_clausula or primeira_clausula == query:
-            raise
-        candidatos = _buscar_candidatos_unsplash(primeira_clausula)
+    # Confirmado empiricamente (benchmark 2026-07-28): a Unsplash retorna cada
+    # vez menos resultados conforme a query cresce em número de palavras
+    # (acima de ~6 palavras a taxa de zero-resultado sobe muito). 3 níveis
+    # fixos (ver _construir_niveis_query), nunca uma cadeia aberta — cada
+    # nível remove só o mínimo necessário, preservando o termo do atributo
+    # pelo maior número de tentativas possível antes de descartá-lo.
+    niveis_query = _construir_niveis_query(categoria)
+    candidatos = None
+    query = niveis_query[0]
+    tentativa_usada = None
+    erro_final = None
+    for tentativa, tentativa_query in enumerate(niveis_query, start=1):
+        try:
+            candidatos = _buscar_candidatos_unsplash(tentativa_query)
+            query = tentativa_query
+            tentativa_usada = tentativa
+            break
+        except ErroBancoImagens as e:
+            erro_final = e
+            if "não retornou imagens" not in str(e):
+                raise  # erro real (chave ausente, rede, rate limit) — não mascarar com retry
+    if candidatos is None:
+        raise erro_final
+
     ranqueados = _rankear_imagens(candidatos, concepts, atributos_termos, forbidden)
     melhores = ranqueados[:QTD_IMAGENS_POR_CATEGORIA]
     urls = [item["urls"]["regular"] for item, _ in melhores]
@@ -816,7 +886,7 @@ def obter_imagens_categoria(categoria: str) -> list[str]:
 
     tempo_ms = round((time.perf_counter() - tempo_inicio) * 1000, 3)
     melhor_score = melhores[0][1] if melhores else None
-    _registrar_telemetria_busca_imagens(categoria, query, len(candidatos), len(urls), melhor_score, tempo_ms, False)
+    _registrar_telemetria_busca_imagens(categoria, query, len(candidatos), len(urls), melhor_score, tempo_ms, False, tentativa_usada)
     return urls
 
 
