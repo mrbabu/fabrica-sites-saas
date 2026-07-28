@@ -77,6 +77,7 @@
     "tier": "specific",
     "aliases": [
       {"text": "restaurante", "weight": 11},
+      {"text": "marmitaria", "weight": 12},
       {"text": "lanchonete", "weight": 10},
       {"text": "pizzaria", "weight": 8},
       {"text": "hamburgueria", "weight": 12},
@@ -90,6 +91,7 @@
     "tier": "specific",
     "aliases": [
       {"text": "sorveteria", "weight": 10},
+      {"text": "acaiteria", "weight": 10},
       {"text": "gelato", "weight": 6},
       {"text": "picole", "weight": 6}
     ],
@@ -134,6 +136,8 @@
       {"text": "encanador", "weight": 9},
       {"text": "serralheria", "weight": 11},
       {"text": "serralharia", "weight": 11},
+      {"text": "serralheir", "weight": 11},
+      {"text": "marmoraria", "weight": 11},
       {"text": "pintor", "weight": 6},
       {"text": "limpeza de ambiente", "weight": 19},
       {"text": "dedetiz", "weight": 7}
@@ -207,7 +211,11 @@
       {"text": "estetica", "weight": 8},
       {"text": "barbearia", "weight": 9},
       {"text": "manicure", "weight": 8},
-      {"text": "pedicure", "weight": 8}
+      {"text": "pedicure", "weight": 8},
+      {"text": "cabeleireir", "weight": 9},
+      {"text": "nail design", "weight": 14},
+      {"text": "maquiagem", "weight": 8},
+      {"text": "cilios", "weight": 10}
     ],
     "concepts": ["hair salon", "beauty spa", "barbershop"],
     "base_queries": ["hair salon interior, beauty spa, barbershop"],
@@ -272,7 +280,8 @@
       {"text": "campo de futebol", "weight": 16},
       {"text": "quadra esportiva", "weight": 16},
       {"text": "clube esportivo", "weight": 15},
-      {"text": "escola de futebol", "weight": 17}
+      {"text": "escola de futebol", "weight": 17},
+      {"text": "time de futebol", "weight": 17}
     ],
     "concepts": ["soccer training", "football academy", "sports field"],
     "base_queries": ["soccer training field, football training center, sports field"],
@@ -296,7 +305,8 @@
       {"text": "cerimonial", "weight": 10},
       {"text": "aniversario", "weight": 11},
       {"text": "dj para festas", "weight": 14},
-      {"text": "dj services", "weight": 11}
+      {"text": "dj services", "weight": 11},
+      {"text": "aluguel de brinquedos", "weight": 17}
     ],
     "concepts": ["party venue", "event hall", "celebration"],
     "base_queries": ["party venue interior, event hall decoration, celebration setup"],
@@ -348,7 +358,11 @@
       {"text": "escola de arte", "weight": 14},
       {"text": "curso de culinaria", "weight": 18},
       {"text": "escola de musica", "weight": 16},
-      {"text": "cursinho", "weight": 8}
+      {"text": "cursinho", "weight": 8},
+      {"text": "escola infantil", "weight": 16},
+      {"text": "escola particular", "weight": 15},
+      {"text": "curso de ingles", "weight": 18},
+      {"text": "reforco escolar", "weight": 16}
     ],
     "concepts": ["classroom", "students learning"],
     "base_queries": ["classroom interior, students learning, education workshop"],
