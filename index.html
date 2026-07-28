@@ -59,8 +59,15 @@
         details[open] .faq-icon { transform: rotate(180deg); }
         details[open] summary { border-bottom: 1px solid; }
 
+        /* Pulso do WhatsApp e glow de marca: cor sempre derivada de
+           --color-primary (var() resolve em tempo de render, mesmo definida
+           aqui antes de applyThemeColors() rodar) — nunca cor fixa. */
         .whatsapp-pulse { animation: waPulse 2.6s ease-in-out infinite; }
-        @keyframes waPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(0,0,0,0.10); } 50% { box-shadow: 0 0 0 9px rgba(0,0,0,0); } }
+        @keyframes waPulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary, #000) 35%, transparent); } 50% { box-shadow: 0 0 0 9px transparent; } }
+
+        .glow-primary { box-shadow: 0 14px 34px -12px color-mix(in srgb, var(--color-primary, #000) 50%, transparent); }
+        .glow-primary-hover { transition: box-shadow 0.25s ease; }
+        .glow-primary-hover:hover { box-shadow: 0 18px 42px -12px color-mix(in srgb, var(--color-primary, #000) 55%, transparent); }
         .wa-label-fade { transition: opacity 0.35s ease; }
 
         a:focus-visible, button:focus-visible, summary:focus-visible {
@@ -344,7 +351,7 @@
                         </div>
                         <div class="hidden md:flex items-center gap-8">
                             ${navLinks}
-                            <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary text-white px-5 py-2.5 rounded-full text-sm font-semibold transition hover:shadow-lg hover:shadow-black/10">Agendar agora</a>
+                            <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary glow-primary-hover text-white px-5 py-2.5 rounded-full text-sm font-semibold transition">Agendar agora</a>
                         </div>
                         <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg" style="color: ${config.colors.primary}" aria-label="Abrir menu">
                             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
@@ -402,7 +409,7 @@
                             ${config.hero.subtitle}
                         </p>
                         <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                            <a href="${waHref}" target="_blank" rel="noopener" id="hero-cta" class="magnetic bg-white px-8 py-4 rounded-full font-bold text-base inline-flex items-center justify-center gap-2 transition hover:shadow-2xl" style="color: ${c.primary}">
+                            <a href="${waHref}" target="_blank" rel="noopener" id="hero-cta" class="magnetic glow-primary-hover bg-white px-8 py-4 rounded-full font-bold text-base inline-flex items-center justify-center gap-2 transition" style="color: ${c.primary}">
                                 ${WHATSAPP_ICON} ${config.hero.ctaText}
                             </a>
                             <a href="#servicos" class="border border-white/40 text-white px-8 py-4 rounded-full font-semibold text-base inline-flex items-center justify-center transition hover:bg-white/10">
@@ -506,7 +513,7 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             ${enabledFeatures.map((feature, i) => `
-                                <div class="reveal p-8 rounded-2xl border transition hover:shadow-lg" style="border-color: ${config.colors.border}; transition-delay: ${i * 90}ms">
+                                <div class="reveal glow-primary-hover p-8 rounded-2xl border transition" style="border-color: ${config.colors.border}; transition-delay: ${i * 90}ms">
                                     <div class="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5" style="background-color: ${config.colors.primary}14">${feature.icon}</div>
                                     <h3 class="text-lg font-bold mb-2" style="color: ${config.colors.text}">
                                         ${feature.title}
@@ -537,7 +544,7 @@
                         </div>
                         <div class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
                             ${enabledServices.map((service, i) => `
-                                <div class="reveal snap-start shrink-0 w-[85%] sm:w-[360px] bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition duration-300" style="transition-delay: ${i * 90}ms">
+                                <div class="reveal glow-primary-hover snap-start shrink-0 w-[85%] sm:w-[360px] bg-white p-8 rounded-2xl shadow-sm transition duration-300" style="transition-delay: ${i * 90}ms">
                                     <div class="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5 text-white" style="background: linear-gradient(135deg, ${config.colors.primary}, ${config.colors.primaryDark})">${service.icon}</div>
                                     <h3 class="text-xl font-bold mb-3" style="color: ${config.colors.text}">
                                         ${service.title}
@@ -644,7 +651,7 @@
                         <p class="text-lg mb-9 text-white/85 leading-relaxed">
                             ${config.cta.description}
                         </p>
-                        <a href="${waHref}" target="_blank" rel="noopener" class="bg-white px-9 py-4 rounded-full font-bold text-base inline-flex items-center gap-2 transition transform hover:scale-105 hover:shadow-2xl" style="color: ${config.colors.primary}">
+                        <a href="${waHref}" target="_blank" rel="noopener" class="glow-primary-hover bg-white px-9 py-4 rounded-full font-bold text-base inline-flex items-center gap-2 transition transform hover:scale-105" style="color: ${config.colors.primary}">
                             ${WHATSAPP_ICON} ${config.cta.buttonText}
                         </a>
                     </div>
