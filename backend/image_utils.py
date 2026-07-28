@@ -790,7 +790,23 @@ def obter_imagens_categoria(categoria: str) -> list[str]:
         _ESTRUTURAS["forbidden_por_categoria"].get(categoria_base, []) + _ESTRUTURAS["global_forbidden"]
     ))
 
-    candidatos = _buscar_candidatos_unsplash(query)
+    try:
+        candidatos = _buscar_candidatos_unsplash(query)
+    except ErroBancoImagens as e:
+        # Confirmado empiricamente (benchmark 2026-07-28): a Unsplash retorna
+        # cada vez menos resultados conforme a query cresce em número de
+        # palavras (não é sobre vírgula nem duplicação — "dentist office" (2
+        # palavras) traz dezenas de resultados, qualquer combinação de 6+
+        # palavras tende a zerar). Categorias com base_query de múltiplas
+        # cláusulas (ex.: medical_clinic, beauty_salon) zeram mesmo com query
+        # já deduplicada. Antes de desistir pro fallback do chamador, tenta
+        # de novo só com a primeira cláusula (mais curta, mais específica de
+        # menos palavras) — sem custo de API extra em quem não precisa disso,
+        # já que só entra aqui quando a query completa já falhou.
+        primeira_clausula = query.split(",", 1)[0].strip()
+        if "não retornou imagens" not in str(e) or not primeira_clausula or primeira_clausula == query:
+            raise
+        candidatos = _buscar_candidatos_unsplash(primeira_clausula)
     ranqueados = _rankear_imagens(candidatos, concepts, atributos_termos, forbidden)
     melhores = ranqueados[:QTD_IMAGENS_POR_CATEGORIA]
     urls = [item["urls"]["regular"] for item, _ in melhores]
