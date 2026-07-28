@@ -370,6 +370,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 portfolio_urls=portfolio_urls,
                 localizacao=localizacao,
                 google_maps_url=google_maps_url,
+                descricao_negocio=descricao_negocio,
             )
 
             # Validar schema básico (campos obrigatórios presentes)
@@ -433,6 +434,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         portfolio_urls: list[str] | None = None,
         localizacao: Optional[str] = None,
         google_maps_url: Optional[str] = None,
+        descricao_negocio: Optional[str] = None,
     ) -> dict:
         """
         Garante que nenhum campo de imagem/SEO derivado fique vazio ou quebrado
@@ -456,6 +458,15 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         se o Unsplash não estiver configurado ou a busca falhar, cai pro
         LoremFlickr com ?lock= estável (rede de segurança, nunca quebra a
         geração do site).
+
+        descricao_negocio (opcional): contexto livre informado pelo cliente,
+        concatenado ao nicho só para a categorização de imagem (mapear_categoria)
+        — nunca usado pra slug/SEO. Achado real 2026-07-28: "nicho" sozinho pode
+        ser um nome próprio ambíguo (ex.: "Botafogo Futebol Clube", que não bate
+        em nenhum alias), enquanto a descrição livre normalmente já contém
+        linguagem de tipo de negócio de verdade (ex.: "nossa escolinha de
+        futebol...", que bate direto). Zero custo/latência extra — é só mais
+        texto pro mesmo matcher determinístico que já existia.
         """
         nicho_slug = _slugify(nicho) or "negocio"
         empresa_slug = _slugify(nome_empresa) or "empresa"
@@ -464,7 +475,8 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
             url = (url or "").strip().lower()
             return not url or "placeholder" in url
 
-        categoria_imagem = mapear_categoria(nicho)
+        texto_categorizacao = f"{nicho} {descricao_negocio}" if descricao_negocio else nicho
+        categoria_imagem = mapear_categoria(texto_categorizacao)
         try:
             imagens_categoria = obter_imagens_categoria(categoria_imagem)
         except ErroBancoImagens as e:
