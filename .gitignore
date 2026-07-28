@@ -90,6 +90,9 @@ leads/*.csv
 AGENTS.md
 .agents/
 
+# Estado local de sessão do Claude Code (não é código-fonte do projeto)
+.claude/projects/
+
 # Cache de imagens curadas por categoria (Unsplash) - estado gerado em
 # runtime, não código-fonte
 backend/cache/
