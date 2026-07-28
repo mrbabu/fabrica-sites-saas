@@ -190,7 +190,7 @@
     ],
     "concepts": ["architecture firm", "blueprint design"],
     "base_queries": ["architecture firm office, blueprint design table, modern building design"],
-    "forbidden": ["construction site", "storefront"]
+    "forbidden": ["construction site", "storefront", "building exterior", "skyscraper facade"]
   },
   "solar_energy": {
     "tier": "specific",
@@ -229,7 +229,7 @@
     ],
     "concepts": ["travel agency", "tour guide"],
     "base_queries": ["travel agency office, tour guide desk, tourism office interior"],
-    "forbidden": ["construction"]
+    "forbidden": ["construction", "building facade", "european street", "old town"]
   },
   "beauty_salon": {
     "tier": "specific",
@@ -263,7 +263,7 @@
       {"text": "juridic", "weight": 7}
     ],
     "concepts": ["law office", "lawyer meeting room"],
-    "base_queries": ["law office interior, lawyer meeting room"],
+    "base_queries": ["law office interior, lawyer meeting room, law books, attorney desk"],
     "global_attributes": ["corporativo"],
     "forbidden": ["storefront", "construction"]
   },
@@ -472,7 +472,7 @@
     ],
     "concepts": ["parking lot", "parking garage"],
     "base_queries": ["parking lot, parking garage, car park attendant"],
-    "forbidden": ["office"]
+    "forbidden": ["office", "vintage car", "classic car"]
   },
 
   "retail_general": {
@@ -507,7 +507,7 @@
     ],
     "concepts": ["professional office"],
     "base_queries": ["modern professional office, business meeting room, corporate workspace"],
-    "forbidden": []
+    "forbidden": ["bar", "restaurant lighting", "lounge"]
   },
   "workshop_industrial": {
     "tier": "generic",
