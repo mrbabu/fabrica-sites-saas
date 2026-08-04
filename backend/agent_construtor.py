@@ -382,6 +382,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
 
         ultimo_erro = None
         for tentativa in range(1, MAX_TENTATIVAS_GERACAO + 1):
+            tempo_inicio_tentativa = time.time()
             config = self.ai.gerar_json(prompt, max_tokens=4096)
             print(f"   ↳ Provedor utilizado: {self.ai.provedor_ativo}")
 
@@ -413,6 +414,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                     "provedor": self.ai.provedor_ativo,
                     "sucesso": valido,
                     "erro": None if valido else erro,
+                    "tempo_segundos": time.time() - tempo_inicio_tentativa,
                 })
 
             if valido:

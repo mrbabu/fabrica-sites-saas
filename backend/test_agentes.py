@@ -7,13 +7,138 @@ Gera relatório de qualidade
 
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Optional, Tuple
 from datetime import datetime
-from agent_construtor import AgenteConstrutor
+from agent_construtor import AgenteConstrutor, MAX_TENTATIVAS_GERACAO
 from schema_validator import ValidadorSchema
+
+
+# Categorização de erro de validação -- distingue causa de MODELO (o LLM
+# escreveu algo ruim: duplicou texto, vazou placeholder) de causa de
+# PIPELINE (constraint estrutural do schema, rede, parsing) -- "70% porque
+# o modelo repete texto" e "70% porque o schema rejeita FAQ curto" são
+# diagnósticos diferentes e pedem correções diferentes. Uma mensagem pode
+# disparar mais de uma categoria (ex.: pydantic reporta features E faq
+# curtos na mesma exceção) -- por isso retorna lista, não categoria única.
+# Ordem importa: categorias mais específicas primeiro.
+_PADROES_CATEGORIA_ERRO = [
+    ("MODEL_DUPLICATION", re.compile(r"(Título|Texto|Pergunta de FAQ) duplicado", re.IGNORECASE)),
+    ("MODEL_TEMPLATE_LEAK", re.compile(r"Texto de template vazou para produção", re.IGNORECASE)),
+    ("SCHEMA_FAQ", re.compile(r"\bfaq\b\s*\n\s*List should have at least", re.IGNORECASE)),
+    ("SCHEMA_FEATURES", re.compile(r"\bfeatures\b\s*\n\s*List should have at least", re.IGNORECASE)),
+    ("SCHEMA_SERVICES", re.compile(r"\bservices\b\s*\n\s*List should have at least", re.IGNORECASE)),
+    ("IMAGE", re.compile(r"ErroBancoImagens|banco de imagens", re.IGNORECASE)),
+    ("FALLBACK", re.compile(r"Nenhum provedor de IA dispon[íi]vel", re.IGNORECASE)),
+    ("TIMEOUT", re.compile(r"\btimed?[\s_-]?out\b|\btimeout\b", re.IGNORECASE)),
+    ("JSON_INVALID", re.compile(r"Expecting value|JSONDecodeError|json inv[áa]lido", re.IGNORECASE)),
+]
+
+
+def _categorizar_erro(mensagem: Optional[str]) -> List[str]:
+    """Classifica uma mensagem de erro em 0+ categorias conhecidas (MODEL_*/SCHEMA_*/IMAGE/FALLBACK/TIMEOUT/JSON_INVALID)."""
+    if not mensagem:
+        return []
+    categorias = [nome for nome, padrao in _PADROES_CATEGORIA_ERRO if padrao.search(mensagem)]
+    if categorias:
+        return categorias
+    if "validation error" in mensagem.lower():
+        return ["SCHEMA_OUTRO"]
+    return ["OUTRO"]
+
+
+def _agregar_diagnostico(resultados: List[Dict]) -> Dict:
+    """
+    Agrega diagnostico_tentativas de todos os nichos testados em:
+    - por_regra: quantas TENTATIVAS (não nichos) falharam por cada
+      categoria (uma tentativa pode contar em mais de uma categoria)
+    - por_nicho: quantos NICHOS DISTINTOS tiveram essa categoria em pelo
+      menos uma tentativa
+    - por_tentativa: distribuição (conta e %) de em qual tentativa cada
+      nicho teve sucesso, quantos nunca tiveram, e tempo médio por número
+      de tentativa (ex.: "a 3ª tentativa demora mais que a 1ª?")
+    - top_regras: por_regra ordenado do mais pro menos frequente
+    Não faz rede nem I/O -- só lê a estrutura já coletada por testar_nicho.
+    """
+    por_regra: Dict[str, int] = {}
+    por_nicho: Dict[str, int] = {}
+    distribuicao_sucesso: Dict[int, int] = {}
+    soma_tempo_por_numero: Dict[int, float] = {}
+    contagem_tempo_por_numero: Dict[int, int] = {}
+    nunca_sucesso = 0
+    total_nichos_com_diagnostico = 0
+
+    for resultado in resultados:
+        diagnostico = resultado.get("diagnostico_tentativas") or []
+        if not diagnostico:
+            continue
+        total_nichos_com_diagnostico += 1
+        categorias_neste_nicho = set()
+
+        tentativa_de_sucesso = None
+        for entrada in diagnostico:
+            numero = entrada["tentativa"]
+            soma_tempo_por_numero[numero] = soma_tempo_por_numero.get(numero, 0.0) + entrada.get("tempo_segundos", 0.0)
+            contagem_tempo_por_numero[numero] = contagem_tempo_por_numero.get(numero, 0) + 1
+
+            if entrada["sucesso"]:
+                tentativa_de_sucesso = numero
+                continue
+            for categoria in _categorizar_erro(entrada["erro"]):
+                por_regra[categoria] = por_regra.get(categoria, 0) + 1
+                categorias_neste_nicho.add(categoria)
+
+        for categoria in categorias_neste_nicho:
+            por_nicho[categoria] = por_nicho.get(categoria, 0) + 1
+
+        if tentativa_de_sucesso is not None:
+            distribuicao_sucesso[tentativa_de_sucesso] = distribuicao_sucesso.get(tentativa_de_sucesso, 0) + 1
+        else:
+            nunca_sucesso += 1
+
+    tempo_medio_por_numero = {
+        numero: soma_tempo_por_numero[numero] / contagem_tempo_por_numero[numero]
+        for numero in soma_tempo_por_numero
+    }
+
+    base_pct = total_nichos_com_diagnostico or 1
+    distribuicao_sucesso_pct = {
+        numero: (contagem / base_pct * 100) for numero, contagem in distribuicao_sucesso.items()
+    }
+    nunca_sucesso_pct = nunca_sucesso / base_pct * 100
+
+    top_regras = sorted(por_regra.items(), key=lambda kv: -kv[1])
+
+    return {
+        "por_regra": por_regra,
+        "por_nicho": por_nicho,
+        "por_tentativa": {
+            "distribuicao_sucesso": distribuicao_sucesso,
+            "distribuicao_sucesso_pct": distribuicao_sucesso_pct,
+            "nunca_sucesso": nunca_sucesso,
+            "nunca_sucesso_pct": nunca_sucesso_pct,
+            "tempo_medio_por_numero": tempo_medio_por_numero,
+        },
+        "top_regras": top_regras,
+    }
+
+
+def _formatar_tentativas_para_json(diagnostico: List[Dict]) -> List[Dict]:
+    """Converte diagnostico_tentativas (formato interno) pro formato de exportação em relatorio_testes.json."""
+    formatado = []
+    for entrada in diagnostico:
+        formatado.append({
+            "numero": entrada["tentativa"],
+            "status": "passou" if entrada["sucesso"] else "falhou",
+            "regras": [] if entrada["sucesso"] else _categorizar_erro(entrada["erro"]),
+            "tempo_segundos": entrada.get("tempo_segundos"),
+            "provedor": entrada.get("provedor"),
+        })
+    return formatado
+
 
 # Lista de nichos para testar (Fase 1)
 NICHOS_TESTE = [
@@ -135,15 +260,20 @@ class TestadorAgente:
             "validacao_schema": False,
             "campos_faltantes": [],
             "campos_vazios": [],
-            "info": {}
+            "info": {},
+            "diagnostico_tentativas": [],
         }
 
         tempo_inicio = time.time()
+        diagnostico_tentativas: List[Dict] = []
 
         try:
             # Gerar config
-            config = self.agente.gerar_config_site(nome, nicho, cor)
+            config = self.agente.gerar_config_site(
+                nome, nicho, cor, diagnostico_tentativas=diagnostico_tentativas
+            )
             resultado["tempo_segundos"] = time.time() - tempo_inicio
+            resultado["diagnostico_tentativas"] = diagnostico_tentativas
 
             # Validar schema
             valido, erro, config_obj = ValidadorSchema.validar_json(config)
@@ -171,6 +301,7 @@ class TestadorAgente:
         except Exception as e:
             resultado["erro"] = str(e)
             resultado["tempo_segundos"] = time.time() - tempo_inicio
+            resultado["diagnostico_tentativas"] = diagnostico_tentativas
             print(f"   ❌ Erro: {e}\n")
 
         return resultado
@@ -235,8 +366,38 @@ class TestadorAgente:
             for r in erros:
                 print(f"   • {r['nome']}: {r['erro']}")
 
-        # Salvar relatório JSON
-        self.salvar_relatorio_json()
+        # Diagnóstico por regra e por tentativa -- pra decidir com dado
+        # (não com percepção) se o problema é o modelo/provedor ou a regra
+        # de validação em si (ver docs/roadmap-implementacao-dops.md)
+        agregado = _agregar_diagnostico(self.resultados)
+        if agregado["top_regras"]:
+            print(f"\n📐 Top problemas (tentativas que falharam por regra):")
+            top5 = agregado["top_regras"][:5]
+            maior_nome = max(len(nome) for nome, _ in top5)
+            for categoria, n_tentativas in top5:
+                n_nichos = agregado["por_nicho"].get(categoria, 0)
+                pontos = "." * (maior_nome - len(categoria) + 3)
+                print(f"   {categoria} {pontos} {n_tentativas:>3}  ({n_nichos} nicho(s) distinto(s))")
+            restantes = agregado["top_regras"][5:]
+            if restantes:
+                print(f"   + {len(restantes)} categoria(s) menor(es): {', '.join(nome for nome, _ in restantes)}")
+
+        pt = agregado["por_tentativa"]
+        if pt["distribuicao_sucesso"] or pt["nunca_sucesso"]:
+            print(f"\n🔁 Distribuição de sucesso por tentativa (% dos nichos testados):")
+            for numero in sorted(pt["distribuicao_sucesso"]):
+                contagem = pt["distribuicao_sucesso"][numero]
+                pct = pt["distribuicao_sucesso_pct"][numero]
+                tempo_medio = pt["tempo_medio_por_numero"].get(numero)
+                tempo_str = f", tempo médio {tempo_medio:.1f}s" if tempo_medio is not None else ""
+                print(f"   Passou na {numero}ª tentativa: {contagem} ({pct:.1f}%{tempo_str})")
+            if pt["nunca_sucesso"]:
+                print(f"   Nunca (esgotou {MAX_TENTATIVAS_GERACAO} tentativas): {pt['nunca_sucesso']} ({pt['nunca_sucesso_pct']:.1f}%)")
+
+        # Salvar relatório JSON (formato: resumo / resultados / metricas --
+        # ver docs internos; "resultados" preserva os campos originais mais
+        # o detalhe por tentativa em cada nicho)
+        self.salvar_relatorio_json(tempo_total, agregado)
 
         # Avisos
         print(f"\n⚠️  Status:")
@@ -249,11 +410,49 @@ class TestadorAgente:
 
         print("\n" + "="*70 + "\n")
 
-    def salvar_relatorio_json(self) -> None:
-        """Salva relatório em JSON"""
+    def salvar_relatorio_json(self, tempo_total: float = 0.0, agregado: Optional[Dict] = None) -> None:
+        """
+        Salva relatório em JSON no formato {resumo, resultados, metricas}.
+        - resumo: contagens/taxas agregadas do run inteiro
+        - resultados: um item por nicho, com "tentativas" (todas, não só a
+          final) já formatado (numero/status/regras/tempo_segundos/provedor)
+        - metricas: por_regra / por_tentativa / por_nicho, vindos de
+          _agregar_diagnostico -- serve pra responder "o gargalo é o modelo,
+          o schema, a rede ou a política de retry?" com dado, não percepção.
+        """
+        agregado = agregado or {}
+        total = len(self.resultados)
+        sucessos = sum(1 for r in self.resultados if r["sucesso"])
+
+        resumo = {
+            "total": total,
+            "sucessos": sucessos,
+            "falhas": total - sucessos,
+            "taxa_sucesso_pct": (sucessos / total * 100) if total else 0.0,
+            "tempo_total_segundos": tempo_total,
+            "tempo_medio_por_nicho_segundos": (tempo_total / total) if total else 0.0,
+        }
+
+        resultados_exportados = []
+        for r in self.resultados:
+            r_exportado = {k: v for k, v in r.items() if k != "diagnostico_tentativas"}
+            r_exportado["tentativas"] = _formatar_tentativas_para_json(r.get("diagnostico_tentativas") or [])
+            resultados_exportados.append(r_exportado)
+
+        payload = {
+            "resumo": resumo,
+            "resultados": resultados_exportados,
+            "metricas": {
+                "por_regra": agregado.get("por_regra", {}),
+                "por_tentativa": agregado.get("por_tentativa", {}),
+                "por_nicho": agregado.get("por_nicho", {}),
+                "top_regras": agregado.get("top_regras", []),
+            },
+        }
+
         caminho = "relatorio_testes.json"
         with open(caminho, 'w', encoding='utf-8') as f:
-            json.dump(self.resultados, f, ensure_ascii=False, indent=2)
+            json.dump(payload, f, ensure_ascii=False, indent=2)
         print(f"💾 Relatório salvo em: {caminho}")
 
 

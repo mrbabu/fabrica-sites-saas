@@ -132,6 +132,8 @@ class TestDiagnosticoTentativas(unittest.TestCase):
         self.assertEqual(diagnostico[0]["tentativa"], 1)
         self.assertTrue(diagnostico[0]["sucesso"])
         self.assertIsNone(diagnostico[0]["erro"])
+        self.assertIn("tempo_segundos", diagnostico[0])
+        self.assertGreaterEqual(diagnostico[0]["tempo_segundos"], 0)
 
     def test_falha_depois_sucesso_registra_duas_entradas_na_ordem(self):
         agente = _agente_com_dublê([_config_invalido_faq_curto(), _config_valido_minimo()])
