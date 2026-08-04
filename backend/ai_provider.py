@@ -6,8 +6,10 @@ Abstrai a chamada ao modelo de linguagem por trás de uma interface única
 
   1. Gemini (padrão)       - via SDK google-generativeai (Google AI Studio)
   2. NVIDIA NIM (fallback) - via SDK OpenAI-compatível
-  3. Anthropic (fallback)  - via SDK oficial
-  4. Ollama local (fallback de dev, opcional) - via requests
+  3. Groq (fallback)       - via SDK OpenAI-compatível (infra LPU própria,
+                             tier gratuito sem os timeouts do NIM gratuito)
+  4. Anthropic (fallback)  - via SDK oficial
+  5. Ollama local (fallback de dev, opcional) - via requests
 
 A ordem é escolhida por AI_PROVIDER (provedor preferido) e, se ele falhar,
 cai automaticamente para o próximo da cadeia.
@@ -77,6 +79,55 @@ class ProvedorNvidiaNIM:
             # retry de verdade já é feito um nível acima, no fallback entre
             # provedores (gemini -> nvidia_nim -> anthropic -> ollama).
             timeout=float(os.getenv("NVIDIA_NIM_TIMEOUT", "60")),
+            max_retries=0,
+        )
+
+    def gerar_json(self, prompt: str, max_tokens: int = 4096) -> dict:
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Você retorna exclusivamente JSON válido, sem markdown e sem texto adicional.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=max_tokens,
+            temperature=0.7,
+        )
+        texto = response.choices[0].message.content.strip()
+        return _extrair_json(texto)
+
+
+class ProvedorGroq:
+    """
+    Chama modelos via Groq usando o SDK OpenAI-compativel. Infra propria
+    (LPU) com latencia muito baixa mesmo pra modelos grandes -- pensada
+    como alternativa ao NVIDIA NIM quando o tier gratuito do NIM nao
+    aguenta o prompt completo (ver relatorio_testes.json e memoria de
+    2026-08-04: meta/llama-3.3-70b-instruct no NIM gratuito estourava com
+    504 do proprio gateway deles, mesmo com timeout de 600s no client).
+    """
+
+    nome = "groq"
+
+    def __init__(self):
+        try:
+            from openai import OpenAI
+        except ImportError as e:
+            raise ErroProvedorIA("Pacote 'openai' não instalado") from e
+
+        self.api_key = os.getenv("GROQ_API_KEY")
+        self.base_url = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
+        self.model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+        if not self.api_key:
+            raise ErroProvedorIA("GROQ_API_KEY não configurada")
+
+        self.client = OpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            timeout=float(os.getenv("GROQ_TIMEOUT", "60")),
             max_retries=0,
         )
 
@@ -259,11 +310,12 @@ class ProvedorOllama:
 _PROVEDORES = {
     "gemini": ProvedorGemini,
     "nvidia_nim": ProvedorNvidiaNIM,
+    "groq": ProvedorGroq,
     "anthropic": ProvedorAnthropic,
     "ollama": ProvedorOllama,
 }
 
-_ORDEM_PADRAO = ["gemini", "nvidia_nim", "anthropic", "ollama"]
+_ORDEM_PADRAO = ["gemini", "nvidia_nim", "groq", "anthropic", "ollama"]
 
 
 class AIProvider:
