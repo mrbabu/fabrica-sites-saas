@@ -14,6 +14,51 @@ Plataforma SaaS automatizada baseada em IA Multi-Agente. O sistema gera e public
 - Dados de cliente (nome, contato, logo) são sensíveis: tratar com validação estrita na entrada (`backend/app.py`/`backend/schema_validator.py`) e nunca logar em texto plano.
 - Para tarefas simples (formatação de JSON, ajustes pontuais de template), prefira soluções diretas — evite over-engineering ou abstrações não pedidas.
 
+## QA — esteira automatizada
+
+Ponto de entrada único: `python backend/qa.py` (só as suítes rápidas,
+determinísticas, ~13s) — é o que o hook `.githooks/pre-commit` e o CI
+(`.github/workflows/ci.yml`) executam. `--todas` inclui as lentas,
+`--lista` mostra o registro. Ativar o hook num clone novo:
+`git config core.hooksPath .githooks`.
+
+Regra que separa os dois grupos: **suíte no gate não pode depender de rede,
+servidor de pé, LLM real ou banco.** Falha nessas condições não prova nada
+sobre o commit. Quem precisa de LLM real (`test_agentes_llm.py`, benchmark
+de qualidade em 50 nichos) fica em `--lentas`.
+
+`backend/snapshots/*.json` são baseline versionado, não artefato gerado —
+há uma exceção explícita no `.gitignore` (que tem um `*.json` amplo).
+Atualizar após mudança intencional: `ATUALIZAR_SNAPSHOTS=1 pytest
+backend/test_snapshots.py`, e **revisar o diff antes de commitar**.
+
+### Pipeline real de geração (importante para escrever teste ou benchmark)
+
+```
+entrada -> IA #1 (paleta, max_tokens=512) -> IA #2 (config, 4096)
+        -> _autocorrigir() -> _preencher_fallbacks() -> ValidadorSchema
+```
+
+Duas consequências que já causaram teste errado:
+
+1. **São duas chamadas de IA distintas.** Contar as duas juntas mede retry
+   errado — `MAX_TENTATIVAS_GERACAO` só governa a segunda.
+2. **O schema valida a saída do PIPELINE, não a do modelo.** `_autocorrigir`
+   reconstrói `siteTitle`, `icon` e `fontPair`; `_preencher_fallbacks`
+   reescreve `metadata` inteiro e preenche imagens/contato ausentes. Um valor
+   inválido nesses campos nunca chega ao validador — para testar validação de
+   verdade, use um campo fora dessa lista (ex.: `faq`).
+
+Dois pontos sem enforcement determinístico (achados pela suíte de snapshot,
+registrados aqui porque afetam decisão de produto, não só de teste):
+
+- `company.name` não é forçado pelo pipeline — vem do que o modelo devolver.
+- A **cor automática por nicho** (commit `4f54580`) entra apenas no prompt
+  (`agent_construtor.py:204`). Como `colors` é campo obrigatório em
+  `_validar_schema`, o valor final vem do modelo: a cor derivada é
+  instrução, não garantia. A derivação em si tem teste
+  (`test_image_utils.py`); o que falta é enforcement no config final.
+
 ## Status Congelado: Agente Construtor (Builder Engine)
 
 **Estabilidade do motor CONCLUÍDA (parte técnica da Fase 1 do `ROADMAP.md`).**
