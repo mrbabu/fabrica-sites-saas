@@ -1,3 +1,7 @@
 # Scripts que rodam em servidor Linux remoto (ex: infra/) não podem virar
 # CRLF nunca, independente do ambiente de quem edita/commita.
 *.sh text eol=lf
+
+# Git hooks são executados por /bin/sh e não têm extensão — CRLF no shebang
+# quebra o hook em Linux/macOS ("bad interpreter").
+.githooks/* text eol=lf
