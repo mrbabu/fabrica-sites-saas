@@ -1,284 +1,281 @@
 #!/usr/bin/env python3
 """
-Suite de Testes - Validação do Agente Construtor
-Testa o agent_construtor.py com 50+ nichos diferentes
-Gera relatório de qualidade
+Testes determinísticos do Agente Construtor e da cadeia de provedores de IA.
+
+Substitui a versão anterior deste arquivo, que rodava 50 nichos contra um
+LLM real e reportava taxa de sucesso. Aquilo é um *benchmark de qualidade
+do modelo*, não um teste de regressão: lento, caro, dependente de rede e
+não reprodutível. Foi preservado, sem perda de capacidade, em
+`test_agentes_llm.py` (suíte lenta, opt-in) — este arquivo testa a lógica
+que o projeto controla, e por isso pode rodar no gate de commit.
+
+O que é dublado, e por quê:
+  - Provedores de IA: `_PROVEDORES` de ai_provider.py é substituído por
+    classes falsas. Nenhuma chamada de rede, nenhum SDK real.
+  - `obter_imagens_categoria`: gerar_config_site() -> _preencher_fallbacks()
+    consulta o Unsplash. Sem dublar isso, a suíte dependeria de rede e de
+    rate limit (conta Demo, 50 req/hora).
+  - AI_PROVIDER / AI_PROVIDER_FALLBACK_ORDER são limpas do ambiente em cada
+    teste: ai_provider.py e agent_construtor.py chamam load_dotenv() no
+    import, então um .env da máquina mudaria o resultado silenciosamente.
+
+Uso: pytest backend/test_agentes.py   (ou via python backend/qa.py)
 """
 
 import json
 import os
 import sys
-import time
 from pathlib import Path
-from typing import List, Dict, Tuple
-from datetime import datetime
-from agent_construtor import AgenteConstrutor
-from schema_validator import ValidadorSchema
 
-# Lista de nichos para testar (Fase 1)
-NICHOS_TESTE = [
-    # Automóvel
-    ("Auto Elétrica Silva", "Auto Elétrica", "#0066CC"),
-    ("Mecânica Premium", "Mecânica Geral", "#333333"),
-    ("Lavajato Express", "Lavagem de Veículos", "#FF6B35"),
-    
-    # Saúde & Bem-estar
-    ("Academia Power", "Academia de Ginástica", "#FF006E"),
-    ("Clínica Médica Central", "Clínica Médica", "#06A77D"),
-    ("Consultório Odontológico", "Odontologia", "#0099FF"),
-    ("Spa Wellness", "Spa e Bem-estar", "#D946EF"),
-    ("Fisioterapia Motriz", "Fisioterapia", "#00B4D8"),
-    
-    # Advocacia
-    ("Consultoria Jurídica Silva", "Consultoria Jurídica", "#8B0000"),
-    ("Escritório de Advocacia", "Advocacia Geral", "#1F2937"),
-    
-    # Animais
-    ("Pet Shop Amigos", "Pet Shop", "#FF85C0"),
-    ("Clínica Veterinária", "Veterinária", "#22D3EE"),
-    ("Banho e Tosa Paw", "Banho e Tosa", "#F0B030"),
-    
-    # Alimentação
-    ("Pizzaria do João", "Pizzaria", "#EA580C"),
-    ("Restaurante Gourmet", "Restaurante", "#8E7D43"),
-    ("Padaria Artesanal", "Padaria", "#D2691E"),
-    ("Sorveteria Gelato", "Sorveteria", "#FF69B4"),
-    ("Confeitaria Doces", "Confeitaria", "#DC143C"),
-    ("Lanchonete Express", "Lanchonete", "#FF8C00"),
-    
-    # Moda
-    ("Loja Fashion Plus", "Loja de Roupas", "#FF1493"),
-    ("Sapatos Premium", "Sapetaria", "#8B4513"),
-    ("Brechó Criativo", "Brechó", "#A020F0"),
-    
-    # Beleza
-    ("Salão de Beleza Maria", "Salão de Beleza", "#FF69B4"),
-    ("Barbearia Clássica", "Barbearia", "#2F4F4F"),
-    ("Manicure e Pedicure", "Manicure", "#FFB6C1"),
-    
-    # Imóveis
-    ("Imobiliária Casagrande", "Imobiliária", "#4169E1"),
-    ("Aluguel Fácil", "Aluguel de Imóveis", "#1E90FF"),
-    
-    # Educação
-    ("Academia de Idiomas", "Escola de Idiomas", "#007AFF"),
-    ("Curso de Culinária", "Curso Online", "#DC143C"),
-    ("Escola de Artes", "Escola de Artes", "#FF8C00"),
-    
-    # Tecnologia
-    ("Tech Innovations", "Software/SaaS", "#4F46E5"),
-    ("Web Design Studio", "Web Design", "#0891B2"),
-    ("Consultoria TI", "Consultoria Tecnológica", "#1D4ED8"),
-    
-    # Marketing & Publicidade
-    ("Digital Boost Agency", "Agência de Marketing", "#FF6B35"),
-    ("Estúdio Criativo", "Estúdio de Design", "#A855F7"),
-    ("Social Media Expert", "Social Media", "#F97316"),
-    
-    # Serviços
-    ("Encanador Express", "Encanador", "#4B5563"),
-    ("Eletricista Profissional", "Eletricista", "#FFD700"),
-    ("Serralharia Premium", "Serralharia", "#696969"),
-    ("Construção & Reforma", "Construção Civil", "#8B4513"),
-    ("Limpeza Profissional", "Limpeza de Ambientes", "#87CEEB"),
-    
-    # Turismo & Hospedagem
-    ("Hotel Praia Dourada", "Hotel", "#00CED1"),
-    ("Pousada Aconchego", "Pousada", "#228B22"),
-    ("Agência de Viagens", "Agência de Viagens", "#FF4500"),
-    
-    # Outros
-    ("Floricultura Flores", "Floricultura", "#FF1493"),
-    ("Fotógrafo Profissional", "Fotografia", "#000000"),
-    ("DJ Para Festas", "DJ Services", "#FF00FF"),
-    ("Buffet de Festas", "Buffet", "#FFD700"),
-]
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import pytest
+
+import agent_construtor
+import ai_provider
+from agent_construtor import MAX_TENTATIVAS_GERACAO, AgenteConstrutor
+from ai_provider import _ORDEM_PADRAO, AIProvider, ErroProvedorIA
+
+CAMINHO_CONFIG_REAL = Path(__file__).resolve().parent.parent / "site-config.json"
+
+IMAGENS_FALSAS = [f"https://exemplo.test/foto-{i}.jpg" for i in range(1, 7)]
 
 
-class TestadorAgente:
-    """Executa suite de testes com múltiplos nichos"""
+# ==========================================================================
+# Infraestrutura de dublês
+# ==========================================================================
 
-    def __init__(self):
-        self.resultados: List[Dict] = []
-        self.tempo_inicio = None
-        self.agente = None
+def fabricar_provedor(resposta=None, erro=None, registro=None, nome=""):
+    """Cria uma classe de provedor falsa compatível com _PROVEDORES.
 
-    def inicializar(self) -> bool:
-        """Inicializa o agente"""
-        try:
-            print("🤖 Inicializando Agente Construtor...")
-            self.agente = AgenteConstrutor()
-            print("✅ Agente inicializado\n")
-            return True
-        except Exception as e:
-            print(f"❌ Erro ao inicializar agente: {e}")
-            return False
+    _PROVEDORES[nome]() é chamado sem argumentos, então a configuração
+    precisa ser capturada por closure, não por parâmetro de __init__.
+    """
 
-    def testar_nicho(self, nome: str, nicho: str, cor: str, indice: int, total: int) -> Dict:
-        """
-        Testa o agente com um nicho específico
-        
-        Returns:
-            Dict com resultado do teste
-        """
-        print(f"[{indice}/{total}] Testando: {nome} ({nicho}) - {cor}")
-        
-        resultado = {
-            "indice": indice,
-            "nome": nome,
-            "nicho": nicho,
-            "cor": cor,
-            "timestamp": datetime.now().isoformat(),
-            "sucesso": False,
-            "tempo_segundos": 0,
-            "erro": None,
-            "validacao_schema": False,
-            "campos_faltantes": [],
-            "campos_vazios": [],
-            "info": {}
-        }
+    class ProvedorFalso:
+        def __init__(self):
+            if isinstance(erro, type) and issubclass(erro, Exception):
+                # Falha já na construção (ex.: chave ausente) — o AIProvider
+                # precisa tratar isso igual a falha de geração.
+                raise erro(f"{nome}: indisponível")
 
-        tempo_inicio = time.time()
+        def gerar_json(self, prompt, max_tokens=4096):
+            if registro is not None:
+                registro.append(nome)
+            if isinstance(erro, Exception):
+                raise erro
+            return resposta
 
-        try:
-            # Gerar config
-            config = self.agente.gerar_config_site(nome, nicho, cor)
-            resultado["tempo_segundos"] = time.time() - tempo_inicio
-
-            # Validar schema
-            valido, erro, config_obj = ValidadorSchema.validar_json(config)
-
-            if not valido:
-                resultado["erro"] = erro
-                print(f"   ❌ Schema inválido: {erro}\n")
-                return resultado
-
-            resultado["validacao_schema"] = True
-
-            # Coletar info
-            resultado["info"] = {
-                "empresa": config_obj.company.name,
-                "serviços": len([s for s in config_obj.services if s.enabled]),
-                "depoimentos": len([t for t in config_obj.testimonials if t.enabled]),
-                "cores": len(config_obj.colors.model_dump()),
-                "hero_enabled": config_obj.hero.enabled,
-                "cta_enabled": config_obj.cta.enabled
-            }
-
-            resultado["sucesso"] = True
-            print(f"   ✅ Sucesso em {resultado['tempo_segundos']:.2f}s\n")
-
-        except Exception as e:
-            resultado["erro"] = str(e)
-            resultado["tempo_segundos"] = time.time() - tempo_inicio
-            print(f"   ❌ Erro: {e}\n")
-
-        return resultado
-
-    def executar_testes(self, limite: int = None) -> None:
-        """Executa a suite completa de testes"""
-        if not self.inicializar():
-            return
-
-        print("="*70)
-        print("🧪 SUITE DE TESTES - Agente Construtor")
-        print("="*70)
-        print(f"Total de nichos a testar: {len(NICHOS_TESTE)}\n")
-
-        self.tempo_inicio = time.time()
-
-        # Executar testes
-        nichos_para_testar = NICHOS_TESTE[:limite] if limite else NICHOS_TESTE
-
-        for i, (nome, nicho, cor) in enumerate(nichos_para_testar, 1):
-            resultado = self.testar_nicho(nome, nicho, cor, i, len(nichos_para_testar))
-            self.resultados.append(resultado)
-
-        tempo_total = time.time() - self.tempo_inicio
-
-        # Gerar relatório
-        self.gerar_relatorio(tempo_total)
-
-    def gerar_relatorio(self, tempo_total: float) -> None:
-        """Gera relatório de qualidade"""
-        print("\n" + "="*70)
-        print("📊 RELATÓRIO DE QUALIDADE")
-        print("="*70 + "\n")
-
-        total = len(self.resultados)
-        sucessos = sum(1 for r in self.resultados if r["sucesso"])
-        schema_ok = sum(1 for r in self.resultados if r["validacao_schema"])
-
-        # Taxa de sucesso
-        taxa_sucesso = (sucessos / total * 100) if total > 0 else 0
-        taxa_schema = (schema_ok / total * 100) if total > 0 else 0
-
-        print(f"📈 Estatísticas Gerais:")
-        print(f"   Total de testes: {total}")
-        print(f"   Sucessos: {sucessos}")
-        print(f"   Falhas: {total - sucessos}")
-        print(f"   Taxa de sucesso: {taxa_sucesso:.1f}%")
-        print(f"   Schema válido: {schema_ok}/{total} ({taxa_schema:.1f}%)")
-        print(f"   Tempo total: {tempo_total:.2f}s")
-        print(f"   Tempo médio/nicho: {tempo_total/total:.2f}s\n")
-
-        # Resumo por nicho
-        print(f"📋 Resumo por Nicho:")
-        for r in self.resultados:
-            status = "✅" if r["sucesso"] else "❌"
-            print(f"   {status} {r['nome']:<40} ({r['tempo_segundos']:.1f}s)")
-
-        # Erros
-        erros = [r for r in self.resultados if not r["sucesso"]]
-        if erros:
-            print(f"\n❌ Erros Encontrados ({len(erros)}):")
-            for r in erros:
-                print(f"   • {r['nome']}: {r['erro']}")
-
-        # Salvar relatório JSON
-        self.salvar_relatorio_json()
-
-        # Avisos
-        print(f"\n⚠️  Status:")
-        if taxa_sucesso >= 95:
-            print(f"   ✅ PRONTO PARA PRODUÇÃO (Taxa > 95%)")
-        elif taxa_sucesso >= 85:
-            print(f"   🟡 REQUER MELHORIAS (Taxa entre 85-95%)")
-        else:
-            print(f"   ❌ CRÍTICO (Taxa < 85%)")
-
-        print("\n" + "="*70 + "\n")
-
-    def salvar_relatorio_json(self) -> None:
-        """Salva relatório em JSON"""
-        caminho = "relatorio_testes.json"
-        with open(caminho, 'w', encoding='utf-8') as f:
-            json.dump(self.resultados, f, ensure_ascii=False, indent=2)
-        print(f"💾 Relatório salvo em: {caminho}")
+    return ProvedorFalso
 
 
-def main():
-    """Função principal"""
-    print("\n")
-
-    # Verificar API key
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        print("❌ Erro: ANTHROPIC_API_KEY não configurada")
-        sys.exit(1)
-
-    # Argumentos CLI
-    limite = None
-    if len(sys.argv) > 1:
-        try:
-            limite = int(sys.argv[1])
-        except ValueError:
-            print(f"Uso: python test_agentes.py [limite_nichos]")
-            sys.exit(1)
-
-    # Executar testes
-    testador = TestadorAgente()
-    testador.executar_testes(limite=limite)
+@pytest.fixture(autouse=True)
+def ambiente_limpo(monkeypatch):
+    """Neutraliza configuração de provedor vinda do ambiente/.env."""
+    monkeypatch.delenv("AI_PROVIDER", raising=False)
+    monkeypatch.delenv("AI_PROVIDER_FALLBACK_ORDER", raising=False)
 
 
-if __name__ == "__main__":
-    main()
+@pytest.fixture
+def config_real() -> dict:
+    with CAMINHO_CONFIG_REAL.open(encoding="utf-8") as f:
+        return json.load(f)
+
+
+# ==========================================================================
+# Cadeia de provedores — a ordem e o fallback que a aplicação usa de fato
+# ==========================================================================
+
+def test_ordem_padrao_e_gemini_nim_anthropic_ollama():
+    assert AIProvider().ordem == ["gemini", "nvidia_nim", "anthropic", "ollama"]
+    assert _ORDEM_PADRAO == ["gemini", "nvidia_nim", "anthropic", "ollama"]
+
+
+def test_ai_provider_preferido_vai_para_o_topo_sem_duplicar(monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER", "ollama")
+    ordem = AIProvider().ordem
+    assert ordem[0] == "ollama"
+    assert sorted(ordem) == sorted(_ORDEM_PADRAO), "nenhum provedor pode sumir ou duplicar"
+
+
+def test_ordem_explicita_sobrescreve_o_padrao(monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER_FALLBACK_ORDER", "anthropic, ollama")
+    assert AIProvider().ordem == ["anthropic", "ollama"]
+
+
+def test_nomes_desconhecidos_sao_descartados(monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER_FALLBACK_ORDER", "provedor_que_nao_existe,ollama")
+    assert AIProvider().ordem == ["ollama"]
+
+
+def test_ordem_toda_invalida_levanta_erro(monkeypatch):
+    monkeypatch.setenv("AI_PROVIDER_FALLBACK_ORDER", "inexistente_a,inexistente_b")
+    with pytest.raises(ErroProvedorIA):
+        AIProvider()
+
+
+def test_fallback_pula_provedores_que_falham(monkeypatch):
+    chamados: list[str] = []
+    monkeypatch.setattr(ai_provider, "_PROVEDORES", {
+        "gemini": fabricar_provedor(erro=RuntimeError("cota estourada"), registro=chamados, nome="gemini"),
+        "nvidia_nim": fabricar_provedor(erro=ErroProvedorIA, nome="nvidia_nim"),  # falha no __init__
+        "anthropic": fabricar_provedor(resposta={"ok": True}, registro=chamados, nome="anthropic"),
+        "ollama": fabricar_provedor(resposta={"nao": "deveria chegar aqui"}, registro=chamados, nome="ollama"),
+    })
+
+    provedor = AIProvider()
+    assert provedor.provedor_ativo is None, "ninguém respondeu ainda"
+
+    assert provedor.gerar_json("prompt") == {"ok": True}
+    assert provedor.provedor_ativo == "anthropic"
+    assert chamados == ["gemini", "anthropic"], "ollama não podia ser chamado após sucesso"
+
+
+def test_todos_os_provedores_falhando_levanta_erro_com_diagnostico(monkeypatch):
+    monkeypatch.setattr(ai_provider, "_PROVEDORES", {
+        nome: fabricar_provedor(erro=RuntimeError(f"falha de {nome}"), nome=nome)
+        for nome in _ORDEM_PADRAO
+    })
+
+    with pytest.raises(ErroProvedorIA) as ctx:
+        AIProvider().gerar_json("prompt")
+
+    mensagem = str(ctx.value)
+    for nome in _ORDEM_PADRAO:
+        assert nome in mensagem, f"o diagnóstico precisa dizer que {nome} foi tentado"
+
+
+# ==========================================================================
+# Agente Construtor — pipeline de geração, sem IA e sem rede
+# ==========================================================================
+
+# Paleta que o dublê devolve no lugar da chamada de IA de cores.
+PALETA_FALSA = {
+    "primary": "#d2691e",
+    "primaryDark": "#a85417",
+    "secondary": "#1e88d2",
+    "accent": "#d2a91e",
+    "background": "#ffffff",
+    "text": "#1f2937",
+    "textLight": "#6b7280",
+    "border": "#e5e7eb",
+}
+
+
+class ProviderDuble:
+    """Dublê do AIProvider, na interface que agent_construtor consome.
+
+    Atenção ao contrato real: gerar_config_site() faz DUAS chamadas de IA
+    distintas quando recebe cor — primeiro a paleta complementar
+    (max_tokens=512, agent_construtor.py:109) e depois o config do site
+    (max_tokens=4096). Contar as duas juntas mediria a coisa errada nos
+    testes de retry, então o dublê separa por max_tokens.
+    """
+
+    def __init__(self, respostas: list[dict]):
+        self._respostas = list(respostas)
+        self._ultima: dict = {}
+        self.ordem = ["duble"]
+        self.provedor_ativo = "duble"
+        self.chamadas_config = 0
+        self.chamadas_paleta = 0
+
+    def gerar_json(self, prompt, max_tokens=4096):
+        if max_tokens == 512:
+            self.chamadas_paleta += 1
+            return dict(PALETA_FALSA)
+
+        self.chamadas_config += 1
+        if self._respostas:
+            self._ultima = self._respostas.pop(0)
+        return json.loads(json.dumps(self._ultima))
+
+
+@pytest.fixture
+def montar_agente(monkeypatch):
+    """Devolve uma factory que instala o dublê e entrega o agente pronto."""
+
+    def _montar(respostas: list[dict]) -> tuple[AgenteConstrutor, ProviderDuble]:
+        duble = ProviderDuble(respostas)
+        monkeypatch.setattr(agent_construtor, "obter_ai_provider", lambda: duble)
+        # Sem isto, _preencher_fallbacks consulta o Unsplash de verdade.
+        monkeypatch.setattr(
+            agent_construtor, "obter_imagens_categoria", lambda categoria: list(IMAGENS_FALSAS)
+        )
+        return AgenteConstrutor(), duble
+
+    return _montar
+
+
+def test_gera_config_valido_na_primeira_tentativa(montar_agente, config_real):
+    agente, duble = montar_agente([config_real])
+
+    config = agente.gerar_config_site("Padaria Sabor Dourado", "Padaria Artesanal", "#d2691e")
+
+    assert config["company"]["name"]
+    assert duble.chamadas_config == 1, "config válido não pode gastar tentativa extra"
+
+
+def test_retry_reaproveita_tentativas_ate_config_valido(montar_agente, config_real):
+    invalido = json.loads(json.dumps(config_real))
+    # Precisa ser um campo que NENHUMA etapa determinística reconstrói:
+    # _autocorrigir() conserta siteTitle/icon/fontPair e _preencher_fallbacks()
+    # reescreve metadata inteiro, então quebrar esses nunca chega no validador.
+    # faq exige min_items=3 (schema_validator.py:317) e passa intacto.
+    invalido["faq"] = invalido["faq"][:1]
+
+    agente, duble = montar_agente([invalido, invalido, config_real])
+
+    config = agente.gerar_config_site("Clínica Central", "Clínica Médica", "#06a77d")
+
+    assert config["company"]["name"]
+    assert duble.chamadas_config == 3, "deveria ter tentado de novo até o config válido"
+
+
+def test_retry_desiste_apos_o_maximo_de_tentativas(montar_agente, config_real):
+    invalido = json.loads(json.dumps(config_real))
+    invalido["faq"] = invalido["faq"][:1]
+
+    agente, duble = montar_agente([invalido])
+
+    with pytest.raises(ValueError, match="Schema inválido"):
+        agente.gerar_config_site("Loja Teste", "Loja de Roupas", "#ff1493")
+
+    assert duble.chamadas_config == MAX_TENTATIVAS_GERACAO
+
+
+def test_autocorrige_icon_invalido_sem_gastar_tentativa(montar_agente, config_real):
+    quebrado = json.loads(json.dumps(config_real))
+    for servico in quebrado.get("services", []):
+        servico["icon"] = ""
+
+    agente, duble = montar_agente([quebrado])
+
+    config = agente.gerar_config_site("Pet Shop Amigos", "Pet Shop", "#ff85c0")
+
+    assert all(s["icon"] for s in config["services"]), "icon vazio deveria ter sido autocorrigido"
+    assert duble.chamadas_config == 1, "autocorreção é determinística, não pode custar nova chamada"
+
+
+def test_cor_ausente_e_derivada_do_nicho(montar_agente, config_real):
+    """Regressão do commit 4f54580: cor_primaria virou opcional e é resolvida
+    a partir da categoria do nicho quando não vem no payload."""
+    agente, _ = montar_agente([config_real])
+
+    config = agente.gerar_config_site("Clínica Central", "Clínica Médica")
+
+    assert config["colors"]["primary"].startswith("#")
+    assert len(config["colors"]["primary"]) == 7
+
+
+def test_nao_toca_a_rede_de_imagens(montar_agente, config_real, monkeypatch):
+    """Garante que o dublê de imagens está mesmo interceptando: se o código
+    passar a chamar a função real, este teste quebra em vez de fazer HTTP."""
+    def explodir(*_a, **_kw):
+        raise AssertionError("gerar_config_site tentou buscar imagem de verdade")
+
+    agente, _ = montar_agente([config_real])
+    monkeypatch.setattr(agent_construtor, "obter_imagens_categoria", explodir)
+
+    with pytest.raises(AssertionError):
+        agente.gerar_config_site("Pizzaria do João", "Pizzaria", "#ea580c")

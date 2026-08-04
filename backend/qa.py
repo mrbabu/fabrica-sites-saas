@@ -75,8 +75,15 @@ SUITES: list[Suite] = [
     Suite(
         nome="agentes",
         arquivo="test_agentes.py",
+        rapida=True,
+        descricao="Cadeia de provedores + pipeline do Agente Construtor (dublado)",
+        pytest=True,
+    ),
+    Suite(
+        nome="agentes_llm",
+        arquivo="test_agentes_llm.py",
         rapida=False,
-        descricao="Agente Construtor ponta a ponta em 50 nichos",
+        descricao="Benchmark de qualidade em 50 nichos contra LLM real",
         requisito="LLM real (Ollama local ou chave de API) — gera custo/latência",
     ),
     Suite(
