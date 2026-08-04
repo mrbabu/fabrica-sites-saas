@@ -628,14 +628,19 @@ async def value_error_handler(request, exc):
 if __name__ == "__main__":
     import uvicorn
 
-    # Verificar se pelo menos um provedor de IA está configurado
+    # Verificar se pelo menos uma credencial de provedor de IA em nuvem está
+    # configurada. Faltava Gemini aqui (é o 1º da cadeia em ai_provider.py)
+    # e OLLAMA_URL ausente NÃO significa Ollama indisponível -- essa env var
+    # tem default (http://localhost:11434) em ai_provider.py, então checar
+    # a presença dela aqui só gerava aviso falso quando o Ollama já estava
+    # rodando no endereço padrão sem a env var setada.
     if not any([
+        os.getenv("GEMINI_API_KEY"),
         os.getenv("NVIDIA_NIM_API_KEY"),
         os.getenv("ANTHROPIC_API_KEY"),
-        os.getenv("OLLAMA_URL"),
     ]):
-        print("⚠️  Nenhum provedor de IA configurado (NVIDIA_NIM_API_KEY / ANTHROPIC_API_KEY / OLLAMA_URL).")
-        print("   Configure ao menos um em .env antes de gerar sites.")
+        print("⚠️  Nenhuma credencial de provedor de IA em nuvem configurada (GEMINI_API_KEY / NVIDIA_NIM_API_KEY / ANTHROPIC_API_KEY).")
+        print("   Ollama local (padrão http://localhost:11434) serve de fallback automático se estiver rodando.")
 
     if not os.getenv("WEBHOOK_API_KEY"):
         print("⚠️  WEBHOOK_API_KEY não configurada — POST /webhook/whatsapp ficará bloqueado (503).")
