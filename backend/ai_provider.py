@@ -51,6 +51,22 @@ def _extrair_json(texto: str) -> dict:
         raise
 
 
+def _extrair_uso_openai(response) -> Optional[dict]:
+    """
+    Extrai uso de tokens de uma resposta do SDK OpenAI-compatível
+    (NVIDIA NIM/Groq -- mesmo formato de `response.usage`). None se a API
+    não informar -- nunca estimado por aproximação.
+    """
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        return None
+    return {
+        "prompt": usage.prompt_tokens,
+        "completion": usage.completion_tokens,
+        "total": usage.total_tokens,
+    }
+
+
 class ProvedorNvidiaNIM:
     """Chama modelos via NVIDIA NIM usando o SDK OpenAI-compatível"""
 
@@ -65,6 +81,7 @@ class ProvedorNvidiaNIM:
         self.api_key = os.getenv("NVIDIA_NIM_API_KEY")
         self.base_url = os.getenv("NVIDIA_NIM_BASE_URL", "https://integrate.api.nvidia.com/v1")
         self.model = os.getenv("NVIDIA_NIM_MODEL", "meta/llama-3.1-8b-instruct")
+        self.ultimo_uso_tokens: Optional[dict] = None
 
         if not self.api_key:
             raise ErroProvedorIA("NVIDIA_NIM_API_KEY não configurada")
@@ -95,6 +112,7 @@ class ProvedorNvidiaNIM:
             max_tokens=max_tokens,
             temperature=0.7,
         )
+        self.ultimo_uso_tokens = _extrair_uso_openai(response)
         texto = response.choices[0].message.content.strip()
         return _extrair_json(texto)
 
@@ -120,6 +138,7 @@ class ProvedorGroq:
         self.api_key = os.getenv("GROQ_API_KEY")
         self.base_url = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
         self.model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        self.ultimo_uso_tokens: Optional[dict] = None
 
         if not self.api_key:
             raise ErroProvedorIA("GROQ_API_KEY não configurada")
@@ -144,6 +163,7 @@ class ProvedorGroq:
             max_tokens=max_tokens,
             temperature=0.7,
         )
+        self.ultimo_uso_tokens = _extrair_uso_openai(response)
         texto = response.choices[0].message.content.strip()
         return _extrair_json(texto)
 
@@ -232,6 +252,7 @@ class ProvedorOllama:
         self.ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
         self.model = os.getenv("OLLAMA_MODEL", "llama3")
         self.api_endpoint = f"{self.ollama_url}/api/generate"
+        self.ultimo_uso_tokens: Optional[dict] = None
 
         try:
             resp = self._requests.get(f"{self.ollama_url}/api/tags", timeout=2)
@@ -303,7 +324,23 @@ class ProvedorOllama:
             timeout=120,
         )
         response.raise_for_status()
-        texto = response.json()["response"].strip()
+        resposta_json = response.json()
+
+        # Ollama não usa a chave "usage" (formato OpenAI) -- devolve
+        # prompt_eval_count/eval_count soltos no corpo, só quando
+        # stream=False (nosso caso). Ausentes -> None, sem estimar.
+        if "prompt_eval_count" in resposta_json and "eval_count" in resposta_json:
+            prompt_tokens = resposta_json["prompt_eval_count"]
+            completion_tokens = resposta_json["eval_count"]
+            self.ultimo_uso_tokens = {
+                "prompt": prompt_tokens,
+                "completion": completion_tokens,
+                "total": prompt_tokens + completion_tokens,
+            }
+        else:
+            self.ultimo_uso_tokens = None
+
+        texto = resposta_json["response"].strip()
         return _extrair_json(texto)
 
 
@@ -372,6 +409,18 @@ class AIProvider:
     def provedor_ativo(self) -> Optional[str]:
         """Nome do último provedor que respondeu com sucesso"""
         return self._ativo_nome
+
+    @property
+    def uso_tokens_ativo(self) -> Optional[dict]:
+        """
+        {"prompt", "completion", "total"} da última chamada bem-sucedida,
+        ou None se o provedor ativo não informa uso de tokens (nunca
+        estimado por aproximação -- ver _extrair_uso_openai).
+        """
+        if self._ativo_nome is None:
+            return None
+        instancia = self._instancias_cache.get(self._ativo_nome)
+        return getattr(instancia, "ultimo_uso_tokens", None) if instancia else None
 
 
 _instancia_global: Optional[AIProvider] = None

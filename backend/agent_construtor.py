@@ -424,6 +424,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                     "sucesso": valido,
                     "erro": None if valido else erro,
                     "tempo_segundos": time.time() - tempo_inicio_tentativa,
+                    "tokens": getattr(self.ai, "uso_tokens_ativo", None),
                 })
 
             if valido:

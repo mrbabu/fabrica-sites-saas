@@ -84,6 +84,33 @@ class TestProvedorGroqGerarJson(unittest.TestCase):
         resultado = provedor.gerar_json("prompt de teste")
         self.assertEqual(resultado, {"ok": True})
 
+    def test_gerar_json_captura_uso_de_tokens_quando_a_api_informa(self):
+        provedor = ProvedorGroq()
+        resposta_fake = MagicMock()
+        resposta_fake.choices = [MagicMock()]
+        resposta_fake.choices[0].message.content = '{"ok": true}'
+        resposta_fake.usage.prompt_tokens = 150
+        resposta_fake.usage.completion_tokens = 300
+        resposta_fake.usage.total_tokens = 450
+        provedor.client = MagicMock()
+        provedor.client.chat.completions.create.return_value = resposta_fake
+
+        provedor.gerar_json("prompt de teste")
+
+        self.assertEqual(provedor.ultimo_uso_tokens, {"prompt": 150, "completion": 300, "total": 450})
+
+    def test_gerar_json_sem_usage_no_retorno_marca_none_com_motivo(self):
+        provedor = ProvedorGroq()
+        resposta_fake = MagicMock(spec=["choices"])
+        resposta_fake.choices = [MagicMock()]
+        resposta_fake.choices[0].message.content = '{"ok": true}'
+        provedor.client = MagicMock()
+        provedor.client.chat.completions.create.return_value = resposta_fake
+
+        provedor.gerar_json("prompt de teste")
+
+        self.assertIsNone(provedor.ultimo_uso_tokens)
+
 
 if __name__ == "__main__":
     unittest.main()
