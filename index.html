@@ -37,7 +37,14 @@
 
         /* Faixa-ticker contínua — o elemento de assinatura, 100% orientado por dado */
         .ticker-clip { clip-path: polygon(0 1.2vw, 100% 0, 100% 100%, 0 100%); }
-        .ticker-wrap { overflow: hidden; }
+        /* LAY-03: sem mascara, o overflow:hidden corta o texto em corte reto
+           nas bordas enquanto o item entra/sai durante a animacao — a mascara
+           troca o corte abrupto por um fade, padrao pra tickers continuos. */
+        .ticker-wrap {
+            overflow: hidden;
+            -webkit-mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+            mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+        }
         .ticker-track { display: flex; width: max-content; animation: ticker 26s linear infinite; }
         .ticker-wrap:hover .ticker-track { animation-play-state: paused; }
         @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
@@ -423,8 +430,9 @@
         }
 
         function tickerItems() {
+            // LAY-04: a tagline ja aparece no hero, logo acima do ticker —
+            // repeti-la aqui e redundancia, nao reforco.
             const items = [];
-            if (config.company.tagline) items.push(config.company.tagline);
             (config.services || []).filter(s => s.enabled).forEach(s => items.push(s.title));
             (config.features || []).filter(f => f.enabled).forEach(f => items.push(f.title));
             const testimonials = (config.testimonials || []).filter(t => t.enabled);
