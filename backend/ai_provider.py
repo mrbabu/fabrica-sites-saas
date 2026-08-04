@@ -223,16 +223,21 @@ class ProvedorOllama:
         modelo_base = self.model.split(":")[0] if ":" in self.model else self.model
 
         if modelo_base in modelos_normalizados:
-            versoes = modelos_normalizados[modelo_base]
-            sugestao = f"Modelo '{self.model}' não encontrado. Versões disponíveis: {', '.join(versoes)}"
-        else:
-            disponiveis = ", ".join(modelos[:10]) if modelos else "(nenhum modelo instalado)"
-            sugestao = (
-                f"Modelo '{self.model}' não encontrado localmente.\n"
-                f"Modelos disponíveis: {disponiveis}\n"
-                f"Para instalar, execute manualmente: ollama pull {self.model}"
-            )
+            # Match por nome-base (ex.: configurado "llama3", instalado
+            # "llama3:latest") é o mesmo modelo — resolve pra tag exata em
+            # vez de barrar. Bug anterior: essa normalização era calculada
+            # só pra compor a mensagem de erro, e o código levantava
+            # ErroProvedorIA nos dois ramos (match ou não), inutilizando o
+            # próprio propósito da normalização.
+            self.model = modelos_normalizados[modelo_base][0]
+            return
 
+        disponiveis = ", ".join(modelos[:10]) if modelos else "(nenhum modelo instalado)"
+        sugestao = (
+            f"Modelo '{self.model}' não encontrado localmente.\n"
+            f"Modelos disponíveis: {disponiveis}\n"
+            f"Para instalar, execute manualmente: ollama pull {self.model}"
+        )
         raise ErroProvedorIA(sugestao)
 
     def gerar_json(self, prompt: str, max_tokens: int = 4096) -> dict:

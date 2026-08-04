@@ -115,17 +115,20 @@ class TestProvedorOllamaValidacaoModelo(unittest.TestCase):
         finally:
             del os.environ["OLLAMA_MODEL"]
 
-    def test_modelo_sem_tag_mas_tag_disponivel_sugere_versoes(self):
-        """Cenário 6: Modelo 'custom-model' mas só existe 'custom-model:latest' -> erro com sugestão."""
+    def test_modelo_sem_tag_mas_tag_disponivel_resolve_automaticamente(self):
+        """
+        Cenário 6: Modelo configurado 'custom-model' (sem tag) e só existe
+        'custom-model:latest' -> mesmo modelo, resolve pra tag exata em vez
+        de barrar. É o caso padrão real: `ollama pull llama3` sempre lista
+        como "llama3:latest", nunca como "llama3" puro, e OLLAMA_MODEL
+        default é "llama3" (sem tag) — exigir match exato quebraria o
+        fallback de Ollama na configuração default documentada.
+        """
         os.environ["OLLAMA_MODEL"] = "custom-model"
         try:
             mock = _mock_requests(["custom-model:latest"])
-            with self.assertRaises(ErroProvedorIA) as ctx:
-                ProvedorOllama(_requests_module=mock)
-
-            erro_msg = str(ctx.exception)
-            self.assertIn("custom-model", erro_msg)
-            self.assertIn("custom-model:latest", erro_msg)
+            provedor = ProvedorOllama(_requests_module=mock)
+            self.assertEqual(provedor.model, "custom-model:latest")
         finally:
             del os.environ["OLLAMA_MODEL"]
 

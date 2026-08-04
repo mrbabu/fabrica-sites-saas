@@ -261,10 +261,13 @@ def main():
     """Função principal"""
     print("\n")
 
-    # Verificar API key
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        print("❌ Erro: ANTHROPIC_API_KEY não configurada")
-        sys.exit(1)
+    # Nenhuma checagem de credencial aqui: AIProvider (ai_provider.py) já
+    # resolve isso sozinho, tentando toda a cadeia de fallback (Gemini ->
+    # NVIDIA NIM -> Anthropic -> Ollama local) e só falha se NENHUM provedor
+    # estiver disponível. Checar uma env var específica aqui duplicava essa
+    # lógica de forma desatualizada — travava a suite inteira por falta de
+    # ANTHROPIC_API_KEY mesmo quando outro provedor da cadeia funcionaria.
+    # TestadorAgente.inicializar() já captura e reporta esse erro se ocorrer.
 
     # Argumentos CLI
     limite = None
