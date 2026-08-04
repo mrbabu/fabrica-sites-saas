@@ -41,7 +41,7 @@ TIMEOUT_SUITE_S = 300
 
 @dataclass(frozen=True)
 class Suite:
-    """Uma suíte de testes executável como script independente."""
+    """Uma suíte de testes, executada como script próprio ou via pytest."""
 
     nome: str
     arquivo: str
@@ -49,6 +49,14 @@ class Suite:
     descricao: str
     # Só para as lentas: o que precisa estar de pé pra ela rodar.
     requisito: str = ""
+    # Suítes migradas pra pytest; as antigas ainda são scripts com main().
+    pytest: bool = False
+
+    def comando(self) -> list[str]:
+        if self.pytest:
+            # -p no:cacheprovider: não cria backend/.pytest_cache no repo.
+            return [sys.executable, "-m", "pytest", self.arquivo, "-q", "-p", "no:cacheprovider"]
+        return [sys.executable, self.arquivo]
 
 
 SUITES: list[Suite] = [
@@ -74,9 +82,9 @@ SUITES: list[Suite] = [
     Suite(
         nome="api",
         arquivo="test_api.py",
-        rapida=False,
-        descricao="Endpoints da API via HTTP",
-        requisito="servidor FastAPI de pé em http://localhost:8000",
+        rapida=True,
+        descricao="Endpoints da API via TestClient (sem servidor, sem IA, sem banco)",
+        pytest=True,
     ),
 ]
 
@@ -94,7 +102,7 @@ def executar_suite(suite: Suite) -> Resultado:
     inicio = time.time()
     try:
         proc = subprocess.run(
-            [sys.executable, suite.arquivo],
+            suite.comando(),
             cwd=BACKEND_DIR,
             capture_output=True,
             text=True,

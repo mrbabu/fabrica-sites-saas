@@ -60,4 +60,3 @@ jobs:
             backend/relatorio_testes.json
             backend/htmlcov/
             backend/coverage.xml
-            backend/.pytest_cache/
