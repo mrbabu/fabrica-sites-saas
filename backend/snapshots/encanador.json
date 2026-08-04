@@ -1,0 +1,172 @@
+{
+  "colors": {
+    "accent": "#34c759",
+    "background": "#ffffff",
+    "border": "#e5e7eb",
+    "primary": "#7c3aed",
+    "primaryDark": "#5f249f",
+    "secondary": "#ffbf00",
+    "text": "#1f2937",
+    "textLight": "#6b7280"
+  },
+  "company": {
+    "description": "Nossa equipe de treinadores experientes e motivados está aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico. Agende sua consulta hoje mesmo!",
+    "logo": "https://ui-avatars.com/api/?name=Encanador%20Express&background=7c3aed&color=fff&size=400&bold=true",
+    "name": "Studio Vida Fitness",
+    "tagline": "Treinamento Personalizado e Eficaz"
+  },
+  "contact": {
+    "address": null,
+    "email": null,
+    "googleMapsUrl": null,
+    "phone": "+5527999990000",
+    "social": {},
+    "whatsapp": "+5527999990000"
+  },
+  "cta": {
+    "buttonLink": "mailto:contato@studiovidafitness.com",
+    "buttonText": "Agende sua consulta",
+    "description": "Nossa equipe está aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico. Agende sua consulta hoje mesmo!",
+    "enabled": true,
+    "title": "Melhore sua saúde e condicionamento físico com nossos treinadores experientes em Belo Horizonte"
+  },
+  "faq": [
+    {
+      "answer": "Os benefícios do treinamento personalizado incluem uma melhoria da saúde e condicionamento físico, aumento da força e da flexibilidade, e uma progressão mensurável.",
+      "enabled": true,
+      "id": 1,
+      "question": "Quais são os benefícios do treinamento personalizado?"
+    },
+    {
+      "answer": "Os benefícios do treinamento de grupo incluem uma comunidade de apoio, desafios e incentivos, e uma melhoria da saúde e condicionamento físico.",
+      "enabled": true,
+      "id": 2,
+      "question": "Quais são os benefícios do treinamento de grupo?"
+    },
+    {
+      "answer": "Os benefícios do treinamento de condicionamento físico incluem uma melhoria da resistência cardiorrespiratória, aumento da força e da flexibilidade, e uma progressão mensurável.",
+      "enabled": true,
+      "id": 3,
+      "question": "Quais são os benefícios do treinamento de condicionamento físico?"
+    },
+    {
+      "answer": "Os objetivos do treinamento incluem melhorar a saúde e condicionamento físico, aumentar a força e a flexibilidade, e alcançar os objetivos de saúde e condicionamento físico.",
+      "enabled": true,
+      "id": 4,
+      "question": "Quais são os objetivos do treinamento?"
+    }
+  ],
+  "features": [
+    {
+      "description": "Nossos treinadores experientes criam um plano de treinamento personalizado para atender às suas necessidades e objetivos.",
+      "enabled": true,
+      "icon": "⚡",
+      "id": 1,
+      "title": "Treinamento Personalizado"
+    },
+    {
+      "description": "Participe de nossos treinamentos de grupo e encontre uma comunidade de pessoas que compartilham seus objetivos de saúde e condicionamento físico.",
+      "enabled": true,
+      "icon": "✅",
+      "id": 2,
+      "title": "Comunidade de Apoio"
+    },
+    {
+      "description": "Nossos treinadores experientes ajudam a melhorar sua condicionamento físico e alcançar seus objetivos de saúde.",
+      "enabled": true,
+      "icon": "🎯",
+      "id": 3,
+      "title": "Progresso Mensurável"
+    }
+  ],
+  "footer": {
+    "copyrightText": "© 2026 Encanador Express. Todos os direitos reservados.",
+    "description": "Nossa equipe de treinadores experientes e motivados está aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico. Agende sua consulta hoje mesmo!",
+    "links": [
+      {
+        "label": "Sobre Nós",
+        "url": "#sobre"
+      },
+      {
+        "label": "Contato",
+        "url": "#contato"
+      }
+    ]
+  },
+  "hero": {
+    "backgroundImage": "https://imagem.test/construction/1.jpg",
+    "ctaLink": "#contato",
+    "ctaText": "Agende sua consulta",
+    "enabled": true,
+    "subtitle": "Nossa equipe está aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico. Agende sua consulta hoje mesmo!",
+    "title": "Melhore sua saúde e condicionamento físico com nossos treinadores experientes em Belo Horizonte"
+  },
+  "metadata": {
+    "favicon": "🚀",
+    "keywords": [
+      "academia",
+      "personal trainer",
+      "treinamento",
+      "condicionamento físico",
+      "Belo Horizonte"
+    ],
+    "ogDescription": "Melhore sua saúde e condicionamento físico com nossos treinadores experientes em Belo Horizonte. Agende sua consulta hoje mesmo!",
+    "ogImage": "https://imagem.test/construction/1.jpg",
+    "ogTitle": "Academia e Personal Trainer em Belo Horizonte",
+    "siteDescription": "Melhore sua saúde e condicionamento físico com nossos treinadores experientes em Belo Horizonte. Agende sua consulta hoje mesmo!",
+    "siteTitle": "Academia e Personal Trainer em Belo Horizonte"
+  },
+  "sections": [
+    {
+      "content": "Nossa equipe está composta por treinadores experientes e motivados que estão aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico. Nossos treinadores são especializados em diferentes áreas, incluindo treinamento personalizado, treinamento de grupo e treinamento de condicionamento físico.",
+      "enabled": true,
+      "id": "sobre",
+      "image": "https://loremflickr.com/500/400/academia-e-personal-trainer?lock=0",
+      "subtitle": "Nossa equipe de treinadores experientes e motivados está aqui para ajudá-lo a alcançar seus objetivos de saúde e condicionamento físico.",
+      "title": "Sobre Nós",
+      "type": "content"
+    }
+  ],
+  "services": [
+    {
+      "description": "Nossos treinadores experientes criam um plano de treinamento personalizado para atender às suas necessidades e objetivos.",
+      "enabled": true,
+      "features": [
+        "Treinamento personalizado",
+        "Plano de treinamento personalizado",
+        "Progresso mensurável"
+      ],
+      "icon": "⭐",
+      "id": 1,
+      "title": "Treinamento Personalizado"
+    },
+    {
+      "description": "Participe de nossos treinamentos de grupo e encontre uma comunidade de pessoas que compartilham seus objetivos de saúde e condicionamento físico.",
+      "enabled": true,
+      "features": [
+        "Treinamento de grupo",
+        "Comunidade de apoio",
+        "Desafios e incentivos"
+      ],
+      "icon": "✅",
+      "id": 2,
+      "title": "Treinamento de Grupo"
+    },
+    {
+      "description": "Nossos treinadores experientes ajudam a melhorar sua condicionamento físico e alcançar seus objetivos de saúde.",
+      "enabled": true,
+      "features": [
+        "Treinamento de condicionamento físico",
+        "Melhoria da resistência cardiorrespiratória",
+        "Aumento da força e da flexibilidade"
+      ],
+      "icon": "🔧",
+      "id": 3,
+      "title": "Treinamento de Condicionamento Físico"
+    }
+  ],
+  "testimonials": [],
+  "typography": {
+    "fontPair": "modern"
+  }
+}

@@ -72,6 +72,10 @@ prompt_teste_lovable.txt
 !/package-lock.json
 !backend/data/niches.json
 !backend/data/buscas_leads.json
+# Baselines de regressão do QA: são fonte de verdade versionada, não config
+# gerado. Sem esta exceção o *.json acima os engole, o CI não encontra
+# baseline e a suíte de snapshot falha em toda execução limpa.
+!backend/snapshots/*.json
 
 # Métricas e dados
 metrics.json

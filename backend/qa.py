@@ -93,6 +93,13 @@ SUITES: list[Suite] = [
         descricao="Endpoints da API via TestClient (sem servidor, sem IA, sem banco)",
         pytest=True,
     ),
+    Suite(
+        nome="snapshots",
+        arquivo="test_snapshots.py",
+        rapida=True,
+        descricao="Regressão funcional do config gerado: snapshot + invariantes de negócio",
+        pytest=True,
+    ),
 ]
 
 
