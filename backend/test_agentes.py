@@ -50,6 +50,26 @@ def _categorizar_erro(mensagem: Optional[str]) -> List[str]:
     return ["OUTRO"]
 
 
+_REGEX_PAR_DUPLICACAO = re.compile(r"duplicad[oa] entre (\w+)\[[^\]]*\]\.\S+ e (\w+)\[[^\]]*\]\.\S+")
+
+
+def _extrair_par_duplicacao(mensagem: Optional[str]) -> Optional[str]:
+    """
+    Pra mensagens de MODEL_DUPLICATION, extrai QUAIS dois tipos de campo
+    colidiram (ex.: "services×features") -- pra descobrir se a duplicação
+    se concentra num par especifico (ex.: services×features) em vez de
+    espalhada. Ordem alfabetica pro par nao depender de quem apareceu
+    primeiro na mensagem. None se a mensagem não for de duplicação.
+    """
+    if not mensagem:
+        return None
+    m = _REGEX_PAR_DUPLICACAO.search(mensagem)
+    if not m:
+        return None
+    a, b = sorted([m.group(1), m.group(2)])
+    return f"{a}×{b}"
+
+
 def _agregar_diagnostico(resultados: List[Dict]) -> Dict:
     """
     Agrega diagnostico_tentativas de todos os nichos testados em:
@@ -65,6 +85,7 @@ def _agregar_diagnostico(resultados: List[Dict]) -> Dict:
     """
     por_regra: Dict[str, int] = {}
     por_nicho: Dict[str, int] = {}
+    duplicacao_por_par: Dict[str, int] = {}
     distribuicao_sucesso: Dict[int, int] = {}
     soma_tempo_por_numero: Dict[int, float] = {}
     contagem_tempo_por_numero: Dict[int, int] = {}
@@ -90,6 +111,9 @@ def _agregar_diagnostico(resultados: List[Dict]) -> Dict:
             for categoria in _categorizar_erro(entrada["erro"]):
                 por_regra[categoria] = por_regra.get(categoria, 0) + 1
                 categorias_neste_nicho.add(categoria)
+            par = _extrair_par_duplicacao(entrada["erro"])
+            if par:
+                duplicacao_por_par[par] = duplicacao_por_par.get(par, 0) + 1
 
         for categoria in categorias_neste_nicho:
             por_nicho[categoria] = por_nicho.get(categoria, 0) + 1
@@ -115,6 +139,7 @@ def _agregar_diagnostico(resultados: List[Dict]) -> Dict:
     return {
         "por_regra": por_regra,
         "por_nicho": por_nicho,
+        "duplicacao_por_par": duplicacao_por_par,
         "por_tentativa": {
             "distribuicao_sucesso": distribuicao_sucesso,
             "distribuicao_sucesso_pct": distribuicao_sucesso_pct,
@@ -382,6 +407,11 @@ class TestadorAgente:
             if restantes:
                 print(f"   + {len(restantes)} categoria(s) menor(es): {', '.join(nome for nome, _ in restantes)}")
 
+        if agregado["duplicacao_por_par"]:
+            print(f"\n🔀 MODEL_DUPLICATION por par de campo:")
+            for par, contagem in sorted(agregado["duplicacao_por_par"].items(), key=lambda kv: -kv[1]):
+                print(f"   {par:<20}: {contagem}")
+
         pt = agregado["por_tentativa"]
         if pt["distribuicao_sucesso"] or pt["nunca_sucesso"]:
             print(f"\n🔁 Distribuição de sucesso por tentativa (% dos nichos testados):")
@@ -447,6 +477,7 @@ class TestadorAgente:
                 "por_tentativa": agregado.get("por_tentativa", {}),
                 "por_nicho": agregado.get("por_nicho", {}),
                 "top_regras": agregado.get("top_regras", []),
+                "duplicacao_por_par": agregado.get("duplicacao_por_par", {}),
             },
         }
 

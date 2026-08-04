@@ -14,7 +14,12 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from test_agentes import _categorizar_erro, _agregar_diagnostico, _formatar_tentativas_para_json
+from test_agentes import (
+    _categorizar_erro,
+    _agregar_diagnostico,
+    _formatar_tentativas_para_json,
+    _extrair_par_duplicacao,
+)
 
 
 class TestCategorizarErro(unittest.TestCase):
@@ -188,6 +193,52 @@ class TestFormatarTentativasParaJson(unittest.TestCase):
 
     def test_lista_vazia_retorna_lista_vazia(self):
         self.assertEqual(_formatar_tentativas_para_json([]), [])
+
+
+class TestExtrairParDuplicacao(unittest.TestCase):
+    def test_services_e_features(self):
+        erro = "Texto duplicado entre services[1].description e features[1].description (similaridade 0.85)"
+        self.assertEqual(_extrair_par_duplicacao(erro), "features×services")
+
+    def test_services_e_services_mesmo_tipo(self):
+        erro = "Título duplicado entre services[1].title e services[2].title (similaridade 0.87)"
+        self.assertEqual(_extrair_par_duplicacao(erro), "services×services")
+
+    def test_faq_e_faq(self):
+        erro = "Pergunta de FAQ duplicado entre faq[1].question e faq[3].question (similaridade 0.90)"
+        self.assertEqual(_extrair_par_duplicacao(erro), "faq×faq")
+
+    def test_sections_e_features(self):
+        erro = "Texto duplicado entre sections[sobre].content e features[1].description (similaridade 1.00)"
+        self.assertEqual(_extrair_par_duplicacao(erro), "features×sections")
+
+    def test_ordem_alfabetica_independente_de_quem_vem_primeiro_na_mensagem(self):
+        erro_a = "Texto duplicado entre features[1].description e services[2].description (similaridade 0.90)"
+        erro_b = "Texto duplicado entre services[2].description e features[1].description (similaridade 0.90)"
+        self.assertEqual(_extrair_par_duplicacao(erro_a), _extrair_par_duplicacao(erro_b))
+
+    def test_mensagem_nao_duplicacao_retorna_none(self):
+        self.assertIsNone(_extrair_par_duplicacao("1 validation error for SiteConfig\nfaq\n  List should have at least 3 items"))
+
+    def test_none_retorna_none(self):
+        self.assertIsNone(_extrair_par_duplicacao(None))
+
+
+class TestAgregarDiagnosticoDuplicacaoPorPar(unittest.TestCase):
+    def test_conta_pares_de_duplicacao_entre_todos_os_nichos(self):
+        resultados = [
+            _resultado([{"tentativa": 1, "sucesso": False, "erro": "Texto duplicado entre services[1].description e features[1].description (similaridade 0.85)", "tempo_segundos": 1.0}]),
+            _resultado([{"tentativa": 1, "sucesso": False, "erro": "Texto duplicado entre services[1].description e services[2].description (similaridade 0.90)", "tempo_segundos": 1.0}]),
+            _resultado([{"tentativa": 1, "sucesso": False, "erro": "Texto duplicado entre features[2].description e services[3].description (similaridade 0.88)", "tempo_segundos": 1.0}]),
+        ]
+        agregado = _agregar_diagnostico(resultados)
+        self.assertEqual(agregado["duplicacao_por_par"], {"features×services": 2, "services×services": 1})
+
+    def test_erro_nao_duplicacao_nao_conta_no_par(self):
+        erro_faq = "1 validation error for SiteConfig\nfaq\n  List should have at least 3 items"
+        resultados = [_resultado([{"tentativa": 1, "sucesso": False, "erro": erro_faq, "tempo_segundos": 1.0}])]
+        agregado = _agregar_diagnostico(resultados)
+        self.assertEqual(agregado["duplicacao_por_par"], {})
 
 
 if __name__ == "__main__":
