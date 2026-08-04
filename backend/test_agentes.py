@@ -481,7 +481,14 @@ class TestadorAgente:
             },
         }
 
-        caminho = "relatorio_testes.json"
+        # benchmark/ em vez de sobrescrever um arquivo fixo -- cada rodada
+        # vira um registro histórico (nome inclui o provedor testado),
+        # em vez de descartar o resultado da rodada anterior a cada run.
+        pasta_benchmark = Path("benchmark")
+        pasta_benchmark.mkdir(exist_ok=True)
+        provedor_testado = self.agente.ai.ordem[0] if self.agente else "desconhecido"
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        caminho = pasta_benchmark / f"{timestamp}-{provedor_testado}.json"
         with open(caminho, 'w', encoding='utf-8') as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
         print(f"💾 Relatório salvo em: {caminho}")

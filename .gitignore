@@ -76,6 +76,10 @@ prompt_teste_lovable.txt
 # Métricas e dados
 metrics.json
 relatorio_testes.json
+# backend/benchmark/: historico de rodadas do test_agentes.py. Gitignored
+# por ora -- decisao pendente (ver memoria project_arquitetura_benchmark_
+# portfolio_2026-08-04) se isso deveria virar historico versionado.
+backend/benchmark/
 
 # Logos de clientes gerados via onboarding (dados por cliente, não versionados)
 assets/logos/*
