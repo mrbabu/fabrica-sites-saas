@@ -115,6 +115,36 @@ class TestProvedorOllamaValidacaoModelo(unittest.TestCase):
         finally:
             del os.environ["OLLAMA_MODEL"]
 
+    def test_llama3_sem_tag_resolve_para_llama3_latest(self):
+        """
+        Caso padrão real: OLLAMA_MODEL não setado (default "llama3"),
+        `ollama pull llama3` instalado e listado como "llama3:latest"
+        (nunca como "llama3" puro) -> deve resolver e funcionar, não falhar.
+        """
+        mock = _mock_requests(["llama3:latest"])
+        provedor = ProvedorOllama(_requests_module=mock)
+        self.assertEqual(provedor.model, "llama3:latest")
+
+    def test_llama3_latest_exato_bate_sem_normalizacao(self):
+        """Configurado com a tag exata já presente -> match direto, sem precisar normalizar."""
+        os.environ["OLLAMA_MODEL"] = "llama3:latest"
+        try:
+            mock = _mock_requests(["llama3:latest"])
+            provedor = ProvedorOllama(_requests_module=mock)
+            self.assertEqual(provedor.model, "llama3:latest")
+        finally:
+            del os.environ["OLLAMA_MODEL"]
+
+    def test_modelo_versionado_com_ponto_resolve_para_tag_disponivel(self):
+        """Normalização por nome-base também cobre nomes com ponto (ex.: llama3.1 -> llama3.1:8b)."""
+        os.environ["OLLAMA_MODEL"] = "llama3.1"
+        try:
+            mock = _mock_requests(["llama3.1:8b"])
+            provedor = ProvedorOllama(_requests_module=mock)
+            self.assertEqual(provedor.model, "llama3.1:8b")
+        finally:
+            del os.environ["OLLAMA_MODEL"]
+
     def test_modelo_sem_tag_mas_tag_disponivel_resolve_automaticamente(self):
         """
         Cenário 6: Modelo configurado 'custom-model' (sem tag) e só existe
