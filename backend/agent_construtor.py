@@ -222,7 +222,7 @@ Crie um arquivo site-config.json COMPLETO e altamente persuasivo para:
 
 IMPORTANTE:
 1. Retorne APENAS um JSON válido, sem markdown, sem explicações
-2. O JSON deve seguir EXATAMENTE este schema
+2. O JSON deve seguir EXATAMENTE este schema, incluindo o campo "planejamentoServicos" (preenchido ANTES de escrever services/features, ver instrução dentro do próprio schema)
 3. Crie copys persuasivos e impactantes adaptados ao nicho "{nicho}"
 4. Use a cor primária {cor_primaria} e a paleta {json.dumps(cores)}
 5. Gere 3 serviços principais para o nicho {nicho}
@@ -248,6 +248,15 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
   "colors": {json.dumps(cores)},
   "typography": {{
     "fontPair": "string OBRIGATÓRIO - exatamente um destes valores: {', '.join(sorted(FONT_PAIRS_VALIDOS))} - escolha o que melhor combina com a personalidade do nicho \"{nicho}\" (ex.: luxury/editorial para hotelaria e negócios sofisticados, clean para saúde/clínicas, energetic para academia/fitness, creative para negócios criativos/design, modern como opção neutra padrão)"
+  }},
+  "planejamentoServicos": {{
+    "_instrucao": "Preencha ESTE campo ANTES de escrever services/features abaixo. Escolha 6 aspectos DIFERENTES entre si do negocio (ex.: atendimento, qualidade, preco, rapidez, localizacao, tecnologia, confianca, garantia, experiencia -- adapte pro nicho, nao copie essa lista literalmente). Um aspecto por servico/diferencial, NENHUM repetido. Cada services[].description e features[].description correspondente deve refletir claramente o aspecto escolhido aqui e nao repetir a ideia central de nenhum outro item -- medido empiricamente: sem esse passo, services/features tendem a sair com a mesma ideia central repetida, mesmo em modelos grandes.",
+    "servico1": "aspecto escolhido pro Serviço 1, uma palavra ou frase curta",
+    "servico2": "aspecto DIFERENTE do servico1",
+    "servico3": "aspecto DIFERENTE de servico1 e servico2",
+    "diferencial1": "aspecto DIFERENTE de todos os anteriores",
+    "diferencial2": "aspecto DIFERENTE de todos os anteriores",
+    "diferencial3": "aspecto DIFERENTE de todos os anteriores"
   }},
   "hero": {{
     "title": "string (mínimo 10, máximo 200 caracteres) - Título principal impactante (funciona como H1: inclua a palavra-chave do nicho{' e a localização' if localizacao else ''})",
@@ -460,6 +469,13 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         for i, diferencial in enumerate(config.get("features", []) or []):
             diferencial["icon"] = _resolver_icone(diferencial.get("icon"), icones_diferenciais, i)
             icones_diferenciais.add(diferencial["icon"])
+
+        # "planejamentoServicos" é um campo de raciocínio pro modelo (evita
+        # duplicação entre services/features -- ver prompt), não faz parte
+        # do schema real e não deve vazar pro site-config.json final.
+        # Pydantic já ignora campo extra silenciosamente na validação, mas
+        # sem remover aqui ele fica salvo no arquivo servido pro cliente.
+        config.pop("planejamentoServicos", None)
 
         return config
 
