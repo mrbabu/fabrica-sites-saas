@@ -6,6 +6,7 @@ Define e valida o contrato que site-config.json deve seguir
 
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, HttpUrl, validator
+import difflib
 import re
 import json
 
@@ -344,6 +345,130 @@ class SiteConfig(BaseModel):
 
 
 # ============================================================================
+# REGRAS DE NEGÓCIO (DoPS — docs/definition-of-professional-site.md)
+#
+# Checagens que o schema estrutural do Pydantic não cobre: TXT-01 (texto
+# duplicado entre seções) e TXT-04 (texto-molde de gerar_template() vazando
+# pra produção). Violação aqui é tratada como falha de validação normal —
+# reaproveita o retry já existente em AgenteConstrutor.gerar_config_site()
+# (MAX_TENTATIVAS_GERACAO), sem precisar de mecanismo novo.
+# ============================================================================
+
+_LIMIAR_SIMILARIDADE_DUPLICATA = 0.85
+
+# Placeholders literais de ValidadorSchema.gerar_template() — se aparecerem
+# verbatim (após normalização) em qualquer campo de conteúdo, é sinal de que
+# o modelo copiou o molde em vez de gerar texto real.
+_TEMPLATE_PLACEHOLDERS = [
+    "Título do Site", "Descrição meta",
+    "Nome Empresa", "Tagline/Slogan", "Descrição da empresa",
+    "Título Principal", "Subtítulo do Hero", "Começar",
+    "Conheça nossa história", "Descrição completa da empresa e sua história",
+    "Serviço 1", "Descrição breve e objetiva do serviço",
+    "Feature 1", "Feature 2", "Feature 3",
+    "Diferencial 1", "Diferencial 2", "Diferencial 3", "Descrição breve do diferencial",
+    "Chamada Final", "Descrição do benefício", "Agir Agora",
+]
+
+
+def _texto_normalizado(texto: Optional[str]) -> str:
+    return re.sub(r"\s+", " ", (texto or "").strip().lower())
+
+
+def _placeholder_de_template(texto: Optional[str]) -> Optional[str]:
+    normalizado = _texto_normalizado(texto)
+    if not normalizado:
+        return None
+    for placeholder in _TEMPLATE_PLACEHOLDERS:
+        if _texto_normalizado(placeholder) == normalizado:
+            return placeholder
+    return None
+
+
+def _primeira_duplicata(rotulo: str, textos: List[tuple]) -> Optional[str]:
+    """textos: lista de (identificador, texto). Retorna a 1ª dupla >= limiar, ou None."""
+    normalizados = [(ident, _texto_normalizado(texto)) for ident, texto in textos if (texto or "").strip()]
+    for i in range(len(normalizados)):
+        for j in range(i + 1, len(normalizados)):
+            ident_a, texto_a = normalizados[i]
+            ident_b, texto_b = normalizados[j]
+            similaridade = difflib.SequenceMatcher(None, texto_a, texto_b).ratio()
+            if similaridade >= _LIMIAR_SIMILARIDADE_DUPLICATA:
+                return f"{rotulo} duplicado entre {ident_a} e {ident_b} (similaridade {similaridade:.2f})"
+    return None
+
+
+def _validar_regras_conteudo(dados: Dict[str, Any]) -> Optional[str]:
+    """Aplica TXT-01 (dedupe) e TXT-04 (anti-template) sobre o dict bruto."""
+    company = dados.get("company") or {}
+    hero = dados.get("hero") or {}
+    metadata = dados.get("metadata") or {}
+    cta = dados.get("cta") or {}
+    sections = dados.get("sections") or []
+    services = dados.get("services") or []
+    features = dados.get("features") or []
+    faq = dados.get("faq") or []
+
+    # TXT-04: nenhum texto-molde do template padrão
+    campos = [
+        ("metadata.siteTitle", metadata.get("siteTitle")),
+        ("metadata.siteDescription", metadata.get("siteDescription")),
+        ("company.name", company.get("name")),
+        ("company.tagline", company.get("tagline")),
+        ("company.description", company.get("description")),
+        ("hero.title", hero.get("title")),
+        ("hero.subtitle", hero.get("subtitle")),
+        ("hero.ctaText", hero.get("ctaText")),
+        ("cta.title", cta.get("title")),
+        ("cta.description", cta.get("description")),
+        ("cta.buttonText", cta.get("buttonText")),
+    ]
+    for secao in sections:
+        campos.append((f"sections[{secao.get('id')}].title", secao.get("title")))
+        campos.append((f"sections[{secao.get('id')}].subtitle", secao.get("subtitle")))
+        campos.append((f"sections[{secao.get('id')}].content", secao.get("content")))
+    for servico in services:
+        campos.append((f"services[{servico.get('id')}].title", servico.get("title")))
+        campos.append((f"services[{servico.get('id')}].description", servico.get("description")))
+        for i, feat in enumerate(servico.get("features") or []):
+            campos.append((f"services[{servico.get('id')}].features[{i}]", feat))
+    for diferencial in features:
+        campos.append((f"features[{diferencial.get('id')}].title", diferencial.get("title")))
+        campos.append((f"features[{diferencial.get('id')}].description", diferencial.get("description")))
+
+    for identificador, texto in campos:
+        placeholder = _placeholder_de_template(texto)
+        if placeholder:
+            return f"Texto de template vazou para produção em {identificador}: '{placeholder}'"
+
+    # TXT-01: título/descrição não repetidos entre sections, services, features
+    titulos = (
+        [(f"sections[{s.get('id')}].title", s.get("title")) for s in sections]
+        + [(f"services[{s.get('id')}].title", s.get("title")) for s in services]
+        + [(f"features[{f.get('id')}].title", f.get("title")) for f in features]
+    )
+    erro = _primeira_duplicata("Título", titulos)
+    if erro:
+        return erro
+
+    textos_longos = (
+        [(f"sections[{s.get('id')}].content", s.get("content")) for s in sections]
+        + [(f"services[{s.get('id')}].description", s.get("description")) for s in services]
+        + [(f"features[{f.get('id')}].description", f.get("description")) for f in features]
+    )
+    erro = _primeira_duplicata("Texto", textos_longos)
+    if erro:
+        return erro
+
+    perguntas = [(f"faq[{f.get('id')}].question", f.get("question")) for f in faq]
+    erro = _primeira_duplicata("Pergunta de FAQ", perguntas)
+    if erro:
+        return erro
+
+    return None
+
+
+# ============================================================================
 # VALIDADOR PÚBLICO
 # ============================================================================
 
@@ -363,10 +488,14 @@ class ValidadorSchema:
         """
         try:
             config = SiteConfig(**dados)
-            return True, None, config
         except Exception as e:
-            erro = str(e)
-            return False, erro, None
+            return False, str(e), None
+
+        erro_regra_negocio = _validar_regras_conteudo(dados)
+        if erro_regra_negocio:
+            return False, erro_regra_negocio, None
+
+        return True, None, config
 
     @staticmethod
     def validar_arquivo(caminho: str) -> tuple[bool, Optional[str], Optional[SiteConfig]]:

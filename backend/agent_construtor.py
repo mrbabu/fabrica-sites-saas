@@ -60,6 +60,22 @@ def _truncar_para_limite(texto: str, limite: int) -> str:
     return cortado.rstrip(" ,.-–—")
 
 
+def _resolver_icone(icon: Optional[str], usados: set, indice: int) -> str:
+    """
+    Valida um emoji de icon (1-2 caracteres) e garante que não repete outro já
+    usado na mesma lista (VIS-03: nenhum ícone de fallback repetido em cards
+    adjacentes — estendido aqui para cobrir também repetição vinda da própria
+    IA, não só do fallback).
+    """
+    icon = (icon or "").strip()
+    if 1 <= len(icon) <= 2 and icon not in usados:
+        return icon
+    for fallback in ICONES_FALLBACK:
+        if fallback not in usados:
+            return fallback
+    return ICONES_FALLBACK[indice % len(ICONES_FALLBACK)]
+
+
 class AgenteConstrutor:
     """Agente que gera configuração de site baseado em dados de onboarding do cliente"""
 
@@ -417,15 +433,15 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         if typography.get("fontPair") not in FONT_PAIRS_VALIDOS:
             typography["fontPair"] = "modern"
 
+        icones_servicos: set = set()
         for i, servico in enumerate(config.get("services", []) or []):
-            icon = (servico.get("icon") or "").strip()
-            if not (1 <= len(icon) <= 2):
-                servico["icon"] = ICONES_FALLBACK[i % len(ICONES_FALLBACK)]
+            servico["icon"] = _resolver_icone(servico.get("icon"), icones_servicos, i)
+            icones_servicos.add(servico["icon"])
 
+        icones_diferenciais: set = set()
         for i, diferencial in enumerate(config.get("features", []) or []):
-            icon = (diferencial.get("icon") or "").strip()
-            if not (1 <= len(icon) <= 2):
-                diferencial["icon"] = ICONES_FALLBACK[i % len(ICONES_FALLBACK)]
+            diferencial["icon"] = _resolver_icone(diferencial.get("icon"), icones_diferenciais, i)
+            icones_diferenciais.add(diferencial["icon"])
 
         return config
 
@@ -520,6 +536,10 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         # por um avatar de iniciais (determinístico: mesmo nome = mesmo
         # resultado), usando a cor primária já gerada pra paleta do site.
         company = config.setdefault("company", {})
+        # TXT-06: nome do negócio é o dado de entrada (nome_empresa), não uma
+        # paráfrase da IA — garante grafia idêntica com footer.copyrightText,
+        # que já deriva de nome_empresa diretamente (ver abaixo).
+        company["name"] = nome_empresa
         if not tem_logo_explicito and _url_invalida(company.get("logo")):
             cor_fundo = (config.get("colors", {}).get("primary") or "#6366f1").lstrip("#")
             company["logo"] = (
@@ -527,15 +547,29 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 f"&background={cor_fundo}&color=fff&size=400&bold=true"
             )
 
+        # IMG-02: a hero não pode se repetir em nenhuma outra seção da mesma
+        # página. imagens_ja_usadas rastreia o que já foi atribuído para
+        # forçar uma alternativa determinística em vez de deixar colidir.
+        imagens_ja_usadas = {hero["backgroundImage"]} if hero.get("backgroundImage") else set()
+
         for i, secao in enumerate(config.get("sections", []) or []):
             if portfolio_urls:
-                secao["image"] = portfolio_urls[(i + 1) % len(portfolio_urls)]
-            elif _url_invalida(secao.get("image")):
+                candidata = portfolio_urls[(i + 1) % len(portfolio_urls)]
+                if candidata in imagens_ja_usadas and len(portfolio_urls) > 1:
+                    candidata = portfolio_urls[(i + 2) % len(portfolio_urls)]
+                secao["image"] = candidata
+            elif _url_invalida(secao.get("image")) or secao.get("image") in imagens_ja_usadas:
                 imagem_curada = _imagem_curada(f"{empresa_slug}-secao-{i}")
-                if imagem_curada:
+                if imagem_curada in imagens_ja_usadas:
+                    imagem_curada = _imagem_curada(f"{empresa_slug}-secao-{i}-alt")
+                if imagem_curada and imagem_curada not in imagens_ja_usadas:
                     secao["image"] = imagem_curada
                 else:
-                    secao["image"] = f"https://loremflickr.com/500/400/{nicho_slug}?lock={i}"
+                    url_fallback = f"https://loremflickr.com/500/400/{nicho_slug}?lock={i}"
+                    if url_fallback in imagens_ja_usadas:
+                        url_fallback = f"https://loremflickr.com/500/400/{nicho_slug}?lock={i + 1000}"
+                    secao["image"] = url_fallback
+            imagens_ja_usadas.add(secao["image"])
 
         for i, depoimento in enumerate(config.get("testimonials", []) or []):
             if _url_invalida(depoimento.get("avatar")):
