@@ -5,7 +5,7 @@ Define e valida o contrato que site-config.json deve seguir
 """
 
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, HttpUrl, validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 import re
 import json
 
@@ -19,13 +19,12 @@ class Metadata(BaseModel):
     siteTitle: str = Field(..., min_length=5, max_length=60, description="Título SEO")
     siteDescription: str = Field(..., min_length=10, max_length=160, description="Meta description")
     favicon: str = Field(default="🚀", description="Emoji ou URL")
-    keywords: List[str] = Field(default_factory=list, max_items=10, description="Palavras-chave de SEO")
+    keywords: List[str] = Field(default_factory=list, max_length=10, description="Palavras-chave de SEO")
     ogTitle: str = Field(default="", description="Título Open Graph (derivado de siteTitle)")
     ogDescription: str = Field(default="", description="Descrição Open Graph (derivada de siteDescription)")
     ogImage: str = Field(default="", description="Imagem Open Graph (derivada de hero.backgroundImage)")
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "siteTitle": "Meu Negócio Profissional",
             "siteDescription": "Descrição breve do seu negócio",
             "favicon": "🚀",
@@ -33,7 +32,7 @@ class Metadata(BaseModel):
             "ogTitle": "Meu Negócio Profissional",
             "ogDescription": "Descrição breve do seu negócio",
             "ogImage": "https://loremflickr.com/1920/600/negocio"
-        }]
+        }]})
 
 
 class Company(BaseModel):
@@ -43,13 +42,12 @@ class Company(BaseModel):
     description: str = Field(..., min_length=20, max_length=500, description="Descrição completa")
     logo: str = Field(default="https://loremflickr.com/180/50/logo", description="URL do logo")
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "name": "Minha Empresa",
             "tagline": "Transformando negócios",
             "description": "Somos especializados em inovação...",
             "logo": "https://loremflickr.com/180/50/logo"
-        }]
+        }]})
 
 
 class Colors(BaseModel):
@@ -63,15 +61,15 @@ class Colors(BaseModel):
     textLight: str = Field(default="#6b7280", description="Cor de texto secundário")
     border: str = Field(default="#e5e7eb", description="Cor de bordas")
 
-    @validator('primary', 'primaryDark', 'secondary', 'accent', 'background', 'text', 'textLight', 'border')
+    @field_validator('primary', 'primaryDark', 'secondary', 'accent', 'background', 'text', 'textLight', 'border')
+    @classmethod
     def validate_hex_color(cls, v):
         """Valida se a cor está em formato hexadecimal válido"""
         if not re.match(r'^#[0-9a-fA-F]{6}$', v):
             raise ValueError(f'Cor deve estar em formato hex válido: {v}')
         return v.lower()
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "primary": "#6366f1",
             "primaryDark": "#4f46e5",
             "secondary": "#ec4899",
@@ -80,7 +78,7 @@ class Colors(BaseModel):
             "text": "#1f2937",
             "textLight": "#6b7280",
             "border": "#e5e7eb"
-        }]
+        }]})
 
 
 class Hero(BaseModel):
@@ -92,15 +90,14 @@ class Hero(BaseModel):
     backgroundImage: str = Field(default="https://loremflickr.com/1920/600/negocio", description="URL background")
     enabled: bool = Field(default=True, description="Ativar/desativar seção")
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "title": "Bem-vindo ao Futuro",
             "subtitle": "Soluções inovadoras",
             "ctaText": "Começar Agora",
             "ctaLink": "#contato",
             "backgroundImage": "https://loremflickr.com/1920/600/negocio",
             "enabled": True
-        }]
+        }]})
 
 
 class Section(BaseModel):
@@ -113,8 +110,7 @@ class Section(BaseModel):
     image: str = Field(default="https://loremflickr.com/500/400/negocio", description="URL imagem")
     enabled: bool = Field(default=True, description="Ativar/desativar")
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "id": "sobre",
             "type": "content",
             "title": "Sobre Nós",
@@ -122,7 +118,7 @@ class Section(BaseModel):
             "content": "Somos uma empresa...",
             "image": "https://loremflickr.com/500/400/negocio",
             "enabled": True
-        }]
+        }]})
 
 
 class Service(BaseModel):
@@ -131,25 +127,25 @@ class Service(BaseModel):
     title: str = Field(..., min_length=5, max_length=100, description="Nome do serviço")
     description: str = Field(..., min_length=20, max_length=300, description="Descrição")
     icon: str = Field(..., min_length=1, max_length=2, description="Emoji do serviço")
-    features: List[str] = Field(default_factory=list, min_items=1, max_items=10, description="Features")
+    features: List[str] = Field(default_factory=list, min_length=1, max_length=10, description="Features")
     enabled: bool = Field(default=True, description="Ativar/desativar")
 
-    @validator('features')
+    @field_validator('features')
+    @classmethod
     def validate_features(cls, v):
         """Valida features"""
         if not v or len(v) < 1:
             raise ValueError('Deve ter pelo menos 1 feature')
         return v
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "id": 1,
             "title": "Serviço 1",
             "description": "Descrição breve",
             "icon": "⚡",
             "features": ["Feature 1", "Feature 2"],
             "enabled": True
-        }]
+        }]})
 
 
 class Testimonial(BaseModel):
@@ -162,8 +158,7 @@ class Testimonial(BaseModel):
     rating: int = Field(default=5, ge=1, le=5, description="Avaliação 1-5")
     enabled: bool = Field(default=True, description="Ativar/desativar")
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "id": 1,
             "name": "João Silva",
             "role": "CEO - Tech",
@@ -171,7 +166,7 @@ class Testimonial(BaseModel):
             "avatar": "https://i.pravatar.cc/100",
             "rating": 5,
             "enabled": True
-        }]
+        }]})
 
 
 class Feature(BaseModel):
@@ -182,14 +177,13 @@ class Feature(BaseModel):
     icon: str = Field(..., min_length=1, max_length=2, description="Emoji do diferencial")
     enabled: bool = Field(default=True, description="Ativar/desativar")
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "id": 1,
             "title": "Atendimento Rápido",
             "description": "Respondemos em menos de 1 hora",
             "icon": "⚡",
             "enabled": True
-        }]
+        }]})
 
 
 class FAQItem(BaseModel):
@@ -199,13 +193,12 @@ class FAQItem(BaseModel):
     answer: str = Field(..., min_length=10, max_length=400, description="Resposta")
     enabled: bool = Field(default=True, description="Ativar/desativar")
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "id": 1,
             "question": "Como funciona o atendimento?",
             "answer": "Atendemos via WhatsApp em horário comercial.",
             "enabled": True
-        }]
+        }]})
 
 
 class FooterLink(BaseModel):
@@ -220,12 +213,11 @@ class Footer(BaseModel):
     links: List[FooterLink] = Field(default_factory=list, description="Links de navegação")
     copyrightText: str = Field(..., min_length=5, max_length=150, description="Texto de copyright")
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "description": "Somos especializados em inovação...",
             "links": [{"label": "Sobre", "url": "#sobre"}, {"label": "Contato", "url": "#contato"}],
             "copyrightText": "© 2026 Minha Empresa. Todos os direitos reservados."
-        }]
+        }]})
 
 
 class Social(BaseModel):
@@ -245,15 +237,15 @@ class Contact(BaseModel):
     googleMapsUrl: Optional[str] = Field(default=None, description="Link direto do Google Maps do negócio (opcional — mais preciso que endereço em texto)")
     social: Social = Field(default_factory=Social, description="Redes sociais")
 
-    @validator('email')
+    @field_validator('email')
+    @classmethod
     def validate_email(cls, v):
         """Valida formato de email, se informado"""
         if v and ('@' not in v or '.' not in v):
             raise ValueError('Email deve ser válido')
         return v
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "email": "contato@empresa.com",
             "phone": "+55 11 99999-9999",
             "whatsapp": "+5511999999999",
@@ -264,7 +256,7 @@ class Contact(BaseModel):
                 "linkedin": "https://linkedin.com/company/empresa",
                 "twitter": "https://twitter.com/empresa"
             }
-        }]
+        }]})
 
 
 class CTA(BaseModel):
@@ -275,14 +267,13 @@ class CTA(BaseModel):
     buttonLink: str = Field(..., description="Link do botão")
     enabled: bool = Field(default=True, description="Ativar/desativar")
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "title": "Pronto para Começar?",
             "description": "Não perca tempo!",
             "buttonText": "Fale Conosco",
             "buttonLink": "mailto:contato@empresa.com",
             "enabled": True
-        }]
+        }]})
 
 
 FONT_PAIRS_VALIDOS = {"modern", "editorial", "clean", "creative", "luxury", "energetic"}
@@ -293,14 +284,14 @@ class Typography(BaseModel):
     fonte solto (o mapeamento pra fonte real vive só em index.html)."""
     fontPair: str = Field(default="modern", description=f"Uma de: {sorted(FONT_PAIRS_VALIDOS)}")
 
-    @validator('fontPair')
+    @field_validator('fontPair')
+    @classmethod
     def validate_font_pair(cls, v):
         if v not in FONT_PAIRS_VALIDOS:
             raise ValueError(f"fontPair deve ser um de {sorted(FONT_PAIRS_VALIDOS)}, recebido: {v}")
         return v
 
-    class Config:
-        examples = [{"fontPair": "editorial"}]
+    model_config = ConfigDict(json_schema_extra={"examples": [{"fontPair": "editorial"}]})
 
 
 class SiteConfig(BaseModel):
@@ -310,24 +301,24 @@ class SiteConfig(BaseModel):
     colors: Colors
     typography: Typography = Field(default_factory=Typography)
     hero: Hero
-    sections: List[Section] = Field(default_factory=list, max_items=10, description="Seções de conteúdo")
-    services: List[Service] = Field(..., min_items=1, max_items=10, description="Serviços")
-    features: List[Feature] = Field(..., min_items=3, max_items=6, description="Diferenciais competitivos")
-    testimonials: List[Testimonial] = Field(default_factory=list, max_items=20, description="Depoimentos (opcional — só depoimentos reais fornecidos pelo cliente, nunca fabricados pela IA)")
-    faq: List[FAQItem] = Field(..., min_items=3, max_items=8, description="Perguntas frequentes")
+    sections: List[Section] = Field(default_factory=list, max_length=10, description="Seções de conteúdo")
+    services: List[Service] = Field(..., min_length=1, max_length=10, description="Serviços")
+    features: List[Feature] = Field(..., min_length=3, max_length=6, description="Diferenciais competitivos")
+    testimonials: List[Testimonial] = Field(default_factory=list, max_length=20, description="Depoimentos (opcional — só depoimentos reais fornecidos pelo cliente, nunca fabricados pela IA)")
+    faq: List[FAQItem] = Field(..., min_length=3, max_length=8, description="Perguntas frequentes")
     contact: Contact
     cta: CTA
     footer: Footer
 
-    @validator('services')
+    @field_validator('services')
+    @classmethod
     def validate_services(cls, v):
         """Valida que há pelo menos 1 serviço ativo"""
         if not any(s.enabled for s in v):
             raise ValueError('Deve haver pelo menos 1 serviço ativo')
         return v
 
-    class Config:
-        examples = [{
+    model_config = ConfigDict(json_schema_extra={"examples": [{
             "metadata": {"siteTitle": "Empresa", "siteDescription": "Descrição", "favicon": "🚀", "keywords": ["empresa"], "ogTitle": "Empresa", "ogDescription": "Descrição", "ogImage": "url"},
             "company": {"name": "Empresa", "tagline": "Slogan", "description": "Descrição", "logo": "url"},
             "colors": {"primary": "#6366f1", "primaryDark": "#4f46e5", "secondary": "#ec4899", "accent": "#f59e0b", "background": "#ffffff", "text": "#1f2937", "textLight": "#6b7280", "border": "#e5e7eb"},
@@ -340,7 +331,7 @@ class SiteConfig(BaseModel):
             "contact": {"email": "email@test.com", "phone": "+55", "whatsapp": "+55", "address": "Endereço", "social": {}},
             "cta": {"title": "Título", "description": "Descrição", "buttonText": "Botão", "buttonLink": "url", "enabled": True},
             "footer": {"description": "Descrição", "links": [{"label": "Contato", "url": "#contato"}], "copyrightText": "© 2026 Empresa"}
-        }]
+        }]})
 
 
 # ============================================================================
