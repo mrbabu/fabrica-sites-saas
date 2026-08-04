@@ -211,6 +211,22 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
             contato_whatsapp_prompt = "+5511987654321"
 
         # Prompt para o modelo gerar o JSON completo
+        #
+        # STATUS: EXPERIMENTAL (2026-08-04) -- aguardando benchmark controlado.
+        # O campo "planejamentoServicos" (schema abaixo) foi adicionado pra
+        # atacar MODEL_DUPLICATION (ver memória do projeto). Teste feito na
+        # mesma sessão NÃO isolou a variável: comparou prompt-novo+Ollama+
+        # fallback+cota-do-Groq-esgotada contra uma baseline prompt-antigo+
+        # Ollama de outro momento -- 4 variáveis mudando ao mesmo tempo
+        # (prompt, provedor, modelo 70B->8B, cota), então "70%->20%" NÃO é
+        # evidência válida de que o prompt piorou. Não reverter nem promover
+        # até rodar o mesmo benchmark (10 nichos) com Groq 70B nos dois lados
+        # (prompt antigo vs novo), mesmo ambiente, único delta = o prompt.
+        # Suspeita técnica em aberto: se o Ollama (8B) realmente degradar com
+        # esse campo, pode ser questão de ONDE o planejamento acontece (nessa
+        # mesma resposta) e não do conceito -- separar em duas chamadas
+        # (1: só planejamento, 2: gera o site usando o plano) é a alternativa
+        # a testar se o benchmark controlado confirmar problema real.
         prompt = f"""Você é um especialista em marketing, copywriting e SEO para criar sites profissionais de alto impacto.
 
 Crie um arquivo site-config.json COMPLETO e altamente persuasivo para:
