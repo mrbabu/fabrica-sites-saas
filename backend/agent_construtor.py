@@ -147,6 +147,7 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
         descricao_negocio: Optional[str] = None,
         portfolio_urls: list[str] | None = None,
         google_maps_url: Optional[str] = None,
+        diagnostico_tentativas: Optional[list] = None,
     ) -> dict:
         """
         Gera configuração completa de site usando o AIProvider, com SEO by design
@@ -177,6 +178,12 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
                 fornecida, substitui o fallback de stock photo (LoremFlickr)
                 em hero.backgroundImage e sections[].image; não afeta
                 company.logo (ver logo_url para isso)
+            diagnostico_tentativas: lista mutável opcional para instrumentação
+                (ex.: test_agentes.py). Se fornecida, cada tentativa do laço
+                de retry abaixo anexa um dict {"tentativa", "provedor",
+                "sucesso", "erro"} — não muda nenhum comportamento de
+                geração/retry, só observa. Omitir preserva 100% do
+                comportamento anterior a este parâmetro.
 
         Returns:
             Dicionário com configuração completa do site
@@ -399,6 +406,15 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
 
             # Validação completa (tipos, tamanhos, regras de negócio)
             valido, erro, _ = ValidadorSchema.validar_json(config)
+
+            if diagnostico_tentativas is not None:
+                diagnostico_tentativas.append({
+                    "tentativa": tentativa,
+                    "provedor": self.ai.provedor_ativo,
+                    "sucesso": valido,
+                    "erro": None if valido else erro,
+                })
+
             if valido:
                 return config
 
