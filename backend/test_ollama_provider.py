@@ -105,6 +105,37 @@ class TestProvedorOllamaValidacaoModelo(unittest.TestCase):
         resultado = provedor.gerar_json("test prompt")
         self.assertEqual(resultado, {"key": "value"})
 
+    def test_gerar_json_captura_tokens_quando_ollama_informa(self):
+        mock = _mock_requests(self.modelos)
+        gen_resp = MagicMock()
+        gen_resp.status_code = 200
+        gen_resp.json.return_value = {
+            "response": '{"key": "value"}',
+            "prompt_eval_count": 500,
+            "eval_count": 200,
+        }
+        gen_resp.raise_for_status = MagicMock()
+        mock.post.return_value = gen_resp
+
+        provedor = ProvedorOllama(_requests_module=mock)
+        provedor.gerar_json("test prompt")
+
+        self.assertEqual(provedor.ultimo_uso_tokens, {"prompt": 500, "completion": 200, "total": 700})
+
+    def test_gerar_json_sem_eval_count_marca_tokens_none(self):
+        """Ollama com stream=True (não é o nosso caso) ou versão antiga pode não devolver esses campos."""
+        mock = _mock_requests(self.modelos)
+        gen_resp = MagicMock()
+        gen_resp.status_code = 200
+        gen_resp.json.return_value = {"response": '{"key": "value"}'}
+        gen_resp.raise_for_status = MagicMock()
+        mock.post.return_value = gen_resp
+
+        provedor = ProvedorOllama(_requests_module=mock)
+        provedor.gerar_json("test prompt")
+
+        self.assertIsNone(provedor.ultimo_uso_tokens)
+
     def test_modelo_custom_com_tag_existe(self):
         """Cenário 5: Modelo custom com :latest existe -> OK."""
         os.environ["OLLAMA_MODEL"] = "custom-model:latest"

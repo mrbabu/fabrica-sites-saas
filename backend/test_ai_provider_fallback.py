@@ -32,10 +32,21 @@ class _ProvedorSucessoSempre:
     """Dublê que simula um provedor disponível e funcional."""
 
     def __init__(self, *args, **kwargs):
+        self.ultimo_uso_tokens = None
+
+    def gerar_json(self, prompt: str, max_tokens: int = 4096) -> dict:
+        self.ultimo_uso_tokens = {"prompt": 10, "completion": 20, "total": 30}
+        return {"ok": True, "prompt_recebido": prompt}
+
+
+class _ProvedorSucessoSemTokens:
+    """Dublê que simula um provedor que nunca informa uso de tokens (sem o atributo)."""
+
+    def __init__(self, *args, **kwargs):
         pass
 
     def gerar_json(self, prompt: str, max_tokens: int = 4096) -> dict:
-        return {"ok": True, "prompt_recebido": prompt}
+        return {"ok": True}
 
 
 class TestCadeiaDeFallback(unittest.TestCase):
@@ -110,6 +121,34 @@ class TestCadeiaDeFallback(unittest.TestCase):
             mensagem_erro = str(ctx.exception)
             for nome in ("gemini", "nvidia_nim", "anthropic", "ollama"):
                 self.assertIn(nome, mensagem_erro)
+
+
+class TestUsoTokensAtivo(unittest.TestCase):
+    def setUp(self):
+        os.environ["AI_PROVIDER_FALLBACK_ORDER"] = "gemini,ollama"
+
+    def tearDown(self):
+        os.environ.pop("AI_PROVIDER_FALLBACK_ORDER", None)
+
+    def test_expoe_tokens_do_provedor_que_respondeu(self):
+        dubles = {"gemini": _ProvedorSucessoSempre, "ollama": _ProvedorFalhaSempre}
+        with patch.dict(ai_provider._PROVEDORES, dubles):
+            provider = AIProvider()
+            provider.gerar_json("prompt de teste")
+            self.assertEqual(provider.uso_tokens_ativo, {"prompt": 10, "completion": 20, "total": 30})
+
+    def test_none_quando_provedor_ativo_nao_expoe_tokens(self):
+        dubles = {"gemini": _ProvedorSucessoSemTokens, "ollama": _ProvedorFalhaSempre}
+        with patch.dict(ai_provider._PROVEDORES, dubles):
+            provider = AIProvider()
+            provider.gerar_json("prompt de teste")
+            self.assertIsNone(provider.uso_tokens_ativo)
+
+    def test_none_antes_de_qualquer_chamada(self):
+        dubles = {"gemini": _ProvedorSucessoSempre, "ollama": _ProvedorFalhaSempre}
+        with patch.dict(ai_provider._PROVEDORES, dubles):
+            provider = AIProvider()
+            self.assertIsNone(provider.uso_tokens_ativo)
 
 
 if __name__ == "__main__":
