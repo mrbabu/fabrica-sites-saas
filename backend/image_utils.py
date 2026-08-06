@@ -738,6 +738,23 @@ def _buscar_candidatos_unsplash(query: str) -> list[dict]:
     return candidatos
 
 
+def _url_hero_otimizada(item: dict, largura: int = 1920, altura: int = 1080) -> str:
+    """IMG-04 (definition-of-professional-site.md): hero precisa ter largura
+    >= 1920px e proporção >= 16:9. urls.regular NUNCA serve isso -- é a
+    própria Unsplash que capa essa variante em 1080px de largura, não importa
+    a resolução da foto original (_rankear_imagens já pontua resolução, mas
+    isso não tinha efeito nenhum na URL final até essa correção).
+
+    urls.raw é a base sem transformação, aceita parâmetros do Imgix
+    (w/h/fit=crop) -- pedir w=1920&h=1080&fit=crop garante as duas condições
+    de IMG-04 sempre, e como o front usa object-cover em todo lugar que essa
+    lista alimenta (hero e sections[].image), o crop 16:9 não perde nada."""
+    urls = item.get("urls", {})
+    base = urls.get("raw") or urls.get("regular") or ""
+    separador = "&" if "?" in base else "?"
+    return f"{base}{separador}w={largura}&h={altura}&fit=crop&q=80"
+
+
 def _rankear_imagens(
     candidatos: list[dict], concepts: list[str], atributos_termos: list[str], forbidden: list[str],
 ) -> list[tuple[dict, float]]:
@@ -1038,7 +1055,7 @@ def obter_imagens_categoria(categoria: str) -> list[str]:
 
     ranqueados = _rankear_imagens(candidatos, concepts, atributos_termos, forbidden)
     melhores = ranqueados[:QTD_IMAGENS_POR_CATEGORIA]
-    urls = [item["urls"]["regular"] for item, _ in melhores]
+    urls = [_url_hero_otimizada(item) for item, _ in melhores]
 
     cache[categoria] = urls
     _salvar_cache_imagens(cache)
