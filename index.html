@@ -19,6 +19,10 @@
         .font-display { font-family: 'Bricolage Grotesque', sans-serif; }
         html { scroll-behavior: smooth; }
 
+        /* Some navegadores WebKit (Safari) desenham o marcador de <summary>
+           mesmo com list-none do Tailwind -- some explicitamente. */
+        summary::-webkit-details-marker { display: none; }
+
         /* Textura sutil, site-wide — dá um acabamento tátil/editorial, não decorativo por decorativo */
         .grain-overlay {
             position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0.035; mix-blend-mode: overlay;
@@ -337,13 +341,37 @@
         }
 
         function renderNavigation() {
+            // h-*/w-auto/object-contain (não w-*/h-*/rounded-full/object-cover): logo de
+            // cliente pode vir em qualquer proporção (ícone quadrado OU wordmark largo) --
+            // forçar um recorte circular quadrado destrói/corta wordmarks largos.
             const logo = config.company.logo
-                ? `<img src="${config.company.logo}" alt="${config.company.name}" class="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-sm" onerror="this.remove()">`
+                ? `<img src="${config.company.logo}" alt="${config.company.name}" class="h-10 w-auto max-w-[160px] object-contain" onerror="this.remove()">`
                 : `<span class="text-3xl">${config.metadata.favicon || '🚀'}</span>`;
 
-            const navLinks = config.sections.filter(s => s.enabled).map(s => `
-                <a href="#${s.id}" class="font-medium text-sm transition hover:opacity-70" style="color: ${config.colors.text}">${s.title}</a>
-            `).join('');
+            // Nav cheio (1 link por seção) quebra o layout quando há muitas seções (ex.:
+            // portfólio detalhado por etapa) -- seções com id "portfolio-*" agrupam num
+            // submenu único "Portfólio" (<details>/<summary>, nativo -- mesmo comportamento
+            // de clique no desktop e toque no mobile, sem JS extra); as demais seções
+            // continuam como link direto no topo. Todas as seções continuam na página normal.
+            const secoesHabilitadas = config.sections.filter(s => s.enabled);
+            const secoesPortfolio = secoesHabilitadas.filter(s => s.id.startsWith('portfolio-'));
+            const outrasSecoes = secoesHabilitadas.filter(s => !s.id.startsWith('portfolio-'));
+
+            const linkDireto = s => `<a href="#${s.id}" class="font-medium text-sm transition hover:opacity-70" style="color: ${config.colors.text}">${s.title}</a>`;
+
+            const dropdownPortfolio = secoesPortfolio.length === 0 ? '' : `
+                <details class="relative">
+                    <summary class="cursor-pointer list-none font-medium text-sm flex items-center gap-1 transition hover:opacity-70" style="color: ${config.colors.text}">
+                        Portfólio
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </summary>
+                    <div class="md:absolute md:top-full md:left-0 mt-2 bg-white shadow-lg rounded-xl py-2 md:min-w-[260px] border z-50" style="border-color: ${config.colors.border}">
+                        ${secoesPortfolio.map(s => `<a href="#${s.id}" class="block px-4 py-2 text-sm transition hover:opacity-70" style="color: ${config.colors.text}">${s.title}</a>`).join('')}
+                    </div>
+                </details>
+            `;
+
+            const navLinks = outrasSecoes.map(linkDireto).join('') + dropdownPortfolio;
 
             const waHref = config.contact && config.contact.whatsapp
                 ? waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`)
