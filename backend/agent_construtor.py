@@ -24,7 +24,7 @@ try:
 except ImportError:
     pass
 
-from schema_validator import ValidadorSchema, FONT_PAIRS_VALIDOS
+from schema_validator import ValidadorSchema, FONT_PAIRS_VALIDOS, listar_todas_duplicatas
 from metrics import obter_metricas
 from ai_provider import obter_ai_provider, ErroProvedorIA
 from image_utils import _slugify, mapear_categoria, obter_imagens_categoria, obter_cor_primaria, ErroBancoImagens
@@ -130,20 +130,104 @@ def _localizar_item(config: dict, tipo: str, id_str: str) -> Optional[dict]:
     return None
 
 
-def _montar_prompt_reparo(campo: str, texto_atual: str, texto_conflitante: str, nicho: str) -> str:
-    piso = max(10, len(texto_atual) - 30)
-    teto = len(texto_atual) + 30
-    return f"""Reescreva o texto abaixo para um negócio do nicho "{nicho}", sem repetir a ideia central deste outro texto que já existe em outro lugar do mesmo site:
+_MAX_CAMPOS_REPARO_MULTIPLO = 6  # maior cluster observado na medição real (n=8) foi 5 -- folga sobre o pior caso visto
 
-Texto já usado em outro lugar (NÃO repita esta ideia central): "{texto_conflitante}"
+_PRIORIDADE_TIPO_ANCORA = {"services": 0, "features": 1, "faq": 2, "sections": 3}
 
-Texto a reescrever ({campo}): "{texto_atual}"
+
+def _tipo_do_identificador(identificador: str) -> str:
+    return identificador.split("[", 1)[0]
+
+
+def _agrupar_campos_conectados(duplicatas: list) -> list:
+    """
+    Agrupa identificadores de campo em componentes conectados a partir dos
+    pares de listar_todas_duplicatas() -- dois campos no mesmo grupo
+    significa que existe uma cadeia de duplicação entre eles, direta ou
+    transitiva (ex.: A×B e B×C -> A, B, C no mesmo cluster, mesmo que A×C
+    nunca tenha sido comparado diretamente).
+
+    Determinístico: mesma entrada, em qualquer ordem, sempre produz os
+    mesmos clusters -- cada cluster ordenado internamente por
+    identificador, e os clusters ordenados entre si pelo primeiro
+    identificador de cada um. Não depende da ordem de inserção nem de
+    qual campo tem mais conexões.
+    """
+    pai: dict = {}
+
+    def find(x):
+        raiz = x
+        while pai.get(raiz, raiz) != raiz:
+            raiz = pai[raiz]
+        return raiz
+
+    def union(a, b):
+        pai.setdefault(a, a)
+        pai.setdefault(b, b)
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            # raiz determinística: sempre a menor string, nunca depende de ordem de chegada
+            menor, maior = (ra, rb) if ra < rb else (rb, ra)
+            pai[maior] = menor
+
+    for d in duplicatas:
+        union(d["campo_a"], d["campo_b"])
+
+    grupos: dict = {}
+    for campo in pai:
+        raiz = find(campo)
+        grupos.setdefault(raiz, set()).add(campo)
+
+    clusters = [sorted(grupo) for grupo in grupos.values()]
+    clusters.sort(key=lambda cluster: cluster[0])
+    return clusters
+
+
+def _escolher_ancora(cluster: list) -> str:
+    """
+    Prioridade semântica FIXA (services > features > faq > sections),
+    não "quem tem mais conexões no grafo" -- decisão do Tech Lead
+    (2026-08-06): torna o comportamento previsível, um ajuste pequeno no
+    modelo não muda qual campo vira âncora. Empate de tipo desempata pelo
+    identificador (string) menor, também determinístico.
+    """
+    return min(
+        cluster,
+        key=lambda ident: (_PRIORIDADE_TIPO_ANCORA.get(_tipo_do_identificador(ident), 99), ident),
+    )
+
+
+def _localizar_item_por_identificador(config: dict, identificador: str) -> Optional[dict]:
+    parsed = _parsear_identificador(identificador)
+    if not parsed:
+        return None
+    tipo, id_str, _ = parsed
+    return _localizar_item(config, tipo, id_str)
+
+
+def _campo_do_identificador(identificador: str) -> Optional[str]:
+    parsed = _parsear_identificador(identificador)
+    return parsed[2] if parsed else None
+
+
+def _montar_prompt_reparo_multiplo(plano: list, nicho: str) -> str:
+    """plano: [(ancora_ident, ancora_texto, [(campo_ident, campo_texto), ...]), ...]"""
+    blocos = []
+    for ancora_ident, ancora_texto, campos in plano:
+        for campo_ident, campo_texto in campos:
+            blocos.append(
+                f'- Campo "{campo_ident}" (texto atual: "{campo_texto}") '
+                f'-- NÃO repita a ideia central de: "{ancora_texto}"'
+            )
+    lista_campos = "\n".join(blocos)
+    return f"""Reescreva os textos abaixo para um negócio do nicho "{nicho}". Cada um precisa ter uma ideia central DIFERENTE do texto de referência indicado ao lado E diferente dos outros textos desta mesma lista.
+
+{lista_campos}
 
 Regras:
-- Mantenha o mesmo tom e o mesmo campo/contexto
-- Tamanho entre {piso} e {teto} caracteres
-- Foque em um ângulo/aspecto DIFERENTE do negócio do que o texto já usado
-- Retorne APENAS um JSON no formato {{"texto": "novo texto aqui"}}, sem markdown, sem explicação"""
+- Mantenha o tom e o tamanho aproximado de cada texto original
+- Cada reescrita deve focar num ângulo/aspecto diferente do negócio
+- Retorne APENAS um JSON no formato {{"reescritas": {{"identificador_do_campo": "novo texto", ...}}}}, com uma chave por campo listado acima usando o identificador exato entre aspas (ex.: "services[2].description"), sem markdown, sem explicação"""
 
 
 class AgenteConstrutor:
@@ -481,8 +565,9 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
             reparado = False
             reparo_tentado = False
             erro_pos_reparo = None
+            campos_reescritos = 0
             if not valido:
-                config_reparado = self._tentar_reparo_duplicacao(config, erro, nicho)
+                config_reparado, campos_reescritos = self._tentar_reparo_duplicacao(config, erro, nicho)
                 if config_reparado is not None:
                     reparo_tentado = True
                     valido_reparo, erro_reparo, _ = ValidadorSchema.validar_json(config_reparado)
@@ -499,6 +584,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                     "sucesso": valido,
                     "erro": None if valido else erro,
                     "reparado": reparado,
+                    "campos_reescritos": campos_reescritos,
                     "tempo_segundos": time.time() - tempo_inicio_tentativa,
                     "tokens": getattr(self.ai, "uso_tokens_ativo", None),
                 })
@@ -511,50 +597,94 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
 
         raise ValueError(f"Schema inválido após {MAX_TENTATIVAS_GERACAO} tentativas: {ultimo_erro}")
 
-    def _tentar_reparo_duplicacao(self, config: dict, erro: Optional[str], nicho: str) -> Optional[dict]:
+    def _tentar_reparo_duplicacao(self, config: dict, erro: Optional[str], nicho: str) -> tuple:
         """
-        Repair Prompt localizado (RFC aprovada 2026-08-06): se `erro` for
-        especificamente uma duplicação TXT-01, tenta reescrever só o campo
-        duplicado (o segundo dos dois identificadores na mensagem) com uma
-        chamada pequena e barata, em vez de descartar a geração inteira.
+        Repair Engine v2 (RFC aprovada 2026-08-06, evolução do Repair
+        Prompt v1): medição real (n=8, ver backend/scripts/
+        medir_distribuicao_duplicacao.py) mostrou que 80% dos configs que
+        duplicam têm 2+ pares simultâneos -- reparar só o par reportado no
+        erro resolvia uma minoria dos casos. Em vez disso, encontra TODOS
+        os pares do config (schema_validator.listar_todas_duplicatas,
+        mesmo algoritmo de similaridade que já decide TXT-01, nunca
+        reimplementado), agrupa em componentes conectados
+        (_agrupar_campos_conectados) e reescreve numa ÚNICA chamada todos
+        os campos exceto 1 âncora por cluster (prioridade semântica fixa:
+        services > features > faq > sections, determinística -- não
+        depende de qual campo tem mais conexões no grafo).
 
-        No máximo 1 chamada, sem loop: qualquer falha (mensagem não
-        reconhecida, item não encontrado, exceção na chamada de IA, resposta
-        sem o campo esperado) retorna None -- quem chama simplesmente segue
-        pro retry normal (regenera tudo), nunca tenta reparo de novo pra
-        essa mesma falha.
+        Teto de _MAX_CAMPOS_REPARO_MULTIPLO campos reescritos por chamada
+        (maior cluster já observado foi 5). Acima disso, ou qualquer falha
+        (item não encontrado, exceção na chamada de IA, resposta
+        incompleta/malformada), retorna (None, 0) -- quem chama segue pro
+        retry normal, nunca tenta reparo de novo pra essa mesma falha (sem
+        loop, mesma garantia do v1).
+
+        Retorna (config_reparado_ou_None, quantidade_de_campos_reescritos)
+        -- a quantidade é métrica de observabilidade (Tech Lead pediu:
+        acompanhar se o reparo está ficando "agressivo" com o tempo).
         """
-        identificadores = _extrair_identificadores_duplicados(erro)
-        if not identificadores:
-            return None
-        (tipo_a, id_a, campo_a), (tipo_b, id_b, campo_b) = identificadores
+        if not _extrair_identificadores_duplicados(erro):
+            return None, 0  # não é TXT-01 -- fora de escopo do Repair Engine
 
-        item_a = _localizar_item(config, tipo_a, id_a)
-        item_b = _localizar_item(config, tipo_b, id_b)
-        if item_a is None or item_b is None:
-            return None
+        duplicatas = listar_todas_duplicatas(config)
+        if not duplicatas:
+            return None, 0
 
-        texto_atual = item_b.get(campo_b)
-        if not isinstance(texto_atual, str) or not texto_atual.strip():
-            return None
-        texto_conflitante = item_a.get(campo_a)
-        if not isinstance(texto_conflitante, str):
-            texto_conflitante = ""
+        clusters = _agrupar_campos_conectados(duplicatas)
 
-        prompt_reparo = _montar_prompt_reparo(campo_b, texto_atual, texto_conflitante, nicho)
+        plano = []  # [(ancora_ident, ancora_texto, [(campo_ident, campo_texto), ...])]
+        total_campos = 0
+        for cluster in clusters:
+            ancora_ident = _escolher_ancora(cluster)
+            ancora_item = _localizar_item_por_identificador(config, ancora_ident)
+            if ancora_item is None:
+                return None, 0
+            ancora_texto = ancora_item.get(_campo_do_identificador(ancora_ident))
+            if not isinstance(ancora_texto, str):
+                return None, 0
+
+            campos_do_cluster = []
+            for ident in cluster:
+                if ident == ancora_ident:
+                    continue
+                item = _localizar_item_por_identificador(config, ident)
+                if item is None:
+                    return None, 0
+                texto = item.get(_campo_do_identificador(ident))
+                if not isinstance(texto, str) or not texto.strip():
+                    return None, 0
+                campos_do_cluster.append((ident, texto))
+
+            total_campos += len(campos_do_cluster)
+            plano.append((ancora_ident, ancora_texto, campos_do_cluster))
+
+        if total_campos == 0 or total_campos > _MAX_CAMPOS_REPARO_MULTIPLO:
+            return None, 0
+
+        prompt_reparo = _montar_prompt_reparo_multiplo(plano, nicho)
 
         try:
-            resposta = self.ai.gerar_json(prompt_reparo, max_tokens=300)
-            novo_texto = (resposta or {}).get("texto")
+            resposta = self.ai.gerar_json(prompt_reparo, max_tokens=200 * total_campos)
+            reescritas = (resposta or {}).get("reescritas")
         except Exception:
-            return None
+            return None, 0
 
-        if not isinstance(novo_texto, str) or not novo_texto.strip():
-            return None
+        if not isinstance(reescritas, dict):
+            return None, 0
+
+        todos_identificadores = {ident for _, _, campos in plano for ident, _ in campos}
+        if not todos_identificadores.issubset(reescritas.keys()):
+            return None, 0  # resposta incompleta -- nunca aplica reparo parcial
 
         config_reparado = copy.deepcopy(config)
-        _localizar_item(config_reparado, tipo_b, id_b)[campo_b] = novo_texto.strip()
-        return config_reparado
+        for ident in todos_identificadores:
+            novo_texto = reescritas[ident]
+            if not isinstance(novo_texto, str) or not novo_texto.strip():
+                return None, 0
+            item = _localizar_item_por_identificador(config_reparado, ident)
+            item[_campo_do_identificador(ident)] = novo_texto.strip()
+
+        return config_reparado, len(todos_identificadores)
 
     def _autocorrigir(self, config: dict) -> dict:
         """

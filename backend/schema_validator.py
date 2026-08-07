@@ -385,17 +385,78 @@ def _placeholder_de_template(texto: Optional[str]) -> Optional[str]:
     return None
 
 
-def _primeira_duplicata(rotulo: str, textos: List[tuple]) -> Optional[str]:
-    """textos: lista de (identificador, texto). Retorna a 1ª dupla >= limiar, ou None."""
+def _todas_duplicatas(rotulo: str, textos: List[tuple]) -> List[Dict[str, Any]]:
+    """
+    textos: lista de (identificador, texto). Retorna TODAS as duplas
+    >= limiar (não só a primeira) -- usado pelo Repair Engine (RFC
+    aprovada 2026-08-06) pra agrupar campos em clusters de duplicação.
+    Única implementação da normalização/similaridade -- _primeira_duplicata
+    é um wrapper fino em cima desta função, nunca reimplementa o algoritmo.
+    """
     normalizados = [(ident, _texto_normalizado(texto)) for ident, texto in textos if (texto or "").strip()]
+    encontradas = []
     for i in range(len(normalizados)):
         for j in range(i + 1, len(normalizados)):
             ident_a, texto_a = normalizados[i]
             ident_b, texto_b = normalizados[j]
             similaridade = difflib.SequenceMatcher(None, texto_a, texto_b).ratio()
             if similaridade >= _LIMIAR_SIMILARIDADE_DUPLICATA:
-                return f"{rotulo} duplicado entre {ident_a} e {ident_b} (similaridade {similaridade:.2f})"
-    return None
+                encontradas.append({
+                    "rotulo": rotulo, "campo_a": ident_a, "campo_b": ident_b,
+                    "similaridade": round(similaridade, 2),
+                })
+    return encontradas
+
+
+def _primeira_duplicata(rotulo: str, textos: List[tuple]) -> Optional[str]:
+    """textos: lista de (identificador, texto). Retorna a 1ª dupla >= limiar, ou None."""
+    todas = _todas_duplicatas(rotulo, textos)
+    if not todas:
+        return None
+    d = todas[0]
+    return f"{d['rotulo']} duplicado entre {d['campo_a']} e {d['campo_b']} (similaridade {d['similaridade']:.2f})"
+
+
+def _construir_grupos_txt01(dados: Dict[str, Any]) -> Dict[str, List[tuple]]:
+    """
+    Agrupa os campos de título/texto/pergunta relevantes pro TXT-01 --
+    usado tanto por _validar_regras_conteudo (bloqueante, para no primeiro
+    achado) quanto por listar_todas_duplicatas (Repair Engine, precisa de
+    todos os pares) -- uma única enumeração de campos, nunca duplicada.
+    Ordem do dict é sempre a mesma (Título, Texto, Pergunta de FAQ),
+    determinística.
+    """
+    sections = dados.get("sections") or []
+    services = dados.get("services") or []
+    features = dados.get("features") or []
+    faq = dados.get("faq") or []
+
+    return {
+        "Título": (
+            [(f"sections[{s.get('id')}].title", s.get("title")) for s in sections]
+            + [(f"services[{s.get('id')}].title", s.get("title")) for s in services]
+            + [(f"features[{f.get('id')}].title", f.get("title")) for f in features]
+        ),
+        "Texto": (
+            [(f"sections[{s.get('id')}].content", s.get("content")) for s in sections]
+            + [(f"services[{s.get('id')}].description", s.get("description")) for s in services]
+            + [(f"features[{f.get('id')}].description", f.get("description")) for f in features]
+        ),
+        "Pergunta de FAQ": [(f"faq[{f.get('id')}].question", f.get("question")) for f in faq],
+    }
+
+
+def listar_todas_duplicatas(dados: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    TXT-01 completo: todas as duplicatas do config (não só a primeira),
+    usado pelo Repair Engine pra reparar múltiplos pares numa chamada.
+    Reusa exatamente a mesma enumeração de campos e o mesmo algoritmo de
+    similaridade que _validar_regras_conteudo -- nunca reimplementados.
+    """
+    encontradas = []
+    for rotulo, textos in _construir_grupos_txt01(dados).items():
+        encontradas.extend(_todas_duplicatas(rotulo, textos))
+    return encontradas
 
 
 def _validar_regras_conteudo(dados: Dict[str, Any]) -> Optional[str]:
@@ -407,7 +468,6 @@ def _validar_regras_conteudo(dados: Dict[str, Any]) -> Optional[str]:
     sections = dados.get("sections") or []
     services = dados.get("services") or []
     features = dados.get("features") or []
-    faq = dados.get("faq") or []
 
     # TXT-04: nenhum texto-molde do template padrão
     campos = [
@@ -441,29 +501,11 @@ def _validar_regras_conteudo(dados: Dict[str, Any]) -> Optional[str]:
         if placeholder:
             return f"Texto de template vazou para produção em {identificador}: '{placeholder}'"
 
-    # TXT-01: título/descrição não repetidos entre sections, services, features
-    titulos = (
-        [(f"sections[{s.get('id')}].title", s.get("title")) for s in sections]
-        + [(f"services[{s.get('id')}].title", s.get("title")) for s in services]
-        + [(f"features[{f.get('id')}].title", f.get("title")) for f in features]
-    )
-    erro = _primeira_duplicata("Título", titulos)
-    if erro:
-        return erro
-
-    textos_longos = (
-        [(f"sections[{s.get('id')}].content", s.get("content")) for s in sections]
-        + [(f"services[{s.get('id')}].description", s.get("description")) for s in services]
-        + [(f"features[{f.get('id')}].description", f.get("description")) for f in features]
-    )
-    erro = _primeira_duplicata("Texto", textos_longos)
-    if erro:
-        return erro
-
-    perguntas = [(f"faq[{f.get('id')}].question", f.get("question")) for f in faq]
-    erro = _primeira_duplicata("Pergunta de FAQ", perguntas)
-    if erro:
-        return erro
+    # TXT-01: título/descrição não repetidos entre sections, services, features, faq
+    for rotulo, textos in _construir_grupos_txt01(dados).items():
+        erro = _primeira_duplicata(rotulo, textos)
+        if erro:
+            return erro
 
     return None
 

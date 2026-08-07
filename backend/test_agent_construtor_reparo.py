@@ -84,19 +84,85 @@ class TestLocalizarItem(unittest.TestCase):
 
 class TestReparoLocalizado(unittest.TestCase):
     def test_reparo_bem_sucedido_nao_gasta_tentativa_extra(self):
-        """Duplicação + reparo que funciona de primeira: 1 tentativa no diagnóstico, não 2."""
+        """Duplicação (1 par) + reparo que funciona de primeira: 1 tentativa no diagnóstico, não 2.
+        services[1]/services[2] mesmo tipo -- desempate por identificador menor escolhe services[1] como âncora."""
         agente = _agente_com_dublê([
             _config_com_titulo_duplicado(),
-            {"texto": "Suporte técnico especializado para o seu negócio"},
+            {"reescritas": {"services[2].title": "Suporte técnico especializado para o seu negócio"}},
         ])
         diagnostico = []
         resultado = agente.gerar_config_site("Empresa Teste", "nicho", diagnostico_tentativas=diagnostico)
 
         self.assertEqual(len(diagnostico), 1)
         self.assertTrue(diagnostico[0]["sucesso"])
+        self.assertEqual(diagnostico[0]["campos_reescritos"], 1)
         self.assertEqual(resultado["services"][1]["title"], "Suporte técnico especializado para o seu negócio")
-        # campo não-reparado permanece intacto
+        # campo-âncora (não-reparado) permanece intacto
         self.assertEqual(resultado["services"][0]["title"], "Atendimento especializado")
+
+    def test_reparo_multiplos_pares_simultaneos_numa_chamada_so(self):
+        """Padrão real observado (Odontologia/Advocacia, medição de 2026-08-06): 2 pares
+        simultâneos no mesmo config -- v2 reescreve os dois numa única chamada de IA."""
+        config = _config_valido_minimo()
+        config["services"] = [
+            {"id": 1, "title": "Atendimento especializado", "description": "Cuidamos de cada detalhe do seu caso.",
+             "icon": "⚡", "features": ["Rápido"], "enabled": True},
+            {"id": 2, "title": "Atendimento especializado", "description": "Suporte completo do início ao fim.",
+             "icon": "🎯", "features": ["Confiável"], "enabled": True},
+        ]
+        config["features"] = [
+            {"id": 1, "title": "Equipe qualificada", "description": "Cuidamos de cada detalhe do seu caso.", "icon": "⭐", "enabled": True},
+            {"id": 2, "title": "Preço justo", "description": "Valores competitivos sem abrir mão da qualidade.", "icon": "✅", "enabled": True},
+            {"id": 3, "title": "Suporte total", "description": "Atendimento completo em todas as etapas.", "icon": "🚀", "enabled": True},
+        ]
+        # 2 pares independentes: services[1]×services[2] (título) e services[1]×features[1] (descrição)
+        # -- mesmo item-âncora (services[1]) em ambos, mas clusters diferentes por campo.
+
+        agente = _agente_com_dublê([
+            config,
+            {"reescritas": {
+                "services[2].title": "Manutenção preventiva",
+                "features[1].description": "Equipe treinada e certificada pra cada tipo de serviço.",
+            }},
+        ])
+        diagnostico = []
+        resultado = agente.gerar_config_site("Empresa Teste", "nicho", diagnostico_tentativas=diagnostico)
+
+        self.assertEqual(len(diagnostico), 1)
+        self.assertTrue(diagnostico[0]["sucesso"])
+        self.assertEqual(diagnostico[0]["campos_reescritos"], 2)
+        self.assertEqual(resultado["services"][1]["title"], "Manutenção preventiva")
+        self.assertEqual(resultado["features"][0]["description"], "Equipe treinada e certificada pra cada tipo de serviço.")
+        # âncoras permanecem intactas
+        self.assertEqual(resultado["services"][0]["title"], "Atendimento especializado")
+        self.assertEqual(resultado["services"][0]["description"], "Cuidamos de cada detalhe do seu caso.")
+
+    def test_resposta_incompleta_nao_aplica_reparo_parcial(self):
+        """2 pares, mas a IA só devolve reescrita pra 1 -- reparo é tudo ou nada, cai pro retry normal."""
+        config = _config_valido_minimo()
+        config["services"] = [
+            {"id": 1, "title": "Atendimento especializado", "description": "Cuidamos de cada detalhe do seu caso.",
+             "icon": "⚡", "features": ["Rápido"], "enabled": True},
+            {"id": 2, "title": "Atendimento especializado", "description": "Suporte completo do início ao fim.",
+             "icon": "🎯", "features": ["Confiável"], "enabled": True},
+        ]
+        config["features"] = [
+            {"id": 1, "title": "Equipe qualificada", "description": "Cuidamos de cada detalhe do seu caso.", "icon": "⭐", "enabled": True},
+            {"id": 2, "title": "Preço justo", "description": "Valores competitivos sem abrir mão da qualidade.", "icon": "✅", "enabled": True},
+            {"id": 3, "title": "Suporte total", "description": "Atendimento completo em todas as etapas.", "icon": "🚀", "enabled": True},
+        ]
+        agente = _agente_com_dublê([
+            config,
+            {"reescritas": {"services[2].title": "Manutenção preventiva"}},  # falta features[1].description
+            _config_valido_minimo(),
+        ])
+        diagnostico = []
+        resultado = agente.gerar_config_site("Empresa Teste", "nicho", diagnostico_tentativas=diagnostico)
+
+        self.assertEqual(len(diagnostico), 2)
+        self.assertFalse(diagnostico[0]["sucesso"])
+        self.assertTrue(diagnostico[1]["sucesso"])
+        self.assertEqual(resultado["company"]["name"], "Empresa Teste")
 
     def test_reparo_que_falha_cai_pro_retry_normal(self):
         """Resposta de reparo sem o campo esperado -> não usa, tentativa 1 falha, tentativa 2 regenera tudo."""
