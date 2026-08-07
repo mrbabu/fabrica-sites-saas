@@ -42,6 +42,27 @@ testes, QA, documentação, refatorações), e encerrar só a etapa de deploy.
 - Dados de cliente (nome, contato, logo) são sensíveis: tratar com validação estrita na entrada (`backend/app.py`/`backend/schema_validator.py`) e nunca logar em texto plano.
 - Para tarefas simples (formatação de JSON, ajustes pontuais de template), prefira soluções diretas — evite over-engineering ou abstrações não pedidas.
 
+## Convenção de Fonte da Verdade
+
+Origem: revisão de 2026-08-06 que encontrou, no próprio processo de trabalho,
+afirmações citadas como "decisão do projeto" que na verdade só existiam em
+memória de sessão de um agente, nunca formalizadas aqui.
+
+- Memória de sessão (de qualquer agente) nunca constitui decisão do projeto —
+  é contexto de trabalho, não fato normativo.
+- Uma decisão só é vigente quando registrada em `CLAUDE.md`, `ROADMAP.md` ou
+  na DoPS (`docs/definition-of-professional-site.md`). Até lá, citar
+  explicitamente como "discussão", "hipótese" ou "decisão pendente" — nunca
+  como se já estivesse decidido.
+- Caso real de produção confirmado diretamente pelo responsável do projeto
+  conta como evidência, mesmo sem artefato anexado — registrar como "caso de
+  produção informado pelo responsável, sem artefato anexado", não tratar com
+  a mesma reserva que uma alegação não verificada de terceiro.
+- Benchmark reproduzível (arquivo em `backend/benchmark/`) conta como
+  evidência.
+- Hipótese ou proposta (própria ou de terceiro, colada ou não) não conta como
+  evidência até virar um dos itens acima.
+
 ## Status Congelado: Agente Construtor (Builder Engine)
 
 **Estabilidade do motor CONCLUÍDA (parte técnica da Fase 1 do `ROADMAP.md`).**
