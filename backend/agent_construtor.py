@@ -479,10 +479,14 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
             valido, erro, _ = ValidadorSchema.validar_json(config)
 
             reparado = False
+            reparo_tentado = False
+            erro_pos_reparo = None
             if not valido:
                 config_reparado = self._tentar_reparo_duplicacao(config, erro, nicho)
                 if config_reparado is not None:
+                    reparo_tentado = True
                     valido_reparo, erro_reparo, _ = ValidadorSchema.validar_json(config_reparado)
+                    erro_pos_reparo = erro_reparo
                     if valido_reparo:
                         config, valido, erro, reparado = config_reparado, True, None, True
 
@@ -490,6 +494,8 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 diagnostico_tentativas.append({
                     "tentativa": tentativa,
                     "provedor": self.ai.provedor_ativo,
+                    "reparo_tentado": reparo_tentado,
+                    "erro_pos_reparo": erro_pos_reparo,
                     "sucesso": valido,
                     "erro": None if valido else erro,
                     "reparado": reparado,
