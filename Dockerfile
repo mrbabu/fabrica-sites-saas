@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 
 COPY backend/ backend/
 COPY index.html index.html
+COPY assets/css/ assets/css/
 COPY vendas-config.json vendas-config.json
 COPY entrypoint.sh entrypoint.sh
 COPY leads/ leads/

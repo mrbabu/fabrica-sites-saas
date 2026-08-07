@@ -15,6 +15,7 @@ except ImportError:
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Header, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel, Field, field_validator, ConfigDict, HttpUrl
 from contextlib import asynccontextmanager
@@ -24,6 +25,7 @@ import secrets
 import sys
 import logging
 import re
+from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
@@ -114,6 +116,15 @@ app.include_router(demo_lista_router)
 app.include_router(demo_login_router)
 app.include_router(demo_router)
 app.include_router(hunter_router)
+
+# /demo/preview injeta o mesmo index.html de producao (ver
+# routers/demo_preview.py) -- ele referencia assets/css/tailwind.css por
+# caminho relativo, que so resolve se o backend tambem servir /assets.
+app.mount(
+    "/assets",
+    StaticFiles(directory=Path(__file__).resolve().parent.parent / "assets"),
+    name="assets",
+)
 
 # Inicializar agente (singleton)
 try:
