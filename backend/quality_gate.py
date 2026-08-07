@@ -97,23 +97,48 @@ def validar_cnf02_endereco(
 def _url_valida_formato(url: Optional[str]) -> bool:
     if not url:
         return False
+    if _e_caminho_relativo_asset(url):
+        return True
     parsed = urlparse(url)
     return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+
+
+def _e_caminho_relativo_asset(url: str) -> bool:
+    """
+    Caminho relativo dentro de assets/ (ex.: assets/logos/cliente.png,
+    assets/portfolio/cliente/foto.jpg) é um padrão já válido no projeto --
+    servido pelo mesmo host estático do site, sem precisar de URL absoluta
+    (ver agent_construtor._url_invalida, que já aceita isso na produção).
+    Restrito a essa convenção exata (não "qualquer relativo") pra não
+    validar como formato ok uma string qualquer sem "/" nem extensão.
+    """
+    return url.startswith("assets/")
 
 
 def _http_head_padrao(url: str):
     return requests.head(url, timeout=5, allow_redirects=True)
 
 
+def _arquivo_existe_padrao(caminho_relativo: str) -> bool:
+    # raiz do repo é 1 nível acima de backend/ (onde este arquivo vive)
+    raiz_repo = Path(__file__).resolve().parent.parent
+    return (raiz_repo / caminho_relativo).is_file()
+
+
 def validar_img05_imagens_resolvem(
     config: dict,
     http_head: Optional[Callable[[str], object]] = None,
+    arquivo_existe: Optional[Callable[[str], bool]] = None,
 ) -> ResultadoCriterio:
     """
-    IMG-05: toda URL de imagem do config (hero + seções) resolve HTTP 200.
-    `http_head` é injetável para teste -- por padrão faz um HEAD real.
+    IMG-05: toda URL de imagem do config (hero + seções) resolve.
+    URLs absolutas (http/https): resolve HTTP 200 -- `http_head` injetável,
+    por padrão faz um HEAD real. Caminhos relativos em assets/: resolve
+    como existência de arquivo no repo -- `arquivo_existe` injetável, por
+    padrão checa o disco.
     """
     http_head = http_head or _http_head_padrao
+    arquivo_existe = arquivo_existe or _arquivo_existe_padrao
 
     urls = []
     hero = config.get("hero") or {}
@@ -127,6 +152,10 @@ def validar_img05_imagens_resolvem(
     for url in urls:
         if not _url_valida_formato(url):
             falhas.append(f"{url}: formato de URL inválido")
+            continue
+        if _e_caminho_relativo_asset(url):
+            if not arquivo_existe(url):
+                falhas.append(f"{url}: arquivo não encontrado")
             continue
         try:
             resposta = http_head(url)

@@ -133,6 +133,33 @@ class TestIMG05ImagensResolvem(unittest.TestCase):
         self.assertFalse(resultado.passou)
         self.assertIn("secao2", resultado.detalhe)
 
+    def test_caminho_relativo_de_asset_existente_passa_sem_rede(self):
+        """assets/... é padrão válido já usado pra logo/portfólio (caminho relativo servido
+        pelo mesmo host do site) -- IMG-05 deve checar existência do arquivo, não fazer HTTP."""
+        config = _config_base()
+        config["hero"]["backgroundImage"] = "assets/logos/existe.png"
+        config["sections"] = []
+
+        def http_head_nunca_deveria_ser_chamado(url):
+            raise AssertionError("não deveria fazer HEAD pra caminho relativo")
+
+        resultado = validar_img05_imagens_resolvem(
+            config, http_head=http_head_nunca_deveria_ser_chamado,
+            arquivo_existe=lambda caminho: True,
+        )
+        self.assertTrue(resultado.passou)
+
+    def test_caminho_relativo_de_asset_inexistente_falha(self):
+        config = _config_base()
+        config["hero"]["backgroundImage"] = "assets/logos/nao-existe.png"
+        config["sections"] = []
+
+        resultado = validar_img05_imagens_resolvem(
+            config, arquivo_existe=lambda caminho: False,
+        )
+        self.assertFalse(resultado.passou)
+        self.assertIn("nao-existe.png", resultado.detalhe)
+
     def test_url_com_formato_invalido_falha_sem_tentar_rede(self):
         config = _config_base()
         config["hero"]["backgroundImage"] = "não-é-uma-url"

@@ -85,6 +85,11 @@ backend/benchmark/
 assets/logos/*
 !assets/logos/.gitkeep
 
+# Fotos de portfólio de clientes (mesmo racional dos logos acima -- dado por
+# cliente, não versionado no histórico compartilhado do repo)
+assets/portfolio/*
+!assets/portfolio/.gitkeep
+
 # Leads reais da Fase 2 (dado de terceiro, não versionado) - o .example.csv
 # fica versionado como template/estrutura
 leads/*.csv
