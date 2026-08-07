@@ -211,22 +211,6 @@ Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações.
             contato_whatsapp_prompt = "+5511987654321"
 
         # Prompt para o modelo gerar o JSON completo
-        #
-        # STATUS: EXPERIMENTAL (2026-08-04) -- aguardando benchmark controlado.
-        # O campo "planejamentoServicos" (schema abaixo) foi adicionado pra
-        # atacar MODEL_DUPLICATION (ver memória do projeto). Teste feito na
-        # mesma sessão NÃO isolou a variável: comparou prompt-novo+Ollama+
-        # fallback+cota-do-Groq-esgotada contra uma baseline prompt-antigo+
-        # Ollama de outro momento -- 4 variáveis mudando ao mesmo tempo
-        # (prompt, provedor, modelo 70B->8B, cota), então "70%->20%" NÃO é
-        # evidência válida de que o prompt piorou. Não reverter nem promover
-        # até rodar o mesmo benchmark (10 nichos) com Groq 70B nos dois lados
-        # (prompt antigo vs novo), mesmo ambiente, único delta = o prompt.
-        # Suspeita técnica em aberto: se o Ollama (8B) realmente degradar com
-        # esse campo, pode ser questão de ONDE o planejamento acontece (nessa
-        # mesma resposta) e não do conceito -- separar em duas chamadas
-        # (1: só planejamento, 2: gera o site usando o plano) é a alternativa
-        # a testar se o benchmark controlado confirmar problema real.
         prompt = f"""Você é um especialista em marketing, copywriting e SEO para criar sites profissionais de alto impacto.
 
 Crie um arquivo site-config.json COMPLETO e altamente persuasivo para:
@@ -238,7 +222,7 @@ Crie um arquivo site-config.json COMPLETO e altamente persuasivo para:
 
 IMPORTANTE:
 1. Retorne APENAS um JSON válido, sem markdown, sem explicações
-2. O JSON deve seguir EXATAMENTE este schema, incluindo o campo "planejamentoServicos" (preenchido ANTES de escrever services/features, ver instrução dentro do próprio schema)
+2. O JSON deve seguir EXATAMENTE este schema
 3. Crie copys persuasivos e impactantes adaptados ao nicho "{nicho}"
 4. Use a cor primária {cor_primaria} e a paleta {json.dumps(cores)}
 5. Gere 3 serviços principais para o nicho {nicho}
@@ -264,15 +248,6 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
   "colors": {json.dumps(cores)},
   "typography": {{
     "fontPair": "string OBRIGATÓRIO - exatamente um destes valores: {', '.join(sorted(FONT_PAIRS_VALIDOS))} - escolha o que melhor combina com a personalidade do nicho \"{nicho}\" (ex.: luxury/editorial para hotelaria e negócios sofisticados, clean para saúde/clínicas, energetic para academia/fitness, creative para negócios criativos/design, modern como opção neutra padrão)"
-  }},
-  "planejamentoServicos": {{
-    "_instrucao": "Preencha ESTE campo ANTES de escrever services/features abaixo. Escolha 6 aspectos DIFERENTES entre si do negocio (ex.: atendimento, qualidade, preco, rapidez, localizacao, tecnologia, confianca, garantia, experiencia -- adapte pro nicho, nao copie essa lista literalmente). Um aspecto por servico/diferencial, NENHUM repetido. Cada services[].description e features[].description correspondente deve refletir claramente o aspecto escolhido aqui e nao repetir a ideia central de nenhum outro item -- medido empiricamente: sem esse passo, services/features tendem a sair com a mesma ideia central repetida, mesmo em modelos grandes.",
-    "servico1": "aspecto escolhido pro Serviço 1, uma palavra ou frase curta",
-    "servico2": "aspecto DIFERENTE do servico1",
-    "servico3": "aspecto DIFERENTE de servico1 e servico2",
-    "diferencial1": "aspecto DIFERENTE de todos os anteriores",
-    "diferencial2": "aspecto DIFERENTE de todos os anteriores",
-    "diferencial3": "aspecto DIFERENTE de todos os anteriores"
   }},
   "hero": {{
     "title": "string (mínimo 10, máximo 200 caracteres) - Título principal impactante (funciona como H1: inclua a palavra-chave do nicho{' e a localização' if localizacao else ''})",
@@ -486,13 +461,6 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         for i, diferencial in enumerate(config.get("features", []) or []):
             diferencial["icon"] = _resolver_icone(diferencial.get("icon"), icones_diferenciais, i)
             icones_diferenciais.add(diferencial["icon"])
-
-        # "planejamentoServicos" é um campo de raciocínio pro modelo (evita
-        # duplicação entre services/features -- ver prompt), não faz parte
-        # do schema real e não deve vazar pro site-config.json final.
-        # Pydantic já ignora campo extra silenciosamente na validação, mas
-        # sem remover aqui ele fica salvo no arquivo servido pro cliente.
-        config.pop("planejamentoServicos", None)
 
         return config
 
