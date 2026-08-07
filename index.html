@@ -510,8 +510,15 @@
         function renderSections() {
             return config.sections.filter(s => s.enabled).map((section, idx) => {
                 const imageFirst = idx % 2 === 1;
+                // Logo repetida junto do texto só na seção "Sobre Nós" (convenção de id
+                // usada pelo agent_construtor.py) -- reforça identidade da marca sem
+                // repetir em todas as seções de conteúdo/portfólio.
+                const logoDaSecao = (section.id === 'sobre' && config.company.logo)
+                    ? `<img src="${config.company.logo}" alt="${config.company.name}" class="h-12 w-auto max-w-[190px] object-contain mb-6" onerror="this.remove()">`
+                    : '';
                 const textBlock = `
                     <div>
+                        ${logoDaSecao}
                         <span class="inline-block w-10 h-1 rounded-full mb-5" style="background-color: ${config.colors.accent}"></span>
                         <h2 class="font-display text-3xl md:text-4xl font-bold mb-4 tracking-tight" style="color: ${config.colors.text}">
                             ${section.title}
