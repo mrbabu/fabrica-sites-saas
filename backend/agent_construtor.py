@@ -390,7 +390,7 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
   "metadata": {{
     "siteTitle": "string (mínimo 5, MÁXIMO 60 caracteres) - Título SEO do site, com palavra-chave do nicho{' e localização' if localizacao else ''}",
     "siteDescription": "string (mínimo 10, MÁXIMO 160 caracteres) - Meta description focada em conversão",
-    "favicon": "emoji",
+    "favicon": "string OBRIGATÓRIO - um único emoji (1-2 caracteres) que represente visualmente o nicho \"{nicho}\" (ex.: 🏗️ pra construção civil, 🍕 pra pizzaria, ⚖️ pra advocacia) — NUNCA um emoji genérico sem relação com o negócio",
     "keywords": ["5 a 8 palavras-chave de SEO relacionadas ao nicho, cada uma uma string curta"]
   }},
   "company": {{
