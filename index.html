@@ -123,7 +123,7 @@
             document.querySelector('meta[property="og:title"]').setAttribute('content', config.metadata.ogTitle || config.metadata.siteTitle);
             document.querySelector('meta[property="og:description"]').setAttribute('content', config.metadata.ogDescription || config.metadata.siteDescription);
             document.querySelector('meta[property="og:image"]').setAttribute('content', config.metadata.ogImage || '');
-            setFavicon(config.metadata.favicon || '🚀');
+            setFavicon(config.company.logo, config.metadata.favicon || '🚀');
 
             app.innerHTML = `
                 ${renderNavigation()}
@@ -149,9 +149,18 @@
             initCountUp();
         }
 
-        function setFavicon(emoji) {
+        function setFavicon(logoUrl, emoji) {
+            const link = document.getElementById('favicon-link');
+            // Logo real do cliente tem prioridade -- emoji genérico é só fallback pra
+            // quem ainda não tem logo (onerror cobre logo quebrado/URL inválida).
+            if (logoUrl) {
+                link.setAttribute('href', logoUrl);
+                link.onerror = () => setFavicon(null, emoji);
+                return;
+            }
+            link.onerror = null;
             const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="0.9em" font-size="90">${emoji}</text></svg>`;
-            document.getElementById('favicon-link').setAttribute('href', 'data:image/svg+xml,' + encodeURIComponent(svg));
+            link.setAttribute('href', 'data:image/svg+xml,' + encodeURIComponent(svg));
         }
 
         // Pares tipográficos pré-curados — nomeados por personalidade, nunca
