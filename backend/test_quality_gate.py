@@ -20,7 +20,16 @@ from quality_gate import (
     validar_cnf02_endereco,
     validar_img04_hero_dimensao,
     validar_img05_imagens_resolvem,
+    validar_img02_hero_nao_repete,
+    validar_vis03_icones_repetidos,
+    validar_txt01_duplicacao,
+    validar_txt04_template,
     rodar_gate_relatorio,
+    rodar_gate_completo,
+    _gerar_relatorio,
+    _relatorio_para_markdown,
+    _carregar_configs,
+    ResultadoCriterio,
 )
 
 
@@ -198,6 +207,199 @@ class TestRodarGateRelatorio(unittest.TestCase):
             obter_dimensao=lambda url: (1920, 600),
         )
         self.assertEqual(config, config_original)
+
+
+class TestIMG02HeroNaoRepete(unittest.TestCase):
+    def test_hero_diferente_das_secoes_passa(self):
+        resultado = validar_img02_hero_nao_repete(_config_base())
+        self.assertTrue(resultado.passou)
+
+    def test_hero_repetida_em_secao_falha(self):
+        config = _config_base()
+        config["sections"][0]["image"] = config["hero"]["backgroundImage"]
+        resultado = validar_img02_hero_nao_repete(config)
+        self.assertFalse(resultado.passou)
+        self.assertIn("sobre", resultado.detalhe)
+
+    def test_hero_ausente_passa_nada_a_comparar(self):
+        config = _config_base()
+        config["hero"]["backgroundImage"] = ""
+        resultado = validar_img02_hero_nao_repete(config)
+        self.assertTrue(resultado.passou)
+
+
+class TestVIS03IconesRepetidos(unittest.TestCase):
+    def test_icones_unicos_por_grupo_passa(self):
+        config = _config_base()
+        config["services"] = [{"id": 1, "icon": "🔧"}, {"id": 2, "icon": "⚡"}]
+        config["features"] = [{"id": 1, "icon": "✅"}, {"id": 2, "icon": "🚀"}]
+        resultado = validar_vis03_icones_repetidos(config)
+        self.assertTrue(resultado.passou)
+
+    def test_icone_repetido_dentro_de_services_falha(self):
+        config = _config_base()
+        config["services"] = [{"id": 1, "icon": "🔧"}, {"id": 2, "icon": "🔧"}]
+        config["features"] = []
+        resultado = validar_vis03_icones_repetidos(config)
+        self.assertFalse(resultado.passou)
+
+    def test_mesmo_icone_em_services_e_features_nao_conflita(self):
+        """Grupos são deduplicados separadamente (mesma regra de agent_construtor._autocorrigir)."""
+        config = _config_base()
+        config["services"] = [{"id": 1, "icon": "🔧"}]
+        config["features"] = [{"id": 1, "icon": "🔧"}]
+        resultado = validar_vis03_icones_repetidos(config)
+        self.assertTrue(resultado.passou)
+
+
+class TestTXT01Duplicacao(unittest.TestCase):
+    def test_titulos_e_textos_unicos_passa(self):
+        config = _config_base()
+        config["services"] = [
+            {"id": 1, "title": "Instalação elétrica", "description": "Fazemos instalação completa em residências."},
+            {"id": 2, "title": "Manutenção preventiva", "description": "Revisão periódica pra evitar falhas graves."},
+        ]
+        resultado = validar_txt01_duplicacao(config)
+        self.assertTrue(resultado.passou)
+
+    def test_titulo_duplicado_entre_services_falha(self):
+        config = _config_base()
+        config["services"] = [
+            {"id": 1, "title": "Instalação elétrica", "description": "Texto A distinto o suficiente."},
+            {"id": 2, "title": "Instalação elétrica", "description": "Texto B também distinto."},
+        ]
+        resultado = validar_txt01_duplicacao(config)
+        self.assertFalse(resultado.passou)
+        self.assertIn("Título duplicado", resultado.detalhe)
+
+    def test_faq_com_perguntas_repetidas_falha(self):
+        config = _config_base()
+        config["faq"] = [
+            {"id": 1, "question": "Vocês atendem aos finais de semana?"},
+            {"id": 2, "question": "Vocês atendem aos finais de semana?"},
+        ]
+        resultado = validar_txt01_duplicacao(config)
+        self.assertFalse(resultado.passou)
+
+
+class TestTXT04Template(unittest.TestCase):
+    def test_sem_placeholder_passa(self):
+        config = _config_base()
+        config["company"] = {"name": "Auto Elétrica Silva"}
+        resultado = validar_txt04_template(config)
+        self.assertTrue(resultado.passou)
+
+    def test_placeholder_de_template_vazado_falha(self):
+        config = _config_base()
+        config["company"] = {"name": "Nome Empresa"}
+        resultado = validar_txt04_template(config)
+        self.assertFalse(resultado.passou)
+        self.assertIn("company.name", resultado.detalhe)
+
+
+def _http_head_fake_200(url):
+    return type("R", (), {"status_code": 200})()
+
+
+def _obter_dimensao_fake_1920x600(url):
+    return (1920, 600)
+
+
+class TestRodarGateCompleto(unittest.TestCase):
+    """Agregador usado pelo modo CLI -- não inclui CNF-02 (exige dado externo
+    ao site-config.json, não disponível num corpus solto)."""
+
+    def test_nao_inclui_cnf02(self):
+        relatorio = rodar_gate_completo(
+            _config_base(), http_head=_http_head_fake_200, obter_dimensao=_obter_dimensao_fake_1920x600
+        )
+        ids = {r.id for r in relatorio}
+        self.assertNotIn("CNF-02", ids)
+
+    def test_inclui_todos_os_outros_sete_criterios(self):
+        relatorio = rodar_gate_completo(
+            _config_base(), http_head=_http_head_fake_200, obter_dimensao=_obter_dimensao_fake_1920x600
+        )
+        ids = {r.id for r in relatorio}
+        self.assertEqual(ids, {"CNF-01", "IMG-02", "IMG-04", "IMG-05", "TXT-01", "TXT-04", "VIS-03"})
+
+    def test_nao_altera_o_config_recebido(self):
+        import copy
+        config = _config_base()
+        config_original = copy.deepcopy(config)
+        rodar_gate_completo(config, http_head=_http_head_fake_200, obter_dimensao=_obter_dimensao_fake_1920x600)
+        self.assertEqual(config, config_original)
+
+
+class TestGerarRelatorio(unittest.TestCase):
+    def test_agrega_severidade_e_contagem_por_criterio(self):
+        resultados_por_arquivo = {
+            "site_a.json": [
+                ResultadoCriterio("TXT-01", False, "duplicado"),
+                ResultadoCriterio("IMG-04", True),
+            ],
+            "site_b.json": [
+                ResultadoCriterio("TXT-01", False, "duplicado de novo"),
+                ResultadoCriterio("IMG-04", False, "muito pequena"),
+            ],
+        }
+        relatorio = _gerar_relatorio(resultados_por_arquivo)
+        self.assertEqual(relatorio["resumo"]["total_sites"], 2)
+        self.assertEqual(relatorio["resumo"]["total_falhas"], 3)
+        self.assertEqual(relatorio["resumo"]["por_severidade"]["P0"], 2)  # TXT-01 x2
+        self.assertEqual(relatorio["resumo"]["por_severidade"]["P2"], 1)  # IMG-04
+        self.assertEqual(relatorio["quantidade_por_criterio"]["TXT-01"], 2)
+        self.assertEqual(relatorio["quantidade_por_site"]["site_a.json"], 1)
+        self.assertEqual(relatorio["quantidade_por_site"]["site_b.json"], 2)
+
+    def test_top10_ordenado_por_ocorrencia(self):
+        resultados_por_arquivo = {
+            "a.json": [ResultadoCriterio("TXT-01", False), ResultadoCriterio("IMG-02", False)],
+            "b.json": [ResultadoCriterio("TXT-01", False)],
+        }
+        relatorio = _gerar_relatorio(resultados_por_arquivo)
+        self.assertEqual(relatorio["top10_problemas"][0]["criterio"], "TXT-01")
+        self.assertEqual(relatorio["top10_problemas"][0]["ocorrencias"], 2)
+
+    def test_relatorio_vazio_nao_lanca_excecao(self):
+        relatorio = _gerar_relatorio({})
+        self.assertEqual(relatorio["resumo"]["total_sites"], 0)
+        self.assertEqual(relatorio["resumo"]["total_falhas"], 0)
+
+
+class TestRelatorioParaMarkdown(unittest.TestCase):
+    def test_gera_markdown_com_secoes_esperadas(self):
+        resultados_por_arquivo = {"site_a.json": [ResultadoCriterio("TXT-01", False, "duplicado")]}
+        relatorio = _gerar_relatorio(resultados_por_arquivo)
+        md = _relatorio_para_markdown(relatorio)
+        self.assertIn("Top 10 problemas", md)
+        self.assertIn("TXT-01", md)
+        self.assertIn("site_a.json", md)
+
+
+class TestCarregarConfigs(unittest.TestCase):
+    def test_carrega_todos_os_json_do_diretorio(self):
+        import tempfile
+        import json as json_mod
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "site1.json").write_text(json_mod.dumps({"a": 1}), encoding="utf-8")
+            Path(tmp, "site2.json").write_text(json_mod.dumps({"b": 2}), encoding="utf-8")
+            Path(tmp, "nao_e_json.txt").write_text("ignorar", encoding="utf-8")
+
+            resultado = _carregar_configs(Path(tmp))
+            nomes = {nome for nome, _ in resultado}
+            self.assertEqual(nomes, {"site1.json", "site2.json"})
+
+    def test_json_invalido_marca_dados_none_em_vez_de_lancar(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "quebrado.json").write_text("{ isso não é json", encoding="utf-8")
+            resultado = _carregar_configs(Path(tmp))
+            self.assertEqual(resultado, [("quebrado.json", None)])
 
 
 if __name__ == "__main__":
