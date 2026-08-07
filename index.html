@@ -345,7 +345,7 @@
             // cliente pode vir em qualquer proporção (ícone quadrado OU wordmark largo) --
             // forçar um recorte circular quadrado destrói/corta wordmarks largos.
             const logo = config.company.logo
-                ? `<img src="${config.company.logo}" alt="${config.company.name}" class="h-10 w-auto max-w-[160px] object-contain" onerror="this.remove()">`
+                ? `<img src="${config.company.logo}" alt="${config.company.name}" class="h-12 w-auto max-w-[190px] object-contain" onerror="this.remove()">`
                 : `<span class="text-3xl">${config.metadata.favicon || '🚀'}</span>`;
 
             // Nav cheio (1 link por seção) quebra o layout quando há muitas seções (ex.:
@@ -424,6 +424,14 @@
                 ? waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`)
                 : config.hero.ctaLink;
 
+            // Botão "Onde Estamos" só aparece com endereço real (mesma regra de sempre —
+            // nunca fabricar link de mapa); reusa mapsHref (endereço já validado, sem
+            // depender de googleMapsUrl específico).
+            const enderecoReal = config.contact && config.contact.address;
+            const ondeEstamosHref = enderecoReal
+                ? (config.contact.googleMapsUrl || mapsHref(config.contact.address))
+                : null;
+
             const c = config.colors;
 
             return `
@@ -436,6 +444,7 @@
                         radial-gradient(100% 100% at 88% 10%, ${c.accent}b3 0%, transparent 48%),
                         linear-gradient(160deg, ${c.primaryDark}f2 25%, ${c.secondary}59 100%);"></div>
                     <div class="hero-in max-w-5xl mx-auto px-5 sm:px-6 py-24 text-center relative z-10">
+                        ${config.company.logo ? `<img src="${config.company.logo}" alt="${config.company.name}" class="h-16 sm:h-20 w-auto max-w-[280px] object-contain mx-auto mb-6 drop-shadow-lg" onerror="this.remove()">` : ''}
                         ${config.company.tagline ? `<span class="font-display italic inline-block text-base sm:text-lg text-white/85 mb-5">${config.company.tagline}</span>` : ''}
                         <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-[1.05] tracking-tight text-white drop-shadow-sm">
                             ${staggerWords(config.hero.title)}
@@ -450,6 +459,11 @@
                             <a href="#servicos" class="border border-white/40 text-white px-8 py-4 rounded-full font-semibold text-base inline-flex items-center justify-center transition hover:bg-white/10">
                                 Conhecer serviços
                             </a>
+                            ${ondeEstamosHref ? `
+                            <a href="${ondeEstamosHref}" target="_blank" rel="noopener" class="border border-white/40 text-white px-8 py-4 rounded-full font-semibold text-base inline-flex items-center justify-center gap-2 transition hover:bg-white/10">
+                                📍 Onde estamos
+                            </a>
+                            ` : ''}
                         </div>
                         <div class="flex justify-center">${renderTrustStrip()}</div>
                     </div>
