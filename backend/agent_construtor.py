@@ -475,26 +475,26 @@ Schema obrigatório (respeite ESTRITAMENTE os limites de caracteres indicados en
   "faq": [
     {{
       "id": 1,
-      "question": "string (mínimo 10, máximo 150 caracteres) - Pergunta frequente realista do nicho \"{nicho}\"",
-      "answer": "string (mínimo 10, máximo 400 caracteres) - Resposta persuasiva e curta",
+      "question": "string (mínimo 10, máximo 150 caracteres) - Pergunta REAL que um cliente faria antes de contratar (prazo, orçamento, atendimento, diferencial) — NUNCA \"O que é [nicho]?\" nem outra pergunta de definição de dicionário",
+      "answer": "string (mínimo 10, máximo 400 caracteres) - Resposta consultiva e persuasiva, focada em benefício pro cliente. PROIBIDO o formato \"X é um processo de X\" ou qualquer definição de dicionário — responda como a empresa responderia de verdade, não como uma enciclopédia",
       "enabled": true
     }},
     {{
       "id": 2,
-      "question": "string (mínimo 10, máximo 150 caracteres)",
-      "answer": "string (mínimo 10, máximo 400 caracteres)",
+      "question": "string (mínimo 10, máximo 150 caracteres) - mesma regra do item 1: pergunta real de cliente, nunca definição",
+      "answer": "string (mínimo 10, máximo 400 caracteres) - mesma regra do item 1: consultiva e persuasiva, nunca definição de dicionário",
       "enabled": true
     }},
     {{
       "id": 3,
-      "question": "string (mínimo 10, máximo 150 caracteres)",
-      "answer": "string (mínimo 10, máximo 400 caracteres)",
+      "question": "string (mínimo 10, máximo 150 caracteres) - mesma regra do item 1: pergunta real de cliente, nunca definição",
+      "answer": "string (mínimo 10, máximo 400 caracteres) - mesma regra do item 1: consultiva e persuasiva, nunca definição de dicionário",
       "enabled": true
     }},
     {{
       "id": 4,
-      "question": "string (mínimo 10, máximo 150 caracteres)",
-      "answer": "string (mínimo 10, máximo 400 caracteres)",
+      "question": "string (mínimo 10, máximo 150 caracteres) - mesma regra do item 1: pergunta real de cliente, nunca definição",
+      "answer": "string (mínimo 10, máximo 400 caracteres) - mesma regra do item 1: consultiva e persuasiva, nunca definição de dicionário",
       "enabled": true
     }}
   ],
