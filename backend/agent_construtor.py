@@ -5,6 +5,7 @@ Gera site-config.json completo a partir de dados de onboarding do cliente,
 usando o AIProvider modular (NVIDIA NIM -> Anthropic -> Ollama)
 """
 
+import copy
 import json
 import sys
 import os
@@ -74,6 +75,75 @@ def _resolver_icone(icon: Optional[str], usados: set, indice: int) -> str:
         if fallback not in usados:
             return fallback
     return ICONES_FALLBACK[indice % len(ICONES_FALLBACK)]
+
+
+# ============================================================================
+# Repair Prompt localizado (RFC aprovada 2026-08-06, ver memória de projeto
+# -- "planner em duas chamadas" rejeitado por ser mudança de arquitetura;
+# esta é a alternativa menor aprovada: quando a ÚNICA falha é TXT-01
+# (duplicação de título/texto), reescreve só o campo apontado pelo erro em
+# vez de descartar a geração inteira. Escopo aprovado: no máximo 1 chamada
+# de reparo por tentativa, sem loop -- se falhar, cai pro retry normal.
+# ============================================================================
+
+_REGEX_CAMPO_DUPLICADO = re.compile(r"duplicado entre (\S+) e (\S+) \(")
+_REGEX_IDENTIFICADOR = re.compile(r"^(\w+)\[([^\]]+)\]\.(\w+)$")
+_TIPOS_REPARAVEIS = ("services", "features", "sections", "faq")
+
+
+def _parsear_identificador(identificador: str) -> Optional[tuple]:
+    """'services[2].description' -> ('services', '2', 'description'), ou None se não bater o formato/tipo esperado."""
+    m = _REGEX_IDENTIFICADOR.match(identificador)
+    if not m:
+        return None
+    tipo, id_str, campo = m.groups()
+    if tipo not in _TIPOS_REPARAVEIS:
+        return None
+    return (tipo, id_str, campo)
+
+
+def _extrair_identificadores_duplicados(erro: Optional[str]) -> Optional[tuple]:
+    """
+    Extrai os dois identificadores (tipo, id, campo) de uma mensagem de
+    TXT-01 (schema_validator._primeira_duplicata, formato "X duplicado
+    entre A e B (similaridade N)"). None se a mensagem não for desse
+    formato -- o Repair Prompt só cobre TXT-01, por decisão de escopo da
+    RFC: TXT-04/FAQ-curto/etc. continuam só no retry normal.
+    """
+    if not erro:
+        return None
+    m = _REGEX_CAMPO_DUPLICADO.search(erro)
+    if not m:
+        return None
+    primeiro = _parsear_identificador(m.group(1))
+    segundo = _parsear_identificador(m.group(2))
+    if not primeiro or not segundo:
+        return None
+    return (primeiro, segundo)
+
+
+def _localizar_item(config: dict, tipo: str, id_str: str) -> Optional[dict]:
+    """Encontra o dict do item em config[tipo] cujo id bate com id_str (comparação por string -- sections usa id textual, services/features usam int)."""
+    for item in config.get(tipo, []) or []:
+        if str(item.get("id")) == id_str:
+            return item
+    return None
+
+
+def _montar_prompt_reparo(campo: str, texto_atual: str, texto_conflitante: str, nicho: str) -> str:
+    piso = max(10, len(texto_atual) - 30)
+    teto = len(texto_atual) + 30
+    return f"""Reescreva o texto abaixo para um negócio do nicho "{nicho}", sem repetir a ideia central deste outro texto que já existe em outro lugar do mesmo site:
+
+Texto já usado em outro lugar (NÃO repita esta ideia central): "{texto_conflitante}"
+
+Texto a reescrever ({campo}): "{texto_atual}"
+
+Regras:
+- Mantenha o mesmo tom e o mesmo campo/contexto
+- Tamanho entre {piso} e {teto} caracteres
+- Foque em um ângulo/aspecto DIFERENTE do negócio do que o texto já usado
+- Retorne APENAS um JSON no formato {{"texto": "novo texto aqui"}}, sem markdown, sem explicação"""
 
 
 class AgenteConstrutor:
@@ -408,12 +478,21 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
             # Validação completa (tipos, tamanhos, regras de negócio)
             valido, erro, _ = ValidadorSchema.validar_json(config)
 
+            reparado = False
+            if not valido:
+                config_reparado = self._tentar_reparo_duplicacao(config, erro, nicho)
+                if config_reparado is not None:
+                    valido_reparo, erro_reparo, _ = ValidadorSchema.validar_json(config_reparado)
+                    if valido_reparo:
+                        config, valido, erro, reparado = config_reparado, True, None, True
+
             if diagnostico_tentativas is not None:
                 diagnostico_tentativas.append({
                     "tentativa": tentativa,
                     "provedor": self.ai.provedor_ativo,
                     "sucesso": valido,
                     "erro": None if valido else erro,
+                    "reparado": reparado,
                     "tempo_segundos": time.time() - tempo_inicio_tentativa,
                     "tokens": getattr(self.ai, "uso_tokens_ativo", None),
                 })
@@ -425,6 +504,51 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
             print(f"⚠️  Validação de conteúdo falhou na tentativa {tentativa}/{MAX_TENTATIVAS_GERACAO}: {erro}")
 
         raise ValueError(f"Schema inválido após {MAX_TENTATIVAS_GERACAO} tentativas: {ultimo_erro}")
+
+    def _tentar_reparo_duplicacao(self, config: dict, erro: Optional[str], nicho: str) -> Optional[dict]:
+        """
+        Repair Prompt localizado (RFC aprovada 2026-08-06): se `erro` for
+        especificamente uma duplicação TXT-01, tenta reescrever só o campo
+        duplicado (o segundo dos dois identificadores na mensagem) com uma
+        chamada pequena e barata, em vez de descartar a geração inteira.
+
+        No máximo 1 chamada, sem loop: qualquer falha (mensagem não
+        reconhecida, item não encontrado, exceção na chamada de IA, resposta
+        sem o campo esperado) retorna None -- quem chama simplesmente segue
+        pro retry normal (regenera tudo), nunca tenta reparo de novo pra
+        essa mesma falha.
+        """
+        identificadores = _extrair_identificadores_duplicados(erro)
+        if not identificadores:
+            return None
+        (tipo_a, id_a, campo_a), (tipo_b, id_b, campo_b) = identificadores
+
+        item_a = _localizar_item(config, tipo_a, id_a)
+        item_b = _localizar_item(config, tipo_b, id_b)
+        if item_a is None or item_b is None:
+            return None
+
+        texto_atual = item_b.get(campo_b)
+        if not isinstance(texto_atual, str) or not texto_atual.strip():
+            return None
+        texto_conflitante = item_a.get(campo_a)
+        if not isinstance(texto_conflitante, str):
+            texto_conflitante = ""
+
+        prompt_reparo = _montar_prompt_reparo(campo_b, texto_atual, texto_conflitante, nicho)
+
+        try:
+            resposta = self.ai.gerar_json(prompt_reparo, max_tokens=300)
+            novo_texto = (resposta or {}).get("texto")
+        except Exception:
+            return None
+
+        if not isinstance(novo_texto, str) or not novo_texto.strip():
+            return None
+
+        config_reparado = copy.deepcopy(config)
+        _localizar_item(config_reparado, tipo_b, id_b)[campo_b] = novo_texto.strip()
+        return config_reparado
 
     def _autocorrigir(self, config: dict) -> dict:
         """
