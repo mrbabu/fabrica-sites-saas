@@ -177,6 +177,26 @@
             .magnetic { transition: none !important; }
             html { scroll-behavior: auto; }
         }
+
+        /* Lightbox do portfólio -- experimento: em vez de trocar o grid por
+           carrossel, o grid fica como está (aprovado) e ao clicar numa foto
+           abre um visualizador com transição de slide entre as fotos, tudo
+           via CSS transition (opacity+translateX), sem lib de animação. */
+        .lightbox { position: fixed; inset: 0; z-index: 100; background: rgba(5, 13, 26, 0.94); display: none; align-items: center; justify-content: center; padding: 24px; }
+        .lightbox.open { display: flex; }
+        .lightbox-img-wrap { max-width: 90vw; max-height: 82vh; text-align: center; }
+        .lightbox-img { max-width: 90vw; max-height: 72vh; display: block; margin: 0 auto; border-radius: 8px; box-shadow: 0 30px 80px rgba(0,0,0,0.5); transition: opacity 0.22s ease, transform 0.22s ease; opacity: 1; transform: translateX(0); }
+        .lightbox-img--out-next { opacity: 0; transform: translateX(-28px); }
+        .lightbox-img--out-prev { opacity: 0; transform: translateX(28px); }
+        .lightbox-img--in-next { opacity: 0 !important; transform: translateX(28px) !important; transition: none !important; }
+        .lightbox-img--in-prev { opacity: 0 !important; transform: translateX(-28px) !important; transition: none !important; }
+        .lightbox-caption { color: rgba(255,255,255,0.85); margin-top: 16px; font-size: 0.95rem; }
+        .lightbox-btn { position: absolute; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.25); color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease; }
+        .lightbox-btn:hover { background: var(--color-primary); border-color: var(--color-primary); }
+        .lightbox-close { top: 20px; right: 20px; }
+        .lightbox-nav--prev { left: 20px; top: 50%; transform: translateY(-50%); }
+        .lightbox-nav--next { right: 20px; top: 50%; transform: translateY(-50%); }
+        .portfolio-card { cursor: pointer; }
     </style>
 </head>
 <body class="text-gray-900 bg-white antialiased">
@@ -232,6 +252,7 @@
                 </main>
                 ${renderFooter()}
                 ${renderWhatsAppButton()}
+                ${renderLightbox()}
             `;
 
             applyThemeColors();
@@ -239,6 +260,7 @@
             setupNavBehavior();
             initScrollReveal();
             initPortfolioNavActive();
+            initLightbox();
             initWhatsAppLabel();
             initParallax();
             initMagnetic();
@@ -384,6 +406,76 @@
             io.observe(section);
         }
 
+        // Lightbox do portfólio: clique num card abre o visualizador; "passar"
+        // pra próxima/anterior troca a foto com uma transição de slide em CSS
+        // puro (opacity+translateX) -- sem lib de animação, sem novo dado no
+        // JSON, grid do portfólio continua exatamente como está.
+        function initLightbox() {
+            const itens = (config.sections || []).filter(s => s.enabled && s.id.startsWith('portfolio-') && s.image);
+            const box = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            const caption = document.getElementById('lightbox-caption');
+            if (itens.length === 0 || !box || !img) return;
+
+            let index = 0;
+            let transitioning = false;
+
+            function renderSlide() {
+                const item = itens[index];
+                img.src = item.image;
+                img.alt = item.title;
+                const tituloLimpo = item.title.replace(/^Portf[oó]lio:\s*/i, '');
+                caption.textContent = item.subtitle ? `${tituloLimpo} — ${item.subtitle}` : tituloLimpo;
+            }
+
+            function goTo(newIndex, direction) {
+                if (transitioning || prefersReducedMotion()) {
+                    index = newIndex;
+                    renderSlide();
+                    return;
+                }
+                transitioning = true;
+                img.classList.add(direction === 'next' ? 'lightbox-img--out-next' : 'lightbox-img--out-prev');
+                setTimeout(() => {
+                    index = newIndex;
+                    renderSlide();
+                    img.classList.remove('lightbox-img--out-next', 'lightbox-img--out-prev');
+                    img.classList.add(direction === 'next' ? 'lightbox-img--in-next' : 'lightbox-img--in-prev');
+                    requestAnimationFrame(() => requestAnimationFrame(() => {
+                        img.classList.remove('lightbox-img--in-next', 'lightbox-img--in-prev');
+                        transitioning = false;
+                    }));
+                }, 220);
+            }
+
+            function open(i) {
+                index = i;
+                renderSlide();
+                box.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            }
+            function close() {
+                box.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+            function next() { goTo((index + 1) % itens.length, 'next'); }
+            function prev() { goTo((index - 1 + itens.length) % itens.length, 'prev'); }
+
+            document.querySelectorAll('.portfolio-card').forEach(card => {
+                card.addEventListener('click', () => open(Number(card.dataset.portfolioIndex) || 0));
+            });
+            document.getElementById('lightbox-close').addEventListener('click', close);
+            document.getElementById('lightbox-next').addEventListener('click', next);
+            document.getElementById('lightbox-prev').addEventListener('click', prev);
+            box.addEventListener('click', (e) => { if (e.target === box) close(); });
+            document.addEventListener('keydown', (e) => {
+                if (!box.classList.contains('open')) return;
+                if (e.key === 'Escape') close();
+                if (e.key === 'ArrowRight') next();
+                if (e.key === 'ArrowLeft') prev();
+            });
+        }
+
         function initWhatsAppLabel() {
             const label = document.getElementById('wa-label');
             if (!label || prefersReducedMotion()) return;
@@ -466,6 +558,20 @@
         }
 
         const WHATSAPP_ICON = `<svg viewBox="0 0 32 32" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M16.02 3C9.4 3 4 8.38 4 15c0 2.34.64 4.53 1.76 6.42L4 29l7.76-1.7A11.9 11.9 0 0 0 16.02 27C22.64 27 28 21.62 28 15S22.64 3 16.02 3Zm6.98 16.9c-.3.85-1.72 1.63-2.38 1.72-.61.09-1.36.13-2.2-.14-.5-.16-1.15-.37-1.98-.73-3.5-1.51-5.78-5.05-5.96-5.29-.17-.24-1.43-1.9-1.43-3.62s.9-2.57 1.22-2.92c.32-.35.7-.44.93-.44.23 0 .47 0 .67.01.22.01.51-.08.79.6.3.72 1.02 2.49 1.11 2.67.09.18.15.39.03.63-.12.24-.18.39-.36.6-.18.21-.38.47-.54.63-.18.18-.37.37-.16.73.21.36.94 1.55 2.02 2.51 1.39 1.24 2.56 1.62 2.92 1.8.36.18.57.15.78-.09.21-.24.9-1.05 1.14-1.41.24-.36.48-.3.81-.18.33.12 2.1.99 2.46 1.17.36.18.6.27.69.42.09.15.09.85-.21 1.7Z"/></svg>`;
+
+        function renderLightbox() {
+            return `
+                <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Visualizador de projetos">
+                    <button id="lightbox-close" class="lightbox-btn lightbox-close" aria-label="Fechar">✕</button>
+                    <button id="lightbox-prev" class="lightbox-btn lightbox-nav lightbox-nav--prev" aria-label="Projeto anterior">‹</button>
+                    <div class="lightbox-img-wrap">
+                        <img id="lightbox-img" class="lightbox-img" src="" alt="">
+                        <div id="lightbox-caption" class="lightbox-caption"></div>
+                    </div>
+                    <button id="lightbox-next" class="lightbox-btn lightbox-nav lightbox-nav--next" aria-label="Próximo projeto">›</button>
+                </div>
+            `;
+        }
 
         function renderWhatsAppButton() {
             const wa = config.contact && config.contact.whatsapp;
@@ -748,9 +854,9 @@
                                 Projetos que já entregamos
                             </h2>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                        <div class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
                             ${itens.map((item, i) => `
-                                <div id="${item.id}" class="reveal" style="transition-delay: ${i * 80}ms; scroll-margin-top: 100px;">
+                                <div id="${item.id}" class="reveal portfolio-card snap-start shrink-0 w-[85%] sm:w-[360px]" data-portfolio-index="${i}" style="transition-delay: ${i * 80}ms; scroll-margin-top: 100px;">
                                     <div class="reveal-loop img-frame w-full h-64" style="transition-delay: ${i * 80}ms;">
                                         <img src="${item.image}" alt="${item.title}" loading="lazy" class="img-frame-photo w-full object-cover" style="border-radius: ${R('1rem')}" onerror="this.closest('.img-frame').remove()">
                                         <span class="img-frame-corner img-frame-corner--tl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
@@ -791,9 +897,9 @@
                                 Por que escolher a gente
                             </h2>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
                             ${enabledFeatures.map((feature, i) => `
-                                <div class="reveal glow-primary-hover feature-card p-8 transition" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
+                                <div class="reveal glow-primary-hover feature-card snap-start shrink-0 w-[85%] sm:w-[360px] p-8 transition" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
                                     <span class="feature-number font-display font-extrabold block mb-4" aria-hidden="true" style="font-size: 2.75rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
                                     <span class="block w-10 h-px mb-5" style="background-color: ${config.colors.accent}"></span>
                                     <div class="flex items-center gap-3 mb-2">
