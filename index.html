@@ -219,14 +219,17 @@
 
             app.innerHTML = `
                 ${renderNavigation()}
-                ${renderHero()}
-                ${renderTicker()}
-                ${renderSections()}
-                ${renderFeatures()}
-                ${renderServices()}
-                ${renderTestimonials()}
-                ${renderFAQ()}
-                ${renderCTA()}
+                <main>
+                    ${renderHero()}
+                    ${renderTicker()}
+                    ${renderSections()}
+                    ${renderPortfolio()}
+                    ${renderFeatures()}
+                    ${renderServices()}
+                    ${renderTestimonials()}
+                    ${renderFAQ()}
+                    ${renderCTA()}
+                </main>
                 ${renderFooter()}
                 ${renderWhatsAppButton()}
             `;
@@ -438,9 +441,9 @@
             if (!wa) return '';
             const link = waLink(wa, `Olá! Vim pelo site da ${config.company.name} e gostaria de mais informações.`);
             return `
-                <a href="${link}" target="_blank" rel="noopener" aria-label="Falar no WhatsApp"
-                   class="whatsapp-pulse fixed right-5 z-50 flex items-center gap-2 text-white pl-4 pr-5 py-3.5 shadow-xl transition transform hover:scale-105"
-                   style="background-color: ${config.colors.accent}; border-radius: ${shapeSharp ? '2px' : '20px 20px 4px 20px'}; bottom: calc(1.25rem + env(safe-area-inset-bottom));">
+                <a href="${link}" target="_blank" rel="noopener" aria-label="Fale agora no WhatsApp"
+                   class="whatsapp-pulse fixed right-5 z-50 flex items-center gap-2 pl-4 pr-5 py-3.5 shadow-xl transition transform hover:scale-105"
+                   style="background-color: ${config.colors.accent}; color: ${config.colors.text}; border-radius: ${shapeSharp ? '2px' : '20px 20px 4px 20px'}; bottom: calc(1.25rem + env(safe-area-inset-bottom));">
                     ${WHATSAPP_ICON}
                     <span id="wa-label" class="wa-label-fade hidden sm:inline font-display font-bold uppercase tracking-wide text-xs">Fale agora</span>
                 </a>
@@ -632,7 +635,9 @@
         }
 
         function renderSections() {
-            return config.sections.filter(s => s.enabled).map((section, idx) => {
+            // Itens "portfolio-*" saem daqui e viram a seção unificada renderPortfolio()
+            // logo abaixo -- ver conversa sobre unificar o portfolio numa galeria só.
+            return config.sections.filter(s => s.enabled && !s.id.startsWith('portfolio-')).map((section, idx) => {
                 const imageFirst = idx % 2 === 1;
                 const hasImage = !!section.image;
                 // Ritmo visual (LAY-07 da DoPS): sem isso, uma sequência longa de
@@ -703,6 +708,44 @@
             }).join('');
         }
 
+        // Galeria unificada do portfólio -- antes cada foto virava uma seção cheia
+        // própria (alternando com o resto do conteúdo); agora todas as fotos reais
+        // do cliente ficam juntas numa única seção "destacada", em grid. Reusa
+        // exatamente o mesmo .img-frame (foco+cantos blueprint) das fotos de
+        // conteúdo -- a "qualidade dos destaques" não muda, só o layout ao redor.
+        function renderPortfolio() {
+            const itens = config.sections.filter(s => s.enabled && s.id.startsWith('portfolio-') && s.image);
+            if (itens.length === 0) return '';
+
+            return `
+                <section id="portfolio" class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+                        <div class="reveal text-center max-w-2xl mx-auto mb-14">
+                            ${sectionEyebrow('Portfólio')}
+                            <h2 class="font-display text-3xl md:text-4xl font-bold mb-4 tracking-tight" style="color: ${config.colors.text}">
+                                Projetos que já entregamos
+                            </h2>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                            ${itens.map((item, i) => `
+                                <div id="${item.id}" class="reveal" style="transition-delay: ${i * 80}ms; scroll-margin-top: 100px;">
+                                    <div class="img-frame w-full h-64">
+                                        <img src="${item.image}" alt="${item.title}" loading="lazy" class="img-frame-photo w-full object-cover" style="border-radius: ${R('1rem')}" onerror="this.closest('.img-frame').remove()">
+                                        <span class="img-frame-corner img-frame-corner--tl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                                        <span class="img-frame-corner img-frame-corner--tr" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                                        <span class="img-frame-corner img-frame-corner--bl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                                        <span class="img-frame-corner img-frame-corner--br" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                                    </div>
+                                    <h3 class="text-base font-bold mt-4 mb-1" style="color: ${config.colors.text}">${item.title.replace(/^Portf[oó]lio:\s*/i, '')}</h3>
+                                    <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">${item.subtitle}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
         function sectionEyebrow(text) {
             return `
                 <div class="flex items-center justify-center gap-3 mb-4">
@@ -729,7 +772,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             ${enabledFeatures.map((feature, i) => `
                                 <div class="reveal glow-primary-hover feature-card p-8 transition" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
-                                    <span class="feature-number font-display font-extrabold block mb-4" style="font-size: 2.75rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
+                                    <span class="feature-number font-display font-extrabold block mb-4" aria-hidden="true" style="font-size: 2.75rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
                                     <span class="block w-10 h-px mb-5" style="background-color: ${config.colors.accent}"></span>
                                     <div class="flex items-center gap-3 mb-2">
                                         <span class="text-xl">${feature.icon}</span>
@@ -766,7 +809,7 @@
                                 <div class="reveal glow-primary-hover service-card snap-start shrink-0 w-[85%] sm:w-[360px] bg-white p-8 shadow-sm transition duration-300" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
                                     <div class="flex items-center justify-between mb-5">
                                         <div class="service-icon w-14 h-14 flex items-center justify-center text-2xl text-white" style="background: linear-gradient(135deg, ${config.colors.primary}, ${config.colors.primaryDark}); border-radius: ${R('0.75rem')}">${service.icon}</div>
-                                        <span class="service-number font-display font-bold text-sm tracking-widest" style="color: ${config.colors.border}">${String(i + 1).padStart(2, '0')} —</span>
+                                        <span class="service-number font-display font-bold text-sm tracking-widest" aria-hidden="true" style="color: ${config.colors.border}">${String(i + 1).padStart(2, '0')} —</span>
                                     </div>
                                     <h3 class="text-xl font-bold mb-3" style="color: ${config.colors.text}">
                                         ${service.title}
@@ -887,11 +930,11 @@
                     <div class="max-w-6xl mx-auto px-5 sm:px-6 py-16">
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
                             <div>
-                                <h4 class="font-display font-bold text-white mb-4 text-lg">${config.company.name}</h4>
+                                <h3 class="font-display font-bold text-white mb-4 text-lg">${config.company.name}</h3>
                                 <p class="text-gray-400 text-sm leading-relaxed">${config.footer.description}</p>
                             </div>
                             <div>
-                                <h4 class="font-bold text-white mb-4 text-base">Links</h4>
+                                <h3 class="font-bold text-white mb-4 text-base">Links</h3>
                                 <ul class="space-y-2.5 text-gray-400 text-sm">
                                     ${config.footer.links.map(link => `
                                         <li><a href="${link.url}" class="hover:text-white transition">${link.label}</a></li>
@@ -899,7 +942,7 @@
                                 </ul>
                             </div>
                             <div>
-                                <h4 class="font-bold text-white mb-4 text-base">Contato</h4>
+                                <h3 class="font-bold text-white mb-4 text-base">Contato</h3>
                                 <ul class="space-y-2.5 text-gray-400 text-sm">
                                     ${config.contact.whatsapp ? `<li><a href="${waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name}.`)}" target="_blank" rel="noopener" class="hover:text-white transition">📱 WhatsApp</a></li>` : ''}
                                     ${config.contact.email ? `<li><a href="mailto:${config.contact.email}" class="hover:text-white transition">✉️ ${config.contact.email}</a></li>` : ''}
@@ -908,7 +951,7 @@
                                 </ul>
                             </div>
                             <div>
-                                <h4 class="font-bold text-white mb-4 text-base">Redes sociais</h4>
+                                <h3 class="font-bold text-white mb-4 text-base">Redes sociais</h3>
                                 <div class="flex gap-3">
                                     ${config.contact.social.instagram ? `<a href="${config.contact.social.instagram}" class="text-gray-400 hover:text-white transition text-xl" aria-label="Instagram">📸</a>` : ''}
                                     ${config.contact.social.facebook ? `<a href="${config.contact.social.facebook}" class="text-gray-400 hover:text-white transition text-xl" aria-label="Facebook">👍</a>` : ''}
@@ -927,7 +970,7 @@
                                     title="Localização de ${config.company.name}"></iframe>
                             </a>
                         </div>` : ''}
-                        <div class="border-t border-gray-800 pt-8 text-center text-gray-500 text-sm">
+                        <div class="border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
                             <p>${config.footer.copyrightText}</p>
                             <p class="mt-2">Criado com ❤️ por Fábrica de Sites SaaS</p>
                         </div>
