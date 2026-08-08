@@ -119,6 +119,19 @@
         .nav-link::after { content: ''; position: absolute; left: 0; bottom: -4px; width: 0; height: 2px; background-color: var(--color-primary); transition: width 0.25s ease; }
         .nav-link:hover::after, .nav-link.active::after { width: 100%; }
 
+        /* Setas dos carrosséis (Serviços/Diferenciais/Portfólio) -- sem elas,
+           quem usa mouse (não touch/trackpad) não tem affordance nenhuma pra
+           saber que dá pra rolar além dos primeiros cards visíveis (a barra
+           de rolagem nativa está escondida via .no-scrollbar). Escondidas no
+           mobile: touch/swipe já funciona nativamente lá. */
+        .carousel-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 10; width: 44px; height: 44px; border-radius: 50%; background: white; border: 1px solid var(--color-border, #e5e7eb); color: var(--color-primary); display: none; align-items: center; justify-content: center; font-size: 1.3rem; line-height: 1; cursor: pointer; box-shadow: 0 8px 20px -8px rgba(0,0,0,0.25); transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
+        .carousel-arrow:hover { background: var(--color-primary); color: white; box-shadow: 0 12px 28px -8px color-mix(in srgb, var(--color-primary, #000) 45%, transparent); }
+        .carousel-arrow--prev { left: -6px; }
+        .carousel-arrow--next { right: -6px; }
+        @media (min-width: 640px) {
+            .carousel-arrow { display: flex; }
+        }
+
         a:focus-visible, button:focus-visible, summary:focus-visible {
             outline: 2px solid currentColor; outline-offset: 3px; border-radius: 4px;
         }
@@ -261,6 +274,7 @@
             initScrollReveal();
             initPortfolioNavActive();
             initLightbox();
+            initCarouselArrows();
             initWhatsAppLabel();
             initParallax();
             initMagnetic();
@@ -473,6 +487,23 @@
                 if (e.key === 'Escape') close();
                 if (e.key === 'ArrowRight') next();
                 if (e.key === 'ArrowLeft') prev();
+            });
+        }
+
+        // Setas dos carrosséis -- genérico, funciona pra qualquer
+        // .carousel-arrow com data-carousel-target apontando pro id do
+        // container com overflow-x-auto. Um listener de click por seta,
+        // nenhum listener de scroll novo.
+        function initCarouselArrows() {
+            document.querySelectorAll('.carousel-arrow').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const row = document.getElementById(btn.dataset.carouselTarget);
+                    if (!row) return;
+                    const card = row.querySelector(':scope > *');
+                    const step = card ? card.getBoundingClientRect().width + 24 : row.clientWidth * 0.85;
+                    const dir = btn.dataset.carouselDir === 'prev' ? -1 : 1;
+                    row.scrollBy({ left: dir * step, behavior: 'smooth' });
+                });
             });
         }
 
@@ -854,23 +885,36 @@
                                 Projetos que já entregamos
                             </h2>
                         </div>
-                        <div class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
-                            ${itens.map((item, i) => `
-                                <div id="${item.id}" class="reveal portfolio-card snap-start shrink-0 w-[85%] sm:w-[360px]" data-portfolio-index="${i}" style="transition-delay: ${i * 80}ms; scroll-margin-top: 100px;">
-                                    <div class="reveal-loop img-frame w-full h-64" style="transition-delay: ${i * 80}ms;">
-                                        <img src="${item.image}" alt="${item.title}" loading="lazy" class="img-frame-photo w-full object-cover" style="border-radius: ${R('1rem')}" onerror="this.closest('.img-frame').remove()">
-                                        <span class="img-frame-corner img-frame-corner--tl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
-                                        <span class="img-frame-corner img-frame-corner--tr" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
-                                        <span class="img-frame-corner img-frame-corner--bl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
-                                        <span class="img-frame-corner img-frame-corner--br" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                        <div class="relative">
+                            <div id="portfolio-row" class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
+                                ${itens.map((item, i) => `
+                                    <div id="${item.id}" class="reveal portfolio-card snap-start shrink-0 w-[85%] sm:w-[360px]" data-portfolio-index="${i}" style="transition-delay: ${i * 80}ms; scroll-margin-top: 100px;">
+                                        <div class="reveal-loop img-frame w-full h-64" style="transition-delay: ${i * 80}ms;">
+                                            <img src="${item.image}" alt="${item.title}" loading="lazy" class="img-frame-photo w-full object-cover" style="border-radius: ${R('1rem')}" onerror="this.closest('.img-frame').remove()">
+                                            <span class="img-frame-corner img-frame-corner--tl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                                            <span class="img-frame-corner img-frame-corner--tr" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                                            <span class="img-frame-corner img-frame-corner--bl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                                            <span class="img-frame-corner img-frame-corner--br" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                                        </div>
+                                        <h3 class="text-base font-bold mt-4 mb-1" style="color: ${config.colors.text}">${item.title.replace(/^Portf[oó]lio:\s*/i, '')}</h3>
+                                        <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">${item.subtitle}</p>
                                     </div>
-                                    <h3 class="text-base font-bold mt-4 mb-1" style="color: ${config.colors.text}">${item.title.replace(/^Portf[oó]lio:\s*/i, '')}</h3>
-                                    <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">${item.subtitle}</p>
-                                </div>
-                            `).join('')}
+                                `).join('')}
+                            </div>
+                            ${renderCarouselArrows('portfolio-row')}
                         </div>
                     </div>
                 </section>
+            `;
+        }
+
+        // Botões de seta reutilizáveis para qualquer carrossel horizontal
+        // (Serviços/Diferenciais/Portfólio) -- rowId precisa bater com o id
+        // do elemento com overflow-x-auto que a seta vai controlar.
+        function renderCarouselArrows(rowId) {
+            return `
+                <button type="button" class="carousel-arrow carousel-arrow--prev" data-carousel-target="${rowId}" data-carousel-dir="prev" aria-label="Item anterior">‹</button>
+                <button type="button" class="carousel-arrow carousel-arrow--next" data-carousel-target="${rowId}" data-carousel-dir="next" aria-label="Próximo item">›</button>
             `;
         }
 
@@ -897,22 +941,25 @@
                                 Por que escolher a gente
                             </h2>
                         </div>
-                        <div class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
-                            ${enabledFeatures.map((feature, i) => `
-                                <div class="reveal glow-primary-hover feature-card snap-start shrink-0 w-[85%] sm:w-[360px] p-8 transition" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
-                                    <span class="feature-number font-display font-extrabold block mb-4" aria-hidden="true" style="font-size: 2.75rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
-                                    <span class="block w-10 h-px mb-5" style="background-color: ${config.colors.accent}"></span>
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <span class="text-xl">${feature.icon}</span>
-                                        <h3 class="text-lg font-bold" style="color: ${config.colors.text}">
-                                            ${feature.title}
-                                        </h3>
+                        <div class="relative">
+                            <div id="diferenciais-row" class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
+                                ${enabledFeatures.map((feature, i) => `
+                                    <div class="reveal glow-primary-hover feature-card snap-start shrink-0 w-[85%] sm:w-[360px] p-8 transition" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
+                                        <span class="feature-number font-display font-extrabold block mb-4" aria-hidden="true" style="font-size: 2.75rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
+                                        <span class="block w-10 h-px mb-5" style="background-color: ${config.colors.accent}"></span>
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <span class="text-xl">${feature.icon}</span>
+                                            <h3 class="text-lg font-bold" style="color: ${config.colors.text}">
+                                                ${feature.title}
+                                            </h3>
+                                        </div>
+                                        <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">
+                                            ${feature.description}
+                                        </p>
                                     </div>
-                                    <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">
-                                        ${feature.description}
-                                    </p>
-                                </div>
-                            `).join('')}
+                                `).join('')}
+                            </div>
+                            ${renderCarouselArrows('diferenciais-row')}
                         </div>
                     </div>
                 </section>
@@ -932,7 +979,8 @@
                                 Soluções pensadas para você
                             </h2>
                         </div>
-                        <div class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
+                        <div class="relative">
+                            <div id="servicos-row" class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
                             ${enabledServices.map((service, i) => `
                                 <div class="reveal glow-primary-hover service-card snap-start shrink-0 w-[85%] sm:w-[360px] bg-white p-8 shadow-sm transition duration-300" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
                                     <div class="flex items-center justify-between mb-5">
@@ -954,6 +1002,8 @@
                                     </ul>
                                 </div>
                             `).join('')}
+                            </div>
+                            ${renderCarouselArrows('servicos-row')}
                         </div>
                     </div>
                 </section>
