@@ -729,7 +729,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
                             ${itens.map((item, i) => `
                                 <div id="${item.id}" class="reveal" style="transition-delay: ${i * 80}ms; scroll-margin-top: 100px;">
-                                    <div class="img-frame w-full h-64">
+                                    <div class="reveal img-frame w-full h-64" style="transition-delay: ${i * 80}ms;">
                                         <img src="${item.image}" alt="${item.title}" loading="lazy" class="img-frame-photo w-full object-cover" style="border-radius: ${R('1rem')}" onerror="this.closest('.img-frame').remove()">
                                         <span class="img-frame-corner img-frame-corner--tl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
                                         <span class="img-frame-corner img-frame-corner--tr" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
