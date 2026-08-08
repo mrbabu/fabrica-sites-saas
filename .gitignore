@@ -90,6 +90,12 @@ assets/logos/*
 assets/portfolio/*
 !assets/portfolio/.gitkeep
 
+# Imagens de hero conceituais/geradas por cliente (mesmo racional acima --
+# separado de assets/portfolio/ de propósito: aqui NÃO são fotos reais de
+# obra, são composições geradas para o hero, nunca confundir as duas pastas)
+assets/hero/*
+!assets/hero/.gitkeep
+
 # Leads reais da Fase 2 (dado de terceiro, não versionado) - o .example.csv
 # fica versionado como template/estrutura
 leads/*.csv
