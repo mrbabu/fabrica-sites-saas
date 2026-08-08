@@ -30,8 +30,8 @@
         }
 
         /* Revelação de seção/cartão ao rolar — stagger real via transition-delay por item */
-        .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s ease; }
-        .reveal.is-visible { opacity: 1; transform: translateY(0); }
+        .reveal, .reveal-loop { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s ease; }
+        .reveal.is-visible, .reveal-loop.is-visible { opacity: 1; transform: translateY(0); }
 
         /* Moldura de revelação das fotos de seção (Sobre/Portfólio) — a foto
            nasce desfocada/ampliada e "puxa o foco" ao assentar (metáfora
@@ -117,7 +117,7 @@
            no fluxo/clique do link. */
         .nav-link { position: relative; }
         .nav-link::after { content: ''; position: absolute; left: 0; bottom: -4px; width: 0; height: 2px; background-color: var(--color-primary); transition: width 0.25s ease; }
-        .nav-link:hover::after { width: 100%; }
+        .nav-link:hover::after, .nav-link.active::after { width: 100%; }
 
         a:focus-visible, button:focus-visible, summary:focus-visible {
             outline: 2px solid currentColor; outline-offset: 3px; border-radius: 4px;
@@ -168,7 +168,7 @@
         .feature-card:hover .feature-number { color: var(--color-primary); }
 
         @media (prefers-reduced-motion: reduce) {
-            .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+            .reveal, .reveal-loop { opacity: 1 !important; transform: none !important; transition: none !important; }
             .img-frame-photo { filter: none !important; transform: none !important; box-shadow: none !important; transition: none !important; }
             .img-frame-corner { opacity: 0.9 !important; transform: none !important; transition: none !important; }
             .hero-in, .word-reveal { animation: none !important; opacity: 1 !important; transform: none !important; }
@@ -238,6 +238,7 @@
             applyTypography();
             setupNavBehavior();
             initScrollReveal();
+            initPortfolioNavActive();
             initWhatsAppLabel();
             initParallax();
             initMagnetic();
@@ -338,8 +339,10 @@
 
         function initScrollReveal() {
             const items = document.querySelectorAll('.reveal');
+            const loopItems = document.querySelectorAll('.reveal-loop');
             if (prefersReducedMotion() || !('IntersectionObserver' in window)) {
                 items.forEach(el => el.classList.add('is-visible'));
+                loopItems.forEach(el => el.classList.add('is-visible'));
                 return;
             }
             const io = new IntersectionObserver((entries) => {
@@ -351,6 +354,34 @@
                 });
             }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
             items.forEach(el => io.observe(el));
+
+            // Galeria de portfólio: ao contrário do reveal "de uma vez só" acima,
+            // aqui o destaque reaparece toda vez que a foto entra/sai da tela --
+            // nunca chama unobserve, só alterna a classe conforme isIntersecting.
+            // Pedido explícito: rolar pra cima e descer de novo precisa repetir
+            // o efeito, diferente do resto do site (blocos de texto grandes).
+            const ioLoop = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    entry.target.classList.toggle('is-visible', entry.isIntersecting);
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+            loopItems.forEach(el => ioLoop.observe(el));
+        }
+
+        // Estado ativo do link "Projetos" do header -- reusa IntersectionObserver
+        // (nenhum listener de scroll novo), acende o underline enquanto #portfolio
+        // está no viewport. Não depende de posição de scroll calculada, só de
+        // interseção -- mesmo mecanismo já usado no resto do arquivo.
+        function initPortfolioNavActive() {
+            const section = document.getElementById('portfolio');
+            const links = document.querySelectorAll('.nav-link-portfolio');
+            if (!section || links.length === 0 || !('IntersectionObserver' in window)) return;
+            const io = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    links.forEach(a => a.classList.toggle('active', entry.isIntersecting));
+                });
+            }, { threshold: 0.2 });
+            io.observe(section);
         }
 
         function initWhatsAppLabel() {
@@ -459,29 +490,20 @@
                 : `<span class="text-3xl">${config.metadata.favicon || '🚀'}</span>`;
 
             // Nav cheio (1 link por seção) quebra o layout quando há muitas seções (ex.:
-            // portfólio detalhado por etapa) -- seções com id "portfolio-*" agrupam num
-            // submenu único "Portfólio" (<details>/<summary>, nativo -- mesmo comportamento
-            // de clique no desktop e toque no mobile, sem JS extra); as demais seções
-            // continuam como link direto no topo. Todas as seções continuam na página normal.
+            // portfólio detalhado por etapa) -- seções com id "portfolio-*" não geram
+            // mais 1 link cada (a galeria virou uma seção só, renderPortfolio()); viram
+            // 1 único link direto "Projetos" apontando pra #portfolio. Dropdown de 8
+            // sub-links não fazia mais sentido depois que a galeria ficou compacta --
+            // o usuário já vê os 8 projetos juntos assim que chega na seção.
             const secoesHabilitadas = config.sections.filter(s => s.enabled);
             const secoesPortfolio = secoesHabilitadas.filter(s => s.id.startsWith('portfolio-'));
             const outrasSecoes = secoesHabilitadas.filter(s => !s.id.startsWith('portfolio-'));
 
             const linkDireto = s => `<a href="#${s.id}" class="nav-link font-medium text-sm transition hover:opacity-70" style="color: ${config.colors.text}">${s.title}</a>`;
 
-            const dropdownPortfolio = secoesPortfolio.length === 0 ? '' : `
-                <details class="relative">
-                    <summary class="nav-link cursor-pointer list-none font-medium text-sm inline-flex items-center gap-1 transition hover:opacity-70" style="color: ${config.colors.text}">
-                        Portfólio
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
-                    </summary>
-                    <div class="md:absolute md:top-full md:left-0 mt-2 bg-white shadow-lg py-2 md:min-w-[260px] border z-50" style="border-color: ${config.colors.border}; border-radius: ${R('0.75rem')}">
-                        ${secoesPortfolio.map(s => `<a href="#${s.id}" class="block px-4 py-2 text-sm transition hover:opacity-70" style="color: ${config.colors.text}">${s.title}</a>`).join('')}
-                    </div>
-                </details>
-            `;
+            const linkPortfolio = secoesPortfolio.length === 0 ? '' : `<a href="#portfolio" class="nav-link nav-link-portfolio font-medium text-sm transition hover:opacity-70" style="color: ${config.colors.text}">Projetos</a>`;
 
-            const navLinks = outrasSecoes.map(linkDireto).join('') + dropdownPortfolio;
+            const navLinks = outrasSecoes.map(linkDireto).join('') + linkPortfolio;
 
             const waHref = config.contact && config.contact.whatsapp
                 ? waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`)
@@ -718,10 +740,10 @@
             if (itens.length === 0) return '';
 
             return `
-                <section id="portfolio" class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08">
+                <section id="portfolio" class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08; scroll-margin-top: 100px">
                     <div class="max-w-6xl mx-auto px-5 sm:px-6">
                         <div class="reveal text-center max-w-2xl mx-auto mb-14">
-                            ${sectionEyebrow('Portfólio')}
+                            ${sectionEyebrow('Projetos')}
                             <h2 class="font-display text-3xl md:text-4xl font-bold mb-4 tracking-tight" style="color: ${config.colors.text}">
                                 Projetos que já entregamos
                             </h2>
@@ -729,7 +751,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
                             ${itens.map((item, i) => `
                                 <div id="${item.id}" class="reveal" style="transition-delay: ${i * 80}ms; scroll-margin-top: 100px;">
-                                    <div class="reveal img-frame w-full h-64" style="transition-delay: ${i * 80}ms;">
+                                    <div class="reveal-loop img-frame w-full h-64" style="transition-delay: ${i * 80}ms;">
                                         <img src="${item.image}" alt="${item.title}" loading="lazy" class="img-frame-photo w-full object-cover" style="border-radius: ${R('1rem')}" onerror="this.closest('.img-frame').remove()">
                                         <span class="img-frame-corner img-frame-corner--tl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
                                         <span class="img-frame-corner img-frame-corner--tr" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
