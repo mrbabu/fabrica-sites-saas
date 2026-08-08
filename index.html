@@ -101,7 +101,12 @@
 
     <script>
         let config = {};
+        let shapeSharp = false;
         const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // Cantos: "sharp" (par tipográfico industrial) troca o valor arredondado padrão
+        // por um corte quase reto -- usado via inline style, nunca via classe Tailwind
+        // rounded-*, pra não depender de purge/build da folha de estilo estática.
+        const R = (rounded) => shapeSharp ? '2px' : rounded;
 
         async function loadConfig() {
             try {
@@ -116,6 +121,9 @@
 
         function render() {
             const app = document.getElementById('app');
+
+            const fontPairKey = (config.typography && FONT_PAIRS[config.typography.fontPair]) ? config.typography.fontPair : 'modern';
+            shapeSharp = FONT_PAIRS[fontPairKey].cornerStyle === 'sharp';
 
             document.title = config.metadata.siteTitle;
             document.querySelector('meta[name="description"]').setAttribute('content', config.metadata.siteDescription);
@@ -174,6 +182,7 @@
             creative:  { display: "'Space Grotesk', sans-serif", body: "'Inter', sans-serif", googleFontsQuery: "family=Space+Grotesk:wght@400;500;600;700" },
             luxury:    { display: "'Cormorant Garamond', serif", body: "'Inter', sans-serif", googleFontsQuery: "family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400..700" },
             energetic: { display: "'Bebas Neue', sans-serif", body: "'Inter', sans-serif", googleFontsQuery: "family=Bebas+Neue" },
+            industrial: { display: "'Barlow Condensed', sans-serif", body: "'Barlow', sans-serif", googleFontsQuery: "family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700", headingStyle: { textTransform: 'uppercase', letterSpacing: '-0.01em' }, cornerStyle: 'sharp' },
         };
 
         function applyTypography() {
@@ -187,10 +196,14 @@
                 document.head.appendChild(link);
             }
 
+            const headingCss = par.headingStyle
+                ? `text-transform: ${par.headingStyle.textTransform}; letter-spacing: ${par.headingStyle.letterSpacing};`
+                : '';
+
             const style = document.createElement('style');
             style.textContent = `
                 * { font-family: ${par.body}; }
-                .font-display { font-family: ${par.display}; }
+                .font-display { font-family: ${par.display}; ${headingCss} }
             `;
             document.head.appendChild(style);
         }
@@ -342,7 +355,7 @@
             return `
                 <a href="${link}" target="_blank" rel="noopener" aria-label="Falar no WhatsApp"
                    class="whatsapp-pulse fixed right-5 z-50 flex items-center gap-2 text-white pl-4 pr-5 py-3.5 shadow-xl transition transform hover:scale-105"
-                   style="background-color: ${config.colors.accent}; border-radius: 20px 20px 4px 20px; bottom: calc(1.25rem + env(safe-area-inset-bottom));">
+                   style="background-color: ${config.colors.accent}; border-radius: ${shapeSharp ? '2px' : '20px 20px 4px 20px'}; bottom: calc(1.25rem + env(safe-area-inset-bottom));">
                     ${WHATSAPP_ICON}
                     <span id="wa-label" class="wa-label-fade hidden sm:inline font-display font-bold uppercase tracking-wide text-xs">Fale agora</span>
                 </a>
@@ -374,7 +387,7 @@
                         Portfólio
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </summary>
-                    <div class="md:absolute md:top-full md:left-0 mt-2 bg-white shadow-lg rounded-xl py-2 md:min-w-[260px] border z-50" style="border-color: ${config.colors.border}">
+                    <div class="md:absolute md:top-full md:left-0 mt-2 bg-white shadow-lg py-2 md:min-w-[260px] border z-50" style="border-color: ${config.colors.border}; border-radius: ${R('0.75rem')}">
                         ${secoesPortfolio.map(s => `<a href="#${s.id}" class="block px-4 py-2 text-sm transition hover:opacity-70" style="color: ${config.colors.text}">${s.title}</a>`).join('')}
                     </div>
                 </details>
@@ -395,7 +408,7 @@
                         </div>
                         <div class="hidden md:flex items-center gap-8">
                             ${navLinks}
-                            <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary glow-primary-hover text-white px-5 py-2.5 rounded-full text-sm font-semibold transition">Agendar agora</a>
+                            <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary glow-primary-hover text-white px-5 py-2.5 text-sm font-semibold transition" style="border-radius: ${R('9999px')}">Agendar agora</a>
                         </div>
                         <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg" style="color: ${config.colors.primary}" aria-label="Abrir menu">
                             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
@@ -403,7 +416,7 @@
                     </div>
                     <div id="mobile-menu" class="hidden md:hidden border-t bg-white px-5 py-4 flex flex-col gap-4" style="border-color: ${config.colors.border}">
                         ${navLinks}
-                        <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary text-white px-5 py-3 rounded-full text-sm font-semibold text-center">Agendar agora</a>
+                        <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary text-white px-5 py-3 text-sm font-semibold text-center" style="border-radius: ${R('9999px')}">Agendar agora</a>
                     </div>
                 </nav>
             `;
@@ -462,14 +475,14 @@
                             ${config.hero.subtitle}
                         </p>
                         <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                            <a href="${waHref}" target="_blank" rel="noopener" id="hero-cta" class="magnetic glow-primary-hover bg-white px-8 py-4 rounded-full font-bold text-base inline-flex items-center justify-center gap-2 transition" style="color: ${c.primary}">
+                            <a href="${waHref}" target="_blank" rel="noopener" id="hero-cta" class="magnetic glow-primary-hover bg-white px-8 py-4 font-bold text-base inline-flex items-center justify-center gap-2 transition" style="color: ${c.primary}; border-radius: ${R('9999px')}">
                                 ${WHATSAPP_ICON} ${config.hero.ctaText}
                             </a>
-                            <a href="#servicos" class="border border-white/40 text-white px-8 py-4 rounded-full font-semibold text-base inline-flex items-center justify-center transition hover:bg-white/10">
+                            <a href="#servicos" class="border border-white/40 text-white px-8 py-4 font-semibold text-base inline-flex items-center justify-center transition hover:bg-white/10" style="border-radius: ${R('9999px')}">
                                 Conhecer serviços
                             </a>
                             ${ondeEstamosHref ? `
-                            <a href="${ondeEstamosHref}" target="_blank" rel="noopener" class="border border-white/40 text-white px-8 py-4 rounded-full font-semibold text-base inline-flex items-center justify-center gap-2 transition hover:bg-white/10">
+                            <a href="${ondeEstamosHref}" target="_blank" rel="noopener" class="border border-white/40 text-white px-8 py-4 font-semibold text-base inline-flex items-center justify-center gap-2 transition hover:bg-white/10" style="border-radius: ${R('9999px')}">
                                 📍 Onde estamos
                             </a>
                             ` : ''}
@@ -519,16 +532,17 @@
         function renderSections() {
             return config.sections.filter(s => s.enabled).map((section, idx) => {
                 const imageFirst = idx % 2 === 1;
+                const hasImage = !!section.image;
                 // Logo repetida junto do texto só na seção "Sobre Nós" (convenção de id
                 // usada pelo agent_construtor.py) -- reforça identidade da marca sem
                 // repetir em todas as seções de conteúdo/portfólio.
                 const logoDaSecao = (section.id === 'sobre' && config.company.logo)
-                    ? `<img src="${config.company.logo}" alt="${config.company.name}" class="h-12 w-auto max-w-[190px] object-contain mb-6" onerror="this.remove()">`
+                    ? `<img src="${config.company.logo}" alt="${config.company.name}" class="h-12 w-auto max-w-[190px] object-contain mb-6${hasImage ? '' : ' mx-auto'}" onerror="this.remove()">`
                     : '';
                 const textBlock = `
-                    <div>
+                    <div class="${hasImage ? '' : 'max-w-2xl mx-auto text-center'}">
                         ${logoDaSecao}
-                        <span class="inline-block w-10 h-1 rounded-full mb-5" style="background-color: ${config.colors.accent}"></span>
+                        <span class="inline-block w-10 h-1 rounded-full mb-5${hasImage ? '' : ' mx-auto'}" style="background-color: ${config.colors.accent}"></span>
                         <h2 class="font-display text-3xl md:text-4xl font-bold mb-4 tracking-tight" style="color: ${config.colors.text}">
                             ${section.title}
                         </h2>
@@ -540,7 +554,20 @@
                         </p>
                     </div>
                 `;
-                const imageBlock = `<img src="${section.image}" alt="${section.title}" loading="lazy" class="w-full h-72 md:h-96 object-cover rounded-3xl shadow-lg" onerror="this.remove()">`;
+                // Sem imagem própria: em vez de forçar uma foto repetida de outra seção,
+                // a seção vira texto centralizado de coluna única (nunca reusa foto alheia
+                // só pra preencher o grid -- ver conversa sobre fotos repetidas seguidas).
+                if (!hasImage) {
+                    return `
+                        <section id="${section.id}" class="reveal py-20 md:py-28" style="background-color: ${config.colors.background}">
+                            <div class="max-w-6xl mx-auto px-5 sm:px-6">
+                                ${textBlock}
+                            </div>
+                        </section>
+                    `;
+                }
+
+                const imageBlock = `<img src="${section.image}" alt="${section.title}" loading="lazy" class="w-full h-72 md:h-96 object-cover shadow-lg" style="border-radius: ${R('1.5rem')}" onerror="this.remove()">`;
 
                 return `
                     <section id="${section.id}" class="reveal py-20 md:py-28" style="background-color: ${config.colors.background}">
@@ -579,8 +606,8 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             ${enabledFeatures.map((feature, i) => `
-                                <div class="reveal glow-primary-hover p-8 rounded-2xl border transition" style="border-color: ${config.colors.border}; transition-delay: ${i * 90}ms">
-                                    <div class="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5" style="background-color: ${config.colors.primary}14">${feature.icon}</div>
+                                <div class="reveal glow-primary-hover p-8 border transition" style="border-color: ${config.colors.border}; transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
+                                    <div class="w-14 h-14 flex items-center justify-center text-2xl mb-5" style="background-color: ${config.colors.primary}14; border-radius: ${R('0.75rem')}">${feature.icon}</div>
                                     <h3 class="text-lg font-bold mb-2" style="color: ${config.colors.text}">
                                         ${feature.title}
                                     </h3>
@@ -610,8 +637,8 @@
                         </div>
                         <div class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0">
                             ${enabledServices.map((service, i) => `
-                                <div class="reveal glow-primary-hover snap-start shrink-0 w-[85%] sm:w-[360px] bg-white p-8 rounded-2xl shadow-sm transition duration-300" style="transition-delay: ${i * 90}ms">
-                                    <div class="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5 text-white" style="background: linear-gradient(135deg, ${config.colors.primary}, ${config.colors.primaryDark})">${service.icon}</div>
+                                <div class="reveal glow-primary-hover snap-start shrink-0 w-[85%] sm:w-[360px] bg-white p-8 shadow-sm transition duration-300" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
+                                    <div class="w-14 h-14 flex items-center justify-center text-2xl mb-5 text-white" style="background: linear-gradient(135deg, ${config.colors.primary}, ${config.colors.primaryDark}); border-radius: ${R('0.75rem')}">${service.icon}</div>
                                     <h3 class="text-xl font-bold mb-3" style="color: ${config.colors.text}">
                                         ${service.title}
                                     </h3>
@@ -648,7 +675,7 @@
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             ${enabledTestimonials.map((testimonial, i) => `
-                                <div class="reveal p-8 rounded-2xl border" style="border-color: ${config.colors.border}; transition-delay: ${i * 90}ms">
+                                <div class="reveal p-8 border" style="border-color: ${config.colors.border}; transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
                                     <div class="mb-4 flex gap-0.5 text-sm" style="color: ${config.colors.secondary}">
                                         ${Array.from({length: testimonial.rating}).map(() => '★').join('')}
                                     </div>
@@ -683,7 +710,7 @@
                         </div>
                         <div class="space-y-3">
                             ${enabledFaq.map((item, i) => `
-                                <details class="reveal bg-white p-6 rounded-2xl shadow-sm group" style="transition-delay: ${i * 70}ms">
+                                <details class="reveal bg-white p-6 shadow-sm group" style="transition-delay: ${i * 70}ms; border-radius: ${R('1rem')}">
                                     <summary class="font-bold cursor-pointer flex justify-between items-center gap-4 pb-0" style="color: ${config.colors.text}">
                                         <span>${item.question}</span>
                                         <span class="faq-icon flex-shrink-0" style="color: ${config.colors.primary}">
@@ -717,7 +744,7 @@
                         <p class="text-lg mb-9 text-white/85 leading-relaxed">
                             ${config.cta.description}
                         </p>
-                        <a href="${waHref}" target="_blank" rel="noopener" class="glow-primary-hover bg-white px-9 py-4 rounded-full font-bold text-base inline-flex items-center gap-2 transition transform hover:scale-105" style="color: ${config.colors.primary}">
+                        <a href="${waHref}" target="_blank" rel="noopener" class="glow-primary-hover bg-white px-9 py-4 font-bold text-base inline-flex items-center gap-2 transition transform hover:scale-105" style="color: ${config.colors.primary}; border-radius: ${R('9999px')}">
                             ${WHATSAPP_ICON} ${config.cta.buttonText}
                         </a>
                     </div>
@@ -762,7 +789,7 @@
                             </div>
                         </div>
                         ${(config.contact.googleMapsUrl || config.contact.address) ? `
-                        <div class="rounded-2xl overflow-hidden mb-10">
+                        <div class="overflow-hidden mb-10" style="border-radius: ${R('1rem')}">
                             <a href="${config.contact.googleMapsUrl || mapsHref(config.contact.address)}" target="_blank" rel="noopener" aria-label="Abrir localização no mapa">
                                 <iframe
                                     src="${config.contact.googleMapsUrl ? config.contact.googleMapsUrl + (config.contact.googleMapsUrl.includes('?') ? '&' : '?') + 'output=embed' : 'https://www.google.com/maps?q=' + encodeURIComponent(config.contact.address) + '&output=embed'}"
