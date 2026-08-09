@@ -582,6 +582,15 @@
             return `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
         }
 
+        function waMensagemPadrao() {
+            // Mensagem pre-preenchida dos CTAs principais (nav, hero, CTA final).
+            // Configuravel por tenant porque "agendar um horario" so faz sentido em
+            // negocio de hora marcada -- obra/reforma pede orcamento. Sem o campo,
+            // mantem o texto historico (nenhum cliente ja publicado muda).
+            const custom = config.contact && config.contact.whatsappMessage;
+            return custom || `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`;
+        }
+
         function mapsHref(endereco) {
             // Link universal: abre o app de navegação padrão no celular
             // (Google Maps, Waze, etc. via seletor do sistema) ou o Google
@@ -644,8 +653,13 @@
             const navLinks = outrasSecoes.map(linkDireto).join('') + linkPortfolio;
 
             const waHref = config.contact && config.contact.whatsapp
-                ? waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`)
+                ? waLink(config.contact.whatsapp, waMensagemPadrao())
                 : '#contato';
+
+            // Rotulo do botao da nav: reaproveita o CTA do hero (ja vem do config)
+            // em vez de fixar "Agendar agora" no template -- mesma razao do
+            // waMensagemPadrao(): nem todo negocio agenda hora.
+            const ctaCurto = (config.hero && config.hero.ctaText) || 'Fale conosco';
 
             return `
                 <nav id="site-nav" class="sticky top-0 z-40 bg-white/70 backdrop-blur-md transition-shadow duration-300" style="border-bottom: 1px solid ${config.colors.border}">
@@ -656,7 +670,7 @@
                         </div>
                         <div class="hidden md:flex items-center gap-8">
                             ${navLinks}
-                            <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary glow-primary-hover text-white px-5 py-2.5 text-sm font-semibold transition" style="border-radius: ${R('9999px')}">Agendar agora</a>
+                            <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary glow-primary-hover text-white px-5 py-2.5 text-sm font-semibold whitespace-nowrap transition" style="border-radius: ${R('9999px')}">${ctaCurto}</a>
                         </div>
                         <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg" style="color: ${config.colors.primary}" aria-label="Abrir menu">
                             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
@@ -664,7 +678,7 @@
                     </div>
                     <div id="mobile-menu" class="hidden md:hidden border-t bg-white px-5 py-4 flex flex-col gap-4" style="border-color: ${config.colors.border}">
                         ${navLinks}
-                        <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary text-white px-5 py-3 text-sm font-semibold text-center" style="border-radius: ${R('9999px')}">Agendar agora</a>
+                        <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary text-white px-5 py-3 text-sm font-semibold text-center" style="border-radius: ${R('9999px')}">${ctaCurto}</a>
                     </div>
                 </nav>
             `;
@@ -707,7 +721,7 @@
             if (!config.hero || !config.hero.enabled) return '';
 
             const waHref = config.contact && config.contact.whatsapp
-                ? waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`)
+                ? waLink(config.contact.whatsapp, waMensagemPadrao())
                 : config.hero.ctaLink;
 
             // Botão "Onde Estamos" só aparece com endereço real (mesma regra de sempre —
@@ -816,6 +830,23 @@
                            <span class="bg-word font-display font-extrabold uppercase tracking-tighter" style="color: ${config.colors.primary}">${(config.company.name || '').split(' ')[0]}</span>
                        </div>`
                     : '';
+                // Quatro grandes frentes de atuação (opcional, config.institutional.pillars)
+                // -- mesma linguagem editorial dos cards de Diferenciais (número grande +
+                // linha fina + hover com elevação/borda), não "tags"/badges. Só aparece na
+                // seção "Sobre" e só se o tenant tiver esse dado preenchido.
+                const pilares = (section.id === 'sobre' && config.institutional && config.institutional.enabled && config.institutional.pillars && config.institutional.pillars.length)
+                    ? `
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 max-w-4xl mx-auto">
+                            ${config.institutional.pillars.map((pilar, i) => `
+                                <div class="reveal glow-primary-hover feature-card p-6 text-center transition" style="transition-delay: ${i * 90}ms; border-radius: ${R('0.75rem')}">
+                                    <span class="feature-number font-display font-extrabold block mb-2" aria-hidden="true" style="font-size: 2rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
+                                    <span class="block w-6 h-px mx-auto mb-3" style="background-color: ${config.colors.accent}"></span>
+                                    <h3 class="font-display font-bold text-xs uppercase tracking-widest" style="color: ${config.colors.primary}">${pilar}</h3>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `
+                    : '';
                 const textBlock = `
                     <div class="${hasImage ? '' : 'max-w-2xl mx-auto text-center'}">
                         ${logoDaSecao}
@@ -840,6 +871,7 @@
                             ${palavraDeFundo}
                             <div class="max-w-6xl mx-auto px-5 sm:px-6 relative z-10">
                                 ${textBlock}
+                                ${pilares}
                             </div>
                         </section>
                     `;
@@ -862,6 +894,7 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
                                 ${imageFirst ? imageBlock + textBlock : textBlock + imageBlock}
                             </div>
+                            ${pilares}
                         </div>
                     </section>
                 `;
@@ -1119,7 +1152,7 @@
             if (!config.cta || !config.cta.enabled) return '';
 
             const waHref = config.contact && config.contact.whatsapp
-                ? waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`)
+                ? waLink(config.contact.whatsapp, waMensagemPadrao())
                 : config.cta.buttonLink;
 
             return `
