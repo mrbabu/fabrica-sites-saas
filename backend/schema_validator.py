@@ -43,6 +43,8 @@ class Company(BaseModel):
     tagline: str = Field(..., min_length=5, max_length=100, description="Slogan/proposta de valor")
     description: str = Field(..., min_length=20, max_length=500, description="Descrição completa")
     logo: str = Field(default="https://loremflickr.com/180/50/logo", description="URL do logo")
+    cnpj: Optional[str] = Field(default=None, description="CNPJ (opcional — só se fornecido pelo cliente, nunca inventado)")
+    legalName: Optional[str] = Field(default=None, description="Razão social (opcional — só se fornecida pelo cliente, nunca inventada)")
 
     class Config:
         examples = [{
@@ -304,6 +306,14 @@ class Typography(BaseModel):
         examples = [{"fontPair": "editorial"}]
 
 
+class Institutional(BaseModel):
+    """Missão/Visão/Valores (opcional — só quando o cliente fornece esse conteúdo institucional real, nunca genérico/inventado)"""
+    mission: Optional[str] = Field(default=None, max_length=400, description="Missão")
+    vision: Optional[str] = Field(default=None, max_length=400, description="Visão")
+    values: Optional[str] = Field(default=None, max_length=400, description="Valores")
+    enabled: bool = Field(default=True)
+
+
 class SiteConfig(BaseModel):
     """Schema completo de site-config.json"""
     metadata: Metadata
@@ -311,6 +321,7 @@ class SiteConfig(BaseModel):
     colors: Colors
     typography: Typography = Field(default_factory=Typography)
     hero: Hero
+    institutional: Optional[Institutional] = Field(default=None, description="Missão/Visão/Valores opcional")
     sections: List[Section] = Field(default_factory=list, max_items=10, description="Seções de conteúdo")
     services: List[Service] = Field(..., min_items=1, max_items=10, description="Serviços")
     features: List[Feature] = Field(..., min_items=3, max_items=6, description="Diferenciais competitivos")

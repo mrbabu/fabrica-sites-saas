@@ -256,6 +256,7 @@
                     ${renderHero()}
                     ${renderTicker()}
                     ${renderSections()}
+                    ${renderInstitutional()}
                     ${renderPortfolio()}
                     ${renderFeatures()}
                     ${renderServices()}
@@ -867,6 +868,42 @@
             }).join('');
         }
 
+        // Missão/Visão/Valores -- conteúdo institucional real (compromissos
+        // declarados pela empresa), diferente da seção "Sobre" (descrição de
+        // quem ela é). Só renderiza se o config trouxer o bloco -- a maioria
+        // dos tenants não vai ter isso preenchido. Cartões com fundo levemente
+        // tintado na cor primária (mesma convenção das caixas do material
+        // institucional original do cliente), não uma seção cheia própria --
+        // mantém compacto, não compete com o fluxo de conversão.
+        function renderInstitutional() {
+            const inst = config.institutional;
+            if (!inst || !inst.enabled) return '';
+            const itens = [
+                inst.mission ? { titulo: 'Missão', texto: inst.mission } : null,
+                inst.vision ? { titulo: 'Visão', texto: inst.vision } : null,
+                inst.values ? { titulo: 'Valores', texto: inst.values } : null,
+            ].filter(Boolean);
+            if (itens.length === 0) return '';
+
+            return `
+                <section class="py-16 md:py-20" style="background-color: ${config.colors.background}">
+                    <div class="max-w-6xl mx-auto px-5 sm:px-6">
+                        <h2 class="reveal font-display text-2xl font-bold mb-8 text-center tracking-tight" style="color: ${config.colors.text}">
+                            Nosso Compromisso
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            ${itens.map((item, i) => `
+                                <div class="reveal p-6" style="background-color: ${config.colors.primary}08; border: 1px solid ${config.colors.border}; transition-delay: ${i * 90}ms; border-radius: ${R('0.75rem')}">
+                                    <h3 class="font-display font-bold text-base mb-2" style="color: ${config.colors.primary}">${item.titulo}</h3>
+                                    <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">${item.texto}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
         // Galeria unificada do portfólio -- antes cada foto virava uma seção cheia
         // própria (alternando com o resto do conteúdo); agora todas as fotos reais
         // do cliente ficam juntas numa única seção "destacada", em grid. Reusa
@@ -1124,7 +1161,7 @@
                                 <ul class="space-y-2.5 text-gray-400 text-sm">
                                     ${config.contact.whatsapp ? `<li><a href="${waLink(config.contact.whatsapp, `Olá! Vim pelo site da ${config.company.name}.`)}" target="_blank" rel="noopener" class="hover:text-white transition">📱 WhatsApp</a></li>` : ''}
                                     ${config.contact.email ? `<li><a href="mailto:${config.contact.email}" class="hover:text-white transition">✉️ ${config.contact.email}</a></li>` : ''}
-                                    <li><a href="tel:${config.contact.phone}" class="hover:text-white transition">☎️ ${config.contact.phone}</a></li>
+                                    <li><a href="tel:${config.contact.phone}" class="hover:text-white transition">☎️ Telefone: ${config.contact.phone}</a></li>
                                     ${config.contact.address ? `<li><a href="${config.contact.googleMapsUrl || mapsHref(config.contact.address)}" target="_blank" rel="noopener" class="hover:text-white transition">📍 ${config.contact.address}</a></li>` : ''}
                                 </ul>
                             </div>
@@ -1150,6 +1187,7 @@
                         </div>` : ''}
                         <div class="border-t border-gray-800 pt-8 text-center text-gray-400 text-sm">
                             <p>${config.footer.copyrightText}</p>
+                            ${(config.company.legalName || config.company.cnpj) ? `<p class="mt-1">${[config.company.legalName, config.company.cnpj ? `CNPJ: ${config.company.cnpj}` : ''].filter(Boolean).join(' — ')}</p>` : ''}
                             <p class="mt-2">Criado com ❤️ por Fábrica de Sites SaaS</p>
                         </div>
                     </div>
