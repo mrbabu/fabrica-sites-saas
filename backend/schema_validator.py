@@ -246,6 +246,7 @@ class Contact(BaseModel):
     whatsapp: str = Field(..., min_length=10, description="WhatsApp")
     address: Optional[str] = Field(default=None, description="Endereço/cidade do negócio (opcional — só se fornecido, nunca um endereço genérico)")
     googleMapsUrl: Optional[str] = Field(default=None, description="Link direto do Google Maps do negócio (opcional — mais preciso que endereço em texto)")
+    whatsappMessage: Optional[str] = Field(default=None, max_length=300, description="Mensagem pré-preenchida dos botões de WhatsApp (opcional — usar quando 'agendar um horário' não couber no negócio; ex.: obra/reforma pede 'solicitar um orçamento')")
     social: Social = Field(default_factory=Social, description="Redes sociais")
 
     @validator('email')
@@ -311,6 +312,7 @@ class Institutional(BaseModel):
     mission: Optional[str] = Field(default=None, max_length=400, description="Missão")
     vision: Optional[str] = Field(default=None, max_length=400, description="Visão")
     values: Optional[str] = Field(default=None, max_length=400, description="Valores")
+    pillars: Optional[List[str]] = Field(default=None, max_items=6, description="Grandes frentes de atuação (opcional — rótulos curtos derivados dos serviços/descrição reais do cliente, nunca uma lista genérica)")
     enabled: bool = Field(default=True)
 
 
