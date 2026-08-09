@@ -239,10 +239,11 @@
                     ${renderHero()}
                     ${renderTicker()}
                     ${renderSections()}
-                    ${renderInstitutional()}
+                    ${renderServices()}
+                    ${renderCTAFaixa()}
                     ${renderPortfolio()}
                     ${renderFeatures()}
-                    ${renderServices()}
+                    ${renderInstitutional()}
                     ${renderTestimonials()}
                     ${renderFAQ()}
                     ${renderCTA()}
@@ -654,14 +655,17 @@
             if (enabledTestimonials.length === 0) return '';
 
             const avatars = enabledTestimonials.slice(0, 4).map(t => `
-                <img src="${t.avatar}" alt="" class="w-7 h-7 sm:w-9 sm:h-9 rounded-full object-cover ring-2 ring-white -ml-2 first:ml-0" onerror="this.remove()">
+                <img src="${t.avatar}" alt="" class="w-7 h-7 sm:w-9 sm:h-9 rounded-full object-cover ring-2 first:ml-0 -ml-2" style="--tw-ring-color: ${config.colors.background}" onerror="this.remove()">
             `).join('');
             const avg = (enabledTestimonials.reduce((sum, t) => sum + (t.rating || 5), 0) / enabledTestimonials.length);
 
+            // Tema-agnóstico (cores derivadas do config, não brancas fixas) -- o hero
+            // deixou de ter fundo escuro fixo, então isso precisa funcionar sobre
+            // qualquer cor de fundo de qualquer tenant, não só sobre foto/overlay.
             return `
-                <div class="max-w-full flex items-center justify-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full pl-1.5 pr-3 sm:pr-4 py-1.5 mt-8">
+                <div class="inline-flex max-w-full items-center gap-2 sm:gap-3 border rounded-full pl-1.5 pr-3 sm:pr-4 py-1.5 mt-6" style="background-color: ${config.colors.primary}08; border-color: ${config.colors.border}">
                     <div class="flex flex-shrink-0">${avatars}</div>
-                    <span class="text-xs sm:text-sm text-white/90 font-medium whitespace-nowrap">⭐ <span id="trust-rating-value" data-target="${avg.toFixed(1)}">0.0</span> · ${enabledTestimonials.length}+ avaliações</span>
+                    <span class="text-xs sm:text-sm font-medium whitespace-nowrap" style="color: ${config.colors.text}">⭐ <span id="trust-rating-value" data-target="${avg.toFixed(1)}">0.0</span> · ${enabledTestimonials.length}+ avaliações</span>
                 </div>
             `;
         }
@@ -699,39 +703,65 @@
 
             const c = config.colors;
 
-            return `
-                <section class="relative overflow-hidden bg-gray-900 min-h-[92vh] flex items-center">
-                    <div class="hero-media">
-                        <img id="hero-media-img" src="${config.hero.backgroundImage}" alt="" onerror="this.style.display='none'">
+            // Etiqueta de uma linha com os pilares reais (ex.: Construção/Reforma/
+            // Gestão/Planejamento) -- só aparece se o tenant tiver esse dado
+            // preenchido (mesma regra condicional do grid de pilares em
+            // renderSections()); aqui é só o resumo curto, não substitui o grid.
+            const pilaresLinha = (config.institutional && config.institutional.enabled && config.institutional.pillars && config.institutional.pillars.length)
+                ? `
+                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-6 font-display font-bold uppercase tracking-widest text-xs" style="color: ${c.primary}">
+                        ${config.institutional.pillars.map((p, i) => `${i > 0 ? `<span aria-hidden="true" style="color: ${c.accent}">·</span>` : ''}<span>${p}</span>`).join('')}
                     </div>
-                    <div class="absolute inset-0" style="background:
-                        radial-gradient(130% 110% at 12% 15%, ${c.primary}99 0%, transparent 55%),
-                        radial-gradient(100% 100% at 88% 10%, ${c.accent}59 0%, transparent 48%),
-                        linear-gradient(160deg, ${c.primaryDark}b3 25%, ${c.secondary}33 100%);"></div>
-                    ${renderBlueprintSignature('white')}
-                    <div class="hero-in max-w-5xl mx-auto px-5 sm:px-6 py-24 text-center relative z-10">
-                        ${config.company.logo ? `<img src="${config.company.logo}" alt="${config.company.name}" class="h-16 sm:h-20 w-auto max-w-[280px] object-contain mx-auto mb-6 drop-shadow-lg" onerror="this.remove()">` : ''}
-                        ${config.company.tagline ? `<span class="font-display italic inline-block text-base sm:text-lg text-white/85 mb-5">${config.company.tagline}</span>` : ''}
-                        <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-[1.05] tracking-tight text-white drop-shadow-sm">
-                            ${staggerWords(config.hero.title)}
-                        </h1>
-                        <p class="text-lg md:text-xl mb-10 max-w-2xl mx-auto text-white/90 leading-relaxed">
-                            ${config.hero.subtitle}
-                        </p>
-                        <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                            <a href="${waHref}" target="_blank" rel="noopener" id="hero-cta" class="magnetic glow-primary-hover bg-white px-8 py-4 font-bold text-base inline-flex items-center justify-center gap-2 transition" style="color: ${c.primary}; border-radius: ${R('9999px')}">
-                                ${WHATSAPP_ICON} ${config.hero.ctaText}
-                            </a>
-                            <a href="#servicos" class="border border-white/40 text-white px-8 py-4 font-semibold text-base inline-flex items-center justify-center transition hover:bg-white/10" style="border-radius: ${R('9999px')}">
-                                Conhecer serviços
-                            </a>
-                            ${ondeEstamosHref ? `
-                            <a href="${ondeEstamosHref}" target="_blank" rel="noopener" class="border border-white/40 text-white px-8 py-4 font-semibold text-base inline-flex items-center justify-center gap-2 transition hover:bg-white/10" style="border-radius: ${R('9999px')}">
-                                📍 Onde estamos
-                            </a>
-                            ` : ''}
+                `
+                : '';
+
+            // Hero assimétrico (texto | foto), inspirado na composição de referência
+            // (headline curta + CTA à esquerda, imagem grande à direita, bastante
+            // espaço negativo) -- mas sem full-bg escuro nem elemento de review
+            // fake: o card de avaliação da referência não tem dado real equivalente
+            // (config.testimonials vazio pra maioria dos tenants), então some.
+            // Reaproveita o mesmo grid responsivo de renderSections() (já compilado
+            // no Tailwind, sem precisar de classe nova) e o mesmo .img-frame com
+            // cantos "blueprint" já usado em Sobre/Portfólio, pra manter a mesma
+            // linguagem visual em vez de inventar um tratamento de foto novo.
+            return `
+                <section class="relative overflow-hidden" style="background-color: ${c.background}">
+                    ${renderBlueprintSignature(c.primary)}
+                    <div class="hero-in max-w-7xl mx-auto px-5 sm:px-6 py-20 md:py-28 relative z-10">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                            <div>
+                                ${config.company.logo ? `<img src="${config.company.logo}" alt="${config.company.name}" class="h-14 sm:h-16 w-auto max-w-[220px] object-contain mb-6" onerror="this.remove()">` : ''}
+                                ${config.company.tagline ? `<span class="font-display italic inline-block text-base sm:text-lg mb-4" style="color: ${c.textLight}">${config.company.tagline}</span>` : ''}
+                                <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-[1.05] tracking-tight" style="color: ${c.text}">
+                                    ${staggerWords(config.hero.title)}
+                                </h1>
+                                <p class="text-lg md:text-xl mb-6 max-w-xl leading-relaxed" style="color: ${c.textLight}">
+                                    ${config.hero.subtitle}
+                                </p>
+                                ${pilaresLinha}
+                                <div class="flex flex-col sm:flex-row flex-wrap gap-3">
+                                    <a href="${waHref}" target="_blank" rel="noopener" id="hero-cta" class="magnetic glow-primary-hover btn-primary text-white px-8 py-4 font-bold text-base inline-flex items-center justify-center gap-2 transition" style="border-radius: ${R('9999px')}">
+                                        ${WHATSAPP_ICON} ${config.hero.ctaText}
+                                    </a>
+                                    <a href="#servicos" class="px-8 py-4 font-semibold text-base inline-flex items-center justify-center transition hover:opacity-70" style="border: 1.5px solid ${c.text}26; color: ${c.text}; border-radius: ${R('9999px')}">
+                                        Conhecer serviços
+                                    </a>
+                                    ${ondeEstamosHref ? `
+                                    <a href="${ondeEstamosHref}" target="_blank" rel="noopener" class="px-8 py-4 font-semibold text-base inline-flex items-center justify-center gap-2 transition hover:opacity-70" style="border: 1.5px solid ${c.text}26; color: ${c.text}; border-radius: ${R('9999px')}">
+                                        📍 Onde estamos
+                                    </a>
+                                    ` : ''}
+                                </div>
+                                ${renderTrustStrip()}
+                            </div>
+                            <div class="reveal img-frame w-full h-72 sm:h-96 lg:h-[540px]" style="transition-delay: 80ms">
+                                <img src="${config.hero.backgroundImage}" alt="" loading="eager" class="img-frame-photo w-full object-cover" style="border-radius: ${R('1.5rem')}" onerror="this.closest('.img-frame').remove()">
+                                <span class="img-frame-corner img-frame-corner--tl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                                <span class="img-frame-corner img-frame-corner--tr" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                                <span class="img-frame-corner img-frame-corner--bl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                                <span class="img-frame-corner img-frame-corner--br" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                            </div>
                         </div>
-                        <div class="flex justify-center">${renderTrustStrip()}</div>
                     </div>
                 </section>
             `;
@@ -907,9 +937,51 @@
         // do cliente ficam juntas numa única seção "destacada", em grid. Reusa
         // exatamente o mesmo .img-frame (foco+cantos blueprint) das fotos de
         // conteúdo -- a "qualidade dos destaques" não muda, só o layout ao redor.
+        // Agrupa as fotos do portfólio por projeto usando o próprio id da seção
+        // (convenção "portfolio-<projeto>-<etapa>" já usada pelo agent_construtor.py/
+        // gerar_apresentacao.py) -- sem hardcode de nome de projeto, então funciona
+        // pra qualquer tenant que siga essa convenção de id, não só a MGR. Item sem
+        // sufixo "-<numero>" vira grupo de 1 foto só (projeto sem sequência de etapas).
+        function agruparPortfolioPorProjeto(itens) {
+            const grupos = [];
+            const porChave = new Map();
+            itens.forEach((item, index) => {
+                const chave = item.id.replace(/-\d+$/, '');
+                if (!porChave.has(chave)) {
+                    const grupo = { chave, itens: [] };
+                    porChave.set(chave, grupo);
+                    grupos.push(grupo);
+                }
+                porChave.get(chave).itens.push({ ...item, index });
+            });
+            return grupos;
+        }
+
         function renderPortfolio() {
             const itens = config.sections.filter(s => s.enabled && s.id.startsWith('portfolio-') && s.image);
             if (itens.length === 0) return '';
+
+            const grupos = agruparPortfolioPorProjeto(itens);
+
+            // Cada projeto vira 1 cluster: foto principal (última etapa registrada --
+            // normalmente a "finalizada", já que a fonte real já ordena execução ->
+            // finalização) + miniaturas das etapas anteriores do MESMO projeto real.
+            // Isso não é um "antes/depois" inventado: é a sequência de etapas que a
+            // própria fonte (gerar_apresentacao.py) já declara para aquele projeto.
+            const renderFotoPrincipal = (item) => `
+                <div id="${item.id}" class="reveal-loop portfolio-card img-frame w-full h-80 md:h-[26rem]" data-portfolio-index="${item.index}" style="transition-delay: ${item.index * 60}ms;">
+                    <img src="${item.image}" alt="${item.title}" loading="lazy" class="img-frame-photo w-full object-cover" style="border-radius: ${R('1rem')}" onerror="this.closest('.img-frame').remove()">
+                    <span class="img-frame-corner img-frame-corner--tl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                    <span class="img-frame-corner img-frame-corner--tr" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                    <span class="img-frame-corner img-frame-corner--bl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                    <span class="img-frame-corner img-frame-corner--br" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+                </div>
+            `;
+            const renderMiniatura = (item) => `
+                <div id="${item.id}" class="reveal-loop portfolio-card w-full h-20 md:h-24 overflow-hidden" data-portfolio-index="${item.index}" style="border-radius: ${R('0.5rem')}; transition-delay: ${item.index * 60}ms;">
+                    <img src="${item.image}" alt="${item.title}" loading="lazy" class="w-full h-full object-cover" onerror="this.remove()">
+                </div>
+            `;
 
             return `
                 <section id="portfolio" class="reveal py-20 md:py-28" style="background-color: ${config.colors.primary}08; scroll-margin-top: 100px">
@@ -920,22 +992,26 @@
                                 Projetos que já entregamos
                             </h2>
                         </div>
-                        <div class="relative">
-                            <div id="portfolio-row" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                                ${itens.map((item, i) => `
-                                    <div id="${item.id}" class="reveal portfolio-card" data-portfolio-index="${i}" style="transition-delay: ${i * 80}ms; scroll-margin-top: 100px;">
-                                        <div class="reveal-loop img-frame w-full h-72 md:h-80" style="transition-delay: ${i * 80}ms;">
-                                            <img src="${item.image}" alt="${item.title}" loading="lazy" class="img-frame-photo w-full object-cover" style="border-radius: ${R('1rem')}" onerror="this.closest('.img-frame').remove()">
-                                            <span class="img-frame-corner img-frame-corner--tl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
-                                            <span class="img-frame-corner img-frame-corner--tr" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
-                                            <span class="img-frame-corner img-frame-corner--bl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
-                                            <span class="img-frame-corner img-frame-corner--br" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
-                                        </div>
-                                        <h3 class="text-lg font-bold mt-5 mb-1" style="color: ${config.colors.text}">${item.title.replace(/^Portf[oó]lio:\s*/i, '')}</h3>
-                                        <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">${item.subtitle}</p>
+                        <div id="portfolio-row" class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12">
+                            ${grupos.map((grupo, gi) => {
+                                const fotos = grupo.itens;
+                                const principal = fotos[fotos.length - 1];
+                                const miniaturas = fotos.slice(0, -1);
+                                const tituloLimpo = principal.title.replace(/^Portf[oó]lio:\s*/i, '');
+                                const tituloProjeto = tituloLimpo.includes(' — ') ? tituloLimpo.split(' — ')[0] : tituloLimpo;
+
+                                return `
+                                    <div class="reveal portfolio-cluster" style="transition-delay: ${gi * 100}ms; scroll-margin-top: 100px;">
+                                        ${renderFotoPrincipal(principal)}
+                                        <h3 class="text-xl font-bold mt-5 mb-1" style="color: ${config.colors.text}">${tituloProjeto}</h3>
+                                        <p class="text-sm leading-relaxed mb-4" style="color: ${config.colors.textLight}">${principal.subtitle}</p>
+                                        ${miniaturas.length ? `
+                                        <div class="grid grid-cols-3 gap-3">
+                                            ${miniaturas.map(renderMiniatura).join('')}
+                                        </div>` : ''}
                                     </div>
-                                `).join('')}
-                            </div>
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 </section>
@@ -966,20 +1042,21 @@
                             </h2>
                         </div>
                         <div class="relative">
-                            <div id="diferenciais-row" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div id="diferenciais-row" class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                                 ${enabledFeatures.map((feature, i) => `
-                                    <div class="reveal glow-primary-hover feature-card p-8 transition" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
-                                        <span class="feature-number font-display font-extrabold block mb-4" aria-hidden="true" style="font-size: 2.75rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
-                                        <span class="block w-10 h-px mb-5" style="background-color: ${config.colors.accent}"></span>
-                                        <div class="flex items-center gap-3 mb-2">
-                                            <span class="text-xl">${feature.icon}</span>
-                                            <h3 class="text-lg font-bold" style="color: ${config.colors.text}">
-                                                ${feature.title}
-                                            </h3>
+                                    <div class="reveal glow-primary-hover feature-card p-8 flex gap-5 transition" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
+                                        <span class="feature-number font-display font-extrabold block flex-shrink-0" aria-hidden="true" style="font-size: 2.75rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
+                                        <div>
+                                            <div class="flex items-center gap-3 mb-2">
+                                                <span class="text-xl">${feature.icon}</span>
+                                                <h3 class="text-lg font-bold" style="color: ${config.colors.text}">
+                                                    ${feature.title}
+                                                </h3>
+                                            </div>
+                                            <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">
+                                                ${feature.description}
+                                            </p>
                                         </div>
-                                        <p class="text-sm leading-relaxed" style="color: ${config.colors.textLight}">
-                                            ${feature.description}
-                                        </p>
                                     </div>
                                 `).join('')}
                             </div>
@@ -1029,6 +1106,32 @@
                         </div>
                     </div>
                 </section>
+            `;
+        }
+
+        // Faixa leve de contato entre Serviços e Portfólio -- versão adaptada da
+        // faixa de telefone da referência, mas só com WhatsApp real (sem formulário,
+        // sem back-end pra receber submissão; sem telefone fixo aqui pra não duplicar
+        // a formatação que o footer já resolve à sua maneira própria).
+        function renderCTAFaixa() {
+            const whatsapp = config.contact && config.contact.whatsapp;
+            if (!whatsapp) return '';
+
+            const waHref = waLink(whatsapp, waMensagemPadrao());
+
+            return `
+                <div class="py-10" style="background-color: ${config.colors.background}">
+                    <div class="max-w-5xl mx-auto px-5 sm:px-6">
+                        <div class="reveal flex flex-col sm:flex-row items-center justify-between gap-5 p-6 sm:p-8" style="border: 1px solid ${config.colors.border}; border-radius: ${R('1rem')}">
+                            <span class="font-display font-bold text-xl sm:text-2xl text-center sm:text-left" style="color: ${config.colors.text}">
+                                Vamos conversar sobre o seu projeto?
+                            </span>
+                            <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary glow-primary-hover text-white px-7 py-3.5 font-semibold text-sm inline-flex items-center gap-2 transition flex-shrink-0" style="border-radius: ${R('9999px')}">
+                                ${WHATSAPP_ICON} Falar no WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                </div>
             `;
         }
 
