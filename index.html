@@ -1125,10 +1125,17 @@
         }
 
         function renderFooter() {
+            // A coluna "Redes sociais" so existe se o cliente TEM rede cadastrada --
+            // antes o titulo era fixo e os icones condicionais, entao quem nao tem
+            // rede (a maioria: nunca inventamos perfil que o cliente nao forneceu)
+            // ficava com um titulo orfao no rodape. Sem a coluna, o grid vira 3.
+            const social = (config.contact && config.contact.social) || {};
+            const temSocial = !!(social.instagram || social.facebook || social.linkedin || social.twitter);
+
             return `
                 <footer id="contato" class="reveal" style="background-color: ${config.colors.text}">
                     <div class="max-w-6xl mx-auto px-5 sm:px-6 py-16">
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
+                        <div class="grid grid-cols-1 ${temSocial ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-10 mb-10">
                             <div>
                                 <h3 class="font-display font-bold text-white mb-4 text-lg">${config.company.name}</h3>
                                 <p class="text-gray-400 text-sm leading-relaxed">${config.footer.description}</p>
@@ -1150,15 +1157,16 @@
                                     ${config.contact.address ? `<li><a href="${config.contact.googleMapsUrl || mapsHref(config.contact.address)}" target="_blank" rel="noopener" class="hover:text-white transition">📍 ${config.contact.address}</a></li>` : ''}
                                 </ul>
                             </div>
+                            ${temSocial ? `
                             <div>
                                 <h3 class="font-bold text-white mb-4 text-base">Redes sociais</h3>
                                 <div class="flex gap-3">
-                                    ${config.contact.social.instagram ? `<a href="${config.contact.social.instagram}" class="text-gray-400 hover:text-white transition text-xl" aria-label="Instagram">📸</a>` : ''}
-                                    ${config.contact.social.facebook ? `<a href="${config.contact.social.facebook}" class="text-gray-400 hover:text-white transition text-xl" aria-label="Facebook">👍</a>` : ''}
-                                    ${config.contact.social.linkedin ? `<a href="${config.contact.social.linkedin}" class="text-gray-400 hover:text-white transition text-xl" aria-label="LinkedIn">💼</a>` : ''}
-                                    ${config.contact.social.twitter ? `<a href="${config.contact.social.twitter}" class="text-gray-400 hover:text-white transition text-xl" aria-label="Twitter/X">𝕏</a>` : ''}
+                                    ${social.instagram ? `<a href="${social.instagram}" class="text-gray-400 hover:text-white transition text-xl" aria-label="Instagram">📸</a>` : ''}
+                                    ${social.facebook ? `<a href="${social.facebook}" class="text-gray-400 hover:text-white transition text-xl" aria-label="Facebook">👍</a>` : ''}
+                                    ${social.linkedin ? `<a href="${social.linkedin}" class="text-gray-400 hover:text-white transition text-xl" aria-label="LinkedIn">💼</a>` : ''}
+                                    ${social.twitter ? `<a href="${social.twitter}" class="text-gray-400 hover:text-white transition text-xl" aria-label="Twitter/X">𝕏</a>` : ''}
                                 </div>
-                            </div>
+                            </div>` : ''}
                         </div>
                         ${(config.contact.googleMapsUrl || config.contact.address) ? `
                         <div class="overflow-hidden mb-10" style="border-radius: ${R('1rem')}">
