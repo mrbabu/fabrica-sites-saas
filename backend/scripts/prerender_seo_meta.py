@@ -51,12 +51,48 @@ def _favicon_href(company: dict, emoji: str, origin: str | None) -> str:
     return "data:image/svg+xml," + quote(svg)
 
 
+def _construir_structured_data(config: dict, page_url: str | None, og_image: str) -> dict:
+    """Monta um LocalBusiness (schema.org) só com dados reais já presentes no
+    config -- nunca inventa endereço/telefone/tipo de negócio específico.
+    `address` fica como string simples (não como PostalAddress estruturado):
+    fazer parsing de "Rua X, Nº Y, Bairro, Cidade - UF, CEP Z" por regex
+    quebraria para formatos de endereço que não seguem esse padrão exato, e
+    schema.org aceita string livre em `address` como alternativa válida.
+    """
+    company = config.get("company", {})
+    contact = config.get("contact", {})
+
+    dados: dict = {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": company.get("name", ""),
+    }
+    if company.get("legalName"):
+        dados["legalName"] = company["legalName"]
+    if company.get("description"):
+        dados["description"] = company["description"]
+    if og_image:
+        dados["image"] = og_image
+    if page_url:
+        dados["url"] = page_url
+    telefone = contact.get("phone") or contact.get("whatsapp")
+    if telefone:
+        dados["telephone"] = telefone
+    if contact.get("email"):
+        dados["email"] = contact["email"]
+    if contact.get("address"):
+        dados["address"] = contact["address"]
+    return dados
+
+
 def prerender_meta(html_original: str, config: dict, origin: str | None = None) -> str:
     """Substitui os placeholders do <head> pelos valores reais do config.
 
     Espelha exatamente a lógica de render()/setFavicon() em index.html --
     qualquer mudança lá precisa ser refletida aqui também. `origin` (opcional)
-    resolve ogImage/logo relativos pra URL absoluta -- ver docstring do módulo.
+    resolve ogImage/logo/canonical/og:url relativos pra URL absoluta -- ver
+    docstring do módulo. Sem `--origin`, canonical/og:url/structured-data.url
+    ficam vazios (não dá pra gerar URL absoluta sem saber o domínio).
     """
     metadata = config.get("metadata", {})
     company = config.get("company", {})
@@ -69,6 +105,8 @@ def prerender_meta(html_original: str, config: dict, origin: str | None = None) 
     og_image = _absolutizar(metadata.get("ogImage", ""), origin)
     favicon_emoji = metadata.get("favicon", "🚀")
     favicon_href = _favicon_href(company, favicon_emoji, origin)
+    page_url = f"{origin.rstrip('/')}/" if origin else None
+    structured_data = _construir_structured_data(config, page_url, og_image)
 
     substituicoes = [
         (r"<title>.*?</title>", f"<title>{_escape(site_title)}</title>"),
@@ -93,8 +131,32 @@ def prerender_meta(html_original: str, config: dict, origin: str | None = None) 
             f'<meta property="og:image" content="{_escape(og_image)}">',
         ),
         (
+            r'<meta property="og:url" content="[^"]*">',
+            f'<meta property="og:url" content="{_escape(page_url or "")}">',
+        ),
+        (
+            r'<link id="canonical-link" rel="canonical" href="[^"]*">',
+            f'<link id="canonical-link" rel="canonical" href="{_escape(page_url or "")}">',
+        ),
+        (
+            r'<meta name="twitter:title" content="[^"]*">',
+            f'<meta name="twitter:title" content="{_escape(og_title)}">',
+        ),
+        (
+            r'<meta name="twitter:description" content="[^"]*">',
+            f'<meta name="twitter:description" content="{_escape(og_description)}">',
+        ),
+        (
+            r'<meta name="twitter:image" content="[^"]*">',
+            f'<meta name="twitter:image" content="{_escape(og_image)}">',
+        ),
+        (
             r'<link id="favicon-link" rel="icon" href="[^"]*">',
             f'<link id="favicon-link" rel="icon" href="{_escape(favicon_href)}">',
+        ),
+        (
+            r'<script type="application/ld\+json" id="structured-data">.*?</script>',
+            f'<script type="application/ld+json" id="structured-data">{json.dumps(structured_data, ensure_ascii=False)}</script>',
         ),
     ]
 
@@ -105,6 +167,25 @@ def prerender_meta(html_original: str, config: dict, origin: str | None = None) 
             raise ValueError(f"Placeholder não encontrado no index.html (padrão: {padrao[:50]}...)")
         resultado = novo
     return resultado
+
+
+def gerar_robots_txt(origin: str | None) -> str:
+    linhas = ["User-agent: *", "Allow: /"]
+    if origin:
+        linhas += ["", f"Sitemap: {origin.rstrip('/')}/sitemap.xml"]
+    return "\n".join(linhas) + "\n"
+
+
+def gerar_sitemap_xml(origin: str) -> str:
+    url = f"{origin.rstrip('/')}/"
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        "  <url>\n"
+        f"    <loc>{html.escape(url, quote=True)}</loc>\n"
+        "  </url>\n"
+        "</urlset>\n"
+    )
 
 
 def main():
@@ -128,6 +209,15 @@ def main():
     html_corrigido = prerender_meta(html_original, config, origin=args.origin)
     index_path.write_text(html_corrigido, encoding="utf-8")
     print(f"OK: <head> de {index_path} atualizado com dados reais de {config['company']['name']}.")
+
+    (args.pasta / "robots.txt").write_text(gerar_robots_txt(args.origin), encoding="utf-8")
+    print(f"OK: robots.txt gerado em {args.pasta / 'robots.txt'}.")
+
+    if args.origin:
+        (args.pasta / "sitemap.xml").write_text(gerar_sitemap_xml(args.origin), encoding="utf-8")
+        print(f"OK: sitemap.xml gerado em {args.pasta / 'sitemap.xml'}.")
+    else:
+        print("AVISO: sitemap.xml não gerado -- precisa de --origin (URL absoluta obrigatória em <loc>).")
 
 
 if __name__ == "__main__":
