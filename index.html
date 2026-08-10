@@ -210,14 +210,20 @@
 
         async function loadConfig() {
             try {
-                const response = await fetch('./site-config.json');
-                let data = await response.json();
-                // Bootstrap dinâmico opcional: site-config.json vira só um ponteiro
-                // ({dynamic:true, slug, apiBase}) e a config real vem da API/Postgres.
-                // Clientes sem "dynamic" continuam servindo o JSON completo como sempre.
-                if (data && data.dynamic === true && data.slug && data.apiBase) {
-                    const liveResponse = await fetch(`${data.apiBase}/api/v1/site-config/${data.slug}`);
-                    data = await liveResponse.json();
+                let data;
+                if (typeof window.__SITE_CONFIG__ !== 'undefined') {
+                    // Injetado por /demo/preview (backend/routers/demo_preview.py) -- pula o fetch.
+                    data = window.__SITE_CONFIG__;
+                } else {
+                    const response = await fetch('./site-config.json');
+                    data = await response.json();
+                    // Bootstrap dinâmico opcional: site-config.json vira só um ponteiro
+                    // ({dynamic:true, slug, apiBase}) e a config real vem da API/Postgres.
+                    // Clientes sem "dynamic" continuam servindo o JSON completo como sempre.
+                    if (data && data.dynamic === true && data.slug && data.apiBase) {
+                        const liveResponse = await fetch(`${data.apiBase}/api/v1/site-config/${data.slug}`);
+                        data = await liveResponse.json();
+                    }
                 }
                 config = data;
                 render();
