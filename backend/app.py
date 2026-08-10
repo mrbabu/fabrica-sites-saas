@@ -591,6 +591,61 @@ async def obter_site_config(slug: str, db: Session = Depends(get_db)):
     return site.config
 
 
+class ImportarSiteConfigRequest(BaseModel):
+    """Payload para persistir um site-config já pronto, sem passar pelo Agente Construtor"""
+    nicho: str = Field(..., min_length=3, max_length=100, description="Nicho/ramo de atuação")
+    config: dict = Field(..., description="site-config.json completo, já com os dados reais do cliente")
+
+
+@app.post(
+    "/api/v1/site-config/{slug}",
+    response_model=SiteResponse,
+    tags=["Generation"],
+    dependencies=[Depends(verificar_api_key)],
+)
+async def importar_site_config(slug: str, request: ImportarSiteConfigRequest, db: Session = Depends(get_db)):
+    """
+    Persiste no Postgres um site-config já pronto (ex: dados reais de um
+    cliente curados manualmente), sem rodar o Agente Construtor de IA.
+
+    Diferente de `POST /api/v1/generate-site`, que sempre gera conteúdo novo
+    a partir de nome/nicho/cor — este endpoint aceita o JSON completo e só
+    valida estrutura mínima + grava, preservando exatamente o conteúdo
+    enviado.
+
+    Propositalmente **não** usa `ValidadorSchema`/`SiteConfig` (o schema
+    Pydantic estrito do pipeline de IA) — aquele schema policia
+    características de saída de geração automática (ex: enum fechado de
+    `typography.fontPair`, `services[].features` obrigatório) que não fazem
+    sentido para um config real, curado manualmente, que já passou pelo
+    Quality Gate do projeto. Barrar aqui forçaria fabricar dado fake só pra
+    satisfazer o schema — o oposto do que este endpoint existe pra fazer.
+
+    **Protegido**: exige o header `X-API-Key` igual a `WEBHOOK_API_KEY` do
+    ambiente do servidor — mesmo mecanismo do `/api/v1/generate-site`.
+    """
+    if not re.match(r'^[a-z0-9-]+$', slug):
+        raise HTTPException(status_code=400, detail="Slug inválido")
+
+    campos_essenciais = ["metadata", "company", "hero", "services"]
+    faltando = [campo for campo in campos_essenciais if campo not in request.config]
+    if faltando:
+        raise HTTPException(status_code=400, detail=f"Campos essenciais ausentes no config: {faltando}")
+
+    nome_empresa = request.config.get("company", {}).get("name")
+    if not nome_empresa:
+        raise HTTPException(status_code=400, detail="config.company.name é obrigatório")
+
+    repository.upsert_site(db, slug, nome_empresa, request.nicho, request.config)
+
+    return SiteResponse(
+        status="success",
+        data=request.config,
+        timestamp=datetime.now().isoformat(),
+        tempo_geracao_segundos=0.0,
+    )
+
+
 # ============================================================================
 # FUNÇÕES AUXILIARES
 # ============================================================================

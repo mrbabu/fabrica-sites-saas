@@ -211,7 +211,15 @@
         async function loadConfig() {
             try {
                 const response = await fetch('./site-config.json');
-                config = await response.json();
+                let data = await response.json();
+                // Bootstrap dinâmico opcional: site-config.json vira só um ponteiro
+                // ({dynamic:true, slug, apiBase}) e a config real vem da API/Postgres.
+                // Clientes sem "dynamic" continuam servindo o JSON completo como sempre.
+                if (data && data.dynamic === true && data.slug && data.apiBase) {
+                    const liveResponse = await fetch(`${data.apiBase}/api/v1/site-config/${data.slug}`);
+                    data = await liveResponse.json();
+                }
+                config = data;
                 render();
             } catch (error) {
                 console.error('Erro ao carregar configuração:', error);
