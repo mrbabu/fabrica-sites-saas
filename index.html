@@ -170,11 +170,19 @@
                          background: radial-gradient(circle at calc(var(--mx, 36%) + 12%) calc(var(--my, 42%) - 6%), var(--ouroluz, rgba(201,169,97,0.16)), transparent 26%);
                          transition: background 0.5s ease-out; }
 
-        /* --- PLANO 4: conteúdo, à frente de tudo --------------------------- */
-        .hero-plano { transform: translate3d(0, var(--py, 0px), 60px)
+        /* --- PLANO 4: conteúdo, à frente de tudo --------------------------- *
+           translateZ era 60px: com perspective-origin no centro da SEÇÃO (não
+           do bloco) e conteúdo ancorado à esquerda, a escala da perspectiva
+           empurrava título/eyebrow/pilares para fora da tela entre ~1024 e
+           ~1350px (medido: -28px em 1440, texto cortado em 1280). Profundidade
+           pode mover sensação, não pode mover geometria crítica -- reduzido
+           para 20px, valor que o restante da cena (foto, blueprint, luz,
+           parallax) já basta para comunicar. perspective-origin não muda: ele
+           também posiciona foto/marcas/cotas, mexer ali é variável global. */
+        .hero-plano { transform: translate3d(0, var(--py, 0px), 20px)
                                  rotateY(calc(var(--tx, 0) * 3deg)) rotateX(calc(var(--ty, 0) * -3deg));
                       transform-style: preserve-3d; transition: transform 0.35s cubic-bezier(.2,.7,.2,1); }
-        .hero-plano > * { transform: translateZ(30px); }
+        .hero-plano > * { transform: translateZ(10px); }
 
         @media (max-width: 1023px) {
             .hero-eng { perspective: none; }
