@@ -93,6 +93,8 @@ class Hero(BaseModel):
     ctaText: str = Field(..., min_length=3, max_length=50, description="Texto do botão")
     ctaLink: str = Field(default="#contato", description="Link do botão")
     backgroundImage: str = Field(default="https://loremflickr.com/1920/600/negocio", description="URL background")
+    srcset: Optional[str] = Field(default=None, max_length=1200, description="srcset das variantes WebP do hero (gerado por backend/scripts/otimizar_imagens.py) — opcional: sem ele o template serve backgroundImage direto")
+    sizes: Optional[str] = Field(default=None, max_length=200, description="Atributo sizes do hero (opcional — o template tem um padrão para a composição atual)")
     enabled: bool = Field(default=True, description="Ativar/desativar seção")
 
     class Config:

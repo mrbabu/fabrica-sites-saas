@@ -17,7 +17,9 @@
     <meta name="twitter:title" content="">
     <meta name="twitter:description" content="">
     <meta name="twitter:image" content="">
-    <link id="favicon-link" rel="icon" href="">
+    <!-- href vazio faz o browser cair no /favicon.ico e logar 404 antes do JS rodar;
+         o data: neutro segura o lugar ate setFavicon() trocar pelo icone do tenant -->
+    <link id="favicon-link" rel="icon" href="data:,">
     <script type="application/ld+json" id="structured-data">{}</script>
     <link rel="stylesheet" href="/assets/css/tailwind.css?v=2">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -73,8 +75,11 @@
         .img-frame.is-visible .img-frame-corner--br { transform: translate(0, 0) rotate(180deg); }
 
         /* Entrada da hero (carregamento, não scroll) */
+        /* Só opacidade: o transform deste elemento pertence ao .hero-plano
+           (parallax + translateZ + tilt) e uma animação, por ter precedência
+           sobre regras normais, anulava o 3D do plano de conteúdo. */
         .hero-in { animation: heroIn 0.8s ease-out both; }
-        @keyframes heroIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes heroIn { from { opacity: 0; } to { opacity: 1; } }
         .word-reveal { display: inline-block; opacity: 0; transform: translateY(16px); animation: wordUp 0.65s cubic-bezier(.2,.7,.2,1) forwards; }
         @keyframes wordUp { to { opacity: 1; transform: translateY(0); } }
 
@@ -95,6 +100,92 @@
         /* Parallax do hero — JS aplica translateY, CSS só prepara o palco */
         .hero-media { position: absolute; inset: -8% 0 -8% 0; }
         .hero-media img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* ---- Hero "Engenharia em Movimento" -------------------------------
+           A fotografia é protagonista: tudo aqui existe para emoldurá-la, nunca
+           para competir com ela. Cada camada é um plano de profundidade, e o
+           JS só escreve variáveis (--mx/--my/--py) -- nenhuma anima layout.
+           O recorte e o gradiente pertencem ao SLOT, não a uma foto específica:
+           trocar hero.backgroundImage não muda uma linha deste bloco. */
+        /* Quatro planos numa cena com perspectiva real. Cada plano recebe --py
+           (parallax, escrito pelo JS) e herda --tx/--ty (cursor) do .hero-eng --
+           o CSS compõe o transform, o JS nunca escreve transform direto. Assim
+           parallax e tilt convivem sem um sobrescrever o outro. */
+        .hero-eng { position: relative; overflow: hidden; isolation: isolate;
+                    perspective: 1400px; perspective-origin: 50% 42%; }
+        .hero-cena { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; }
+
+        /* --- PLANO 1: fundo ------------------------------------------------ */
+        .hero-mesh { position: absolute; inset: -12% 0; opacity: 0.06;
+                     background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
+                     background-size: 96px 96px;
+                     transform: translate3d(0, var(--py, 0px), -420px) scale(1.34); }
+        /* grade em perspectiva: o "chão" da cena, some antes da metade da tela */
+        .hero-piso { position: absolute; left: -20%; right: -20%; bottom: -18%; height: 70%;
+                     background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
+                     background-size: 120px 78px; opacity: 0.10;
+                     transform: translate3d(0, var(--py, 0px), -300px) rotateX(74deg) scale(1.2);
+                     transform-origin: 50% 100%;
+                     -webkit-mask-image: linear-gradient(0deg, #000 8%, transparent 78%);
+                     mask-image: linear-gradient(0deg, #000 8%, transparent 78%); }
+        .hero-vinheta { position: absolute; inset: 0;
+                        background: radial-gradient(ellipse 120% 90% at 30% 30%, transparent 35%, rgba(0,0,0,0.42) 100%); }
+
+        /* --- PLANO 2: elementos técnicos ----------------------------------- */
+        .hero-tec { position: absolute; inset: 0; transform: translate3d(0, var(--py, 0px), -150px); }
+        .hero-cota { position: absolute; display: flex; align-items: center; gap: 8px;
+                     font-size: 10px; letter-spacing: 0.26em; color: rgba(255,255,255,0.34); }
+        .hero-cota::before, .hero-cota::after { content: ''; display: block; width: 30px; height: 1px; background: currentColor; }
+        .hero-cruz { position: absolute; width: 16px; height: 16px; opacity: 0.5; }
+        .hero-cruz::before, .hero-cruz::after { content: ''; position: absolute; background: var(--ouro, #C9A961); }
+        .hero-cruz::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+        .hero-cruz::after { top: 50%; left: 0; right: 0; height: 1px; }
+        .hero-regua { position: absolute; height: 1px; background: rgba(255,255,255,0.16); }
+        .hero-regua::after { content: ''; position: absolute; inset: 0;
+                             background-image: linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px);
+                             background-size: 28px 100%; height: 7px; top: -3px; }
+
+        /* --- PLANO 3: fotografia ------------------------------------------- */
+        .hero-foto { position: absolute; top: 0; right: 0; bottom: 0; width: 62%;
+                     clip-path: polygon(14% 0, 100% 0, 100% 100%, 0 100%);
+                     transform: translate3d(0, var(--py, 0px), -40px) rotateY(calc(var(--tx, 0) * -1.6deg));
+                     box-shadow: -60px 0 120px -30px rgba(0,0,0,0.55); }
+        .hero-foto img { width: 100%; height: 100%; object-fit: cover; display: block;
+                         filter: blur(12px) saturate(0.8); transform: scale(1.08);
+                         transition: filter 1.1s ease, transform 1.4s cubic-bezier(.2,.7,.2,1); }
+        .hero-eng.is-in .hero-foto img { filter: blur(0) saturate(1); transform: scale(1); }
+        .hero-veu { position: absolute; inset: 0; pointer-events: none; }
+        /* moldura técnica incompleta -- dois cantos, nunca um retângulo fechado */
+        .hero-marca { position: absolute; width: 74px; height: 74px; pointer-events: none; opacity: 0;
+                      transition: opacity 0.6s ease 0.5s, transform 0.6s cubic-bezier(.2,.8,.2,1) 0.5s; }
+        .hero-eng.is-in .hero-marca { opacity: 0.85; transform: translate(0, 0); }
+        .hero-marca--tl { transform: translate(-8px, -8px); }
+        .hero-marca--br { transform: translate(8px, 8px); }
+
+        /* --- luz: azul da marca no cursor, dourado como luz de acabamento --- */
+        .hero-luz { position: absolute; inset: 0; pointer-events: none;
+                    background: radial-gradient(circle at var(--mx, 36%) var(--my, 42%), var(--luz, rgba(74,111,165,0.5)), transparent 46%);
+                    transition: background 0.35s ease-out; }
+        .hero-luz-ouro { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen;
+                         background: radial-gradient(circle at calc(var(--mx, 36%) + 12%) calc(var(--my, 42%) - 6%), var(--ouroluz, rgba(201,169,97,0.16)), transparent 26%);
+                         transition: background 0.5s ease-out; }
+
+        /* --- PLANO 4: conteúdo, à frente de tudo --------------------------- */
+        .hero-plano { transform: translate3d(0, var(--py, 0px), 60px)
+                                 rotateY(calc(var(--tx, 0) * 3deg)) rotateX(calc(var(--ty, 0) * -3deg));
+                      transform-style: preserve-3d; transition: transform 0.35s cubic-bezier(.2,.7,.2,1); }
+        .hero-plano > * { transform: translateZ(30px); }
+
+        @media (max-width: 1023px) {
+            .hero-eng { perspective: none; }
+            .hero-foto { position: relative; width: 100%; height: 320px; clip-path: none;
+                         transform: translate3d(0, var(--py, 0px), 0); box-shadow: none; }
+            .hero-plano { transform: translate3d(0, var(--py, 0px), 0); }
+            .hero-plano > * { transform: none; }
+            .hero-mesh, .hero-piso, .hero-tec { transform: translate3d(0, var(--py, 0px), 0); }
+            .hero-piso, .hero-luz, .hero-luz-ouro { display: none; }
+            .hero-cota, .hero-regua { display: none; }
+        }
 
         /* Botão magnético — JS aplica o transform, CSS só suaviza o retorno */
         .magnetic { transition: transform 0.25s cubic-bezier(.2,.9,.3,1); will-change: transform; }
@@ -121,8 +212,32 @@
            de tenant). Efeito puramente decorativo (::after), não interfere
            no fluxo/clique do link. */
         .nav-link { position: relative; }
-        .nav-link::after { content: ''; position: absolute; left: 0; bottom: -4px; width: 0; height: 2px; background-color: var(--color-primary); transition: width 0.25s ease; }
+        .nav-link::after { content: ''; position: absolute; left: 0; bottom: -4px; width: 0; height: 2px; background-color: var(--color-accent, var(--color-primary)); transition: width 0.25s ease; }
         .nav-link:hover::after, .nav-link.active::after { width: 100%; }
+
+        /* Header integrado ao hero: mesma família de azul do tenant em vez de uma
+           faixa branca cortando a composição. Cor sempre derivada do config --
+           color-mix sobre --color-primary, nunca valor fixo. Ao rolar fica mais
+           opaco (.is-scrolled), mantendo a identidade em cima das seções claras. */
+        .site-nav-eng { background: color-mix(in srgb, var(--color-primary, #0b2545) 82%, transparent);
+                        border-bottom: 1px solid color-mix(in srgb, var(--color-accent, #fff) 28%, transparent);
+                        transition: background 0.3s ease, box-shadow 0.3s ease; }
+        .site-nav-eng.is-scrolled { background: color-mix(in srgb, var(--color-primary, #0b2545) 95%, transparent);
+                                    box-shadow: 0 10px 30px -18px rgba(0,0,0,0.8); }
+        /* fio técnico do blueprint correndo sob a borda -- marca de prancha, não sombra */
+        .site-nav-eng::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; pointer-events: none;
+                               background-image: linear-gradient(90deg, var(--color-accent, #fff) 1px, transparent 1px);
+                               background-size: 26px 100%; opacity: 0.22; }
+        .site-nav-eng .nav-link:hover { color: var(--color-accent, #fff) !important; opacity: 1; }
+        /* a logo do cliente costuma vir sem transparência; sobre o azul ela vira um
+           bloco branco solto. O chip assume isso: vira placa de identificação. */
+        /* CTA do header: azul sobre azul sumia. Contorno dourado dá o contraste
+           sem virar botão colorido -- o dourado é acabamento, não fundo. */
+        .nav-cta { color: var(--color-accent, #fff); border: 1px solid color-mix(in srgb, var(--color-accent, #fff) 70%, transparent);
+                   background: color-mix(in srgb, var(--color-accent, #fff) 10%, transparent); }
+        .nav-cta:hover { background: var(--color-accent, #fff); color: var(--color-primary, #000); }
+        .nav-chip { background: #fff; padding: 6px 10px; display: inline-flex; align-items: center;
+                    border-radius: 2px; box-shadow: 0 2px 12px -4px rgba(0,0,0,0.45); }
 
         a:focus-visible, button:focus-visible, summary:focus-visible {
             outline: 2px solid currentColor; outline-offset: 3px; border-radius: 4px;
@@ -172,11 +287,97 @@
         .feature-number { transition: color 0.3s ease; }
         .feature-card:hover .feature-number { color: var(--color-primary); }
 
+        /* ---- Cards com profundidade -----------------------------------------
+           Um card é um objeto sobre a prancha, não uma caixa: 3 planos reais
+           (superfície / moldura / conteúdo) separados por translateZ dentro de
+           uma perspectiva própria. O JS escreve só --cx/--cy (posição do cursor
+           no card) e --tx/--ty (inclinação); todo o resto é CSS. Cores sempre
+           de --color-primary/--color-accent -- nada fixo, nada de neon. */
+        .card-3d { position: relative; transform-style: preserve-3d;
+                   transition: transform 0.35s cubic-bezier(.2,.8,.2,1), box-shadow 0.35s ease, border-color 0.3s ease;
+                   will-change: transform; }
+        .card-3d:hover { transform: perspective(900px)
+                                    rotateY(calc(var(--tx, 0) * 3deg)) rotateX(calc(var(--ty, 0) * -3deg))
+                                    translateY(-7px) translateZ(6px);
+                         box-shadow: 0 26px 48px -22px color-mix(in srgb, var(--color-primary, #000) 62%, transparent),
+                                     0 3px 10px -6px rgba(0,0,0,0.25); }
+        /* superfície: luz radial que revela o material, não um brilho neon */
+        .card-3d__luz { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.35s ease;
+                        border-radius: inherit;
+                        background: radial-gradient(circle at var(--cx, 50%) var(--cy, 50%),
+                                    color-mix(in srgb, var(--color-primary, #000) 12%, transparent) 0%,
+                                    transparent 58%); }
+        .card-3d:hover .card-3d__luz { opacity: 1; }
+        /* fio dourado de acabamento: aparece só na borda superior, no hover */
+        .card-3d__fio { position: absolute; left: 0; right: 0; top: 0; height: 1px; pointer-events: none;
+                        background: linear-gradient(90deg, transparent, var(--color-accent, #fff), transparent);
+                        opacity: 0; transform: scaleX(0.4); transition: opacity 0.35s ease, transform 0.5s cubic-bezier(.2,.8,.2,1); }
+        .card-3d:hover .card-3d__fio { opacity: 0.9; transform: scaleX(1); }
+        /* os três planos: só ganham profundidade no hover, para o repouso continuar limpo */
+        .card-3d__z1, .card-3d__z2, .card-3d__z3 { transition: transform 0.35s cubic-bezier(.2,.8,.2,1); }
+        .card-3d:hover .card-3d__z1 { transform: translateZ(16px); }
+        .card-3d:hover .card-3d__z2 { transform: translateZ(28px); }
+        .card-3d:hover .card-3d__z3 { transform: translateZ(44px); }
+
+        /* Portfólio: quem está em foco vem à frente; os demais recuam. É a leitura
+           de galeria física -- um projeto de cada vez. No desktop o foco é o :hover;
+           no toque é .is-focus, que o JS aplica ao projeto mais central da tela.
+           Toda a marcação técnica fica FORA da fotografia: a foto nunca recebe
+           texto, glow ou HUD por cima -- ela é o que precisa ser visto primeiro. */
+        .portfolio-cluster { transition: transform 0.45s cubic-bezier(.2,.8,.2,1), opacity 0.45s ease, filter 0.45s ease; }
+        #portfolio-row:has(.portfolio-cluster:hover) .portfolio-cluster:not(:hover),
+        #portfolio-row:has(.portfolio-cluster.is-focus) .portfolio-cluster:not(.is-focus) {
+            /* vizinhos: secundários, nunca "desabilitados" -- ainda precisam convidar
+               o clique. 0.60/0.68 lia como apagado; a escala é que faz o recuo. */
+            transform: scale(0.965); opacity: 0.78; filter: saturate(0.82); }
+        #portfolio-row .portfolio-cluster:hover,
+        #portfolio-row .portfolio-cluster.is-focus { transform: scale(1.014); opacity: 1; filter: none; }
+        #portfolio-row .portfolio-cluster:hover .img-frame-corner,
+        #portfolio-row .portfolio-cluster.is-focus .img-frame-corner { opacity: 1; }
+        /* aproximação: o zoom acontece DENTRO da moldura, então a composição
+           não se mexe -- a foto é que se aproxima do observador */
+        .portfolio-cluster .img-frame { overflow: hidden; }
+        .portfolio-cluster .img-frame-photo { transition: filter 0.9s ease, transform 0.7s cubic-bezier(.2,.7,.2,1), box-shadow 0.5s ease; }
+        #portfolio-row .portfolio-cluster:hover .img-frame.is-visible .img-frame-photo,
+        #portfolio-row .portfolio-cluster.is-focus .img-frame.is-visible .img-frame-photo {
+            transform: scale(1.045);
+            box-shadow: 0 34px 66px -28px color-mix(in srgb, var(--color-primary, #000) 78%, transparent); }
+
+        /* Marcação de prancha: número do projeto, linha de cota, contagem de
+           etapas e indicador de escala. Secundários por definição -- baixa
+           opacidade em repouso, dourado só quando o projeto está em foco. */
+        .pf-cabecalho { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .pf-num { font-size: 0.72rem; letter-spacing: 0.28em; transition: color 0.4s ease;
+                  color: var(--color-border, #cbd5e1); }
+        #portfolio-row .portfolio-cluster:hover .pf-num,
+        #portfolio-row .portfolio-cluster.is-focus .pf-num { color: var(--color-accent, #b45309); }
+        .pf-linha { flex: 1; height: 1px; background: currentColor; opacity: 0.16; }
+        .pf-etiqueta { font-size: 0.62rem; letter-spacing: 0.22em; opacity: 0.45; white-space: nowrap; }
+        .pf-cota { display: flex; align-items: center; gap: 10px; margin-top: 12px; opacity: 0.3;
+                   font-size: 0.6rem; letter-spacing: 0.22em; transition: opacity 0.4s ease; }
+        #portfolio-row .portfolio-cluster:hover .pf-cota,
+        #portfolio-row .portfolio-cluster.is-focus .pf-cota { opacity: 0.62; }
+        .pf-cota__regua { flex: 1; height: 5px; border-left: 1px solid currentColor; border-right: 1px solid currentColor;
+                          background-image: linear-gradient(90deg, currentColor 1px, transparent 1px);
+                          background-size: 22px 1px; background-position: 0 2px; background-repeat: repeat-x; }
+
         @media (prefers-reduced-motion: reduce) {
             .reveal, .reveal-loop { opacity: 1 !important; transform: none !important; transition: none !important; }
             .img-frame-photo { filter: none !important; transform: none !important; box-shadow: none !important; transition: none !important; }
             .img-frame-corner { opacity: 0.9 !important; transform: none !important; transition: none !important; }
             .hero-in, .word-reveal { animation: none !important; opacity: 1 !important; transform: none !important; }
+            /* hero: entra direto no estado final -- sem blur, sem tilt, sem luz seguindo cursor */
+            .hero-foto img { filter: none !important; transform: none !important; transition: none !important; }
+            .hero-marca { opacity: 0.85 !important; transform: none !important; transition: none !important; }
+            .hero-plano, .hero-plano > *, .hero-foto, .hero-mesh, .hero-piso, .hero-tec { transform: none !important; transition: none !important; }
+            .hero-luz, .hero-luz-ouro, .hero-piso { display: none !important; }
+            /* cards: sem tilt, sem parallax interno, sem luz seguindo cursor --
+               o hover continua existindo, só que como elevação e borda */
+            .card-3d, .card-3d:hover, .card-3d__z1, .card-3d__z2, .card-3d__z3,
+            .portfolio-cluster, #portfolio-row .portfolio-cluster:hover,
+            #portfolio-row:has(.portfolio-cluster:hover) .portfolio-cluster:not(:hover) {
+                transform: none !important; transition: none !important; opacity: 1 !important; filter: none !important; }
+            .card-3d__luz, .card-3d__fio { display: none !important; }
             .whatsapp-pulse { animation: none !important; }
             .ticker-track { animation: none !important; }
             .magnetic { transition: none !important; }
@@ -313,6 +514,8 @@
             initWhatsAppLabel();
             initParallax();
             initMagnetic();
+            initCards3D();
+            initPortfolioFoco();
             initCountUp();
         }
 
@@ -394,8 +597,7 @@
             const nav = document.getElementById('site-nav');
             if (nav) {
                 const onScroll = () => {
-                    if (window.scrollY > 8) nav.classList.add('shadow-md', 'bg-white/90');
-                    else nav.classList.remove('shadow-md', 'bg-white/90');
+                    nav.classList.toggle('is-scrolled', window.scrollY > 8);
                 };
                 window.addEventListener('scroll', onScroll);
                 onScroll();
@@ -538,20 +740,102 @@
         }
 
         function initParallax() {
-            const media = document.getElementById('hero-media-img');
-            if (!media || prefersReducedMotion()) return;
-            let ticking = false;
-            const update = () => {
-                const y = Math.min(window.scrollY, 900) * 0.14;
-                media.style.transform = `translateY(${y}px)`;
-                ticking = false;
+            const hero = document.getElementById('hero');
+            if (!hero) return;
+
+            // A entrada (blur -> foco) roda mesmo sob reduced-motion: lá o CSS
+            // neutraliza a transição, então a classe só garante o estado final.
+            requestAnimationFrame(() => hero.classList.add('is-in'));
+            if (prefersReducedMotion()) return;
+
+            // Parallax por camada: quanto MAIOR o fator, mais a camada é puxada
+            // de volta enquanto a página sobe -- ou seja, menos ela anda na tela
+            // e mais distante ela parece. Fundo 0.34 > técnicos 0.24 > foto 0.16 >
+            // conteúdo 0.06 produz exatamente a leitura pedida: fundo distante,
+            // fotografia intermediária, conteúdo próximo. O JS só escreve --py;
+            // quem compõe o transform (junto do translateZ e do tilt) é o CSS.
+            const camadas = [...hero.querySelectorAll('[data-parallax]')].map(el => ({
+                el, fator: parseFloat(el.dataset.parallax) || 0
+            }));
+            let pendente = false;
+            const mover = () => {
+                const y = Math.min(window.scrollY, 900);
+                camadas.forEach(({ el, fator }) => {
+                    el.style.setProperty('--py', (y * fator).toFixed(1) + 'px');
+                });
+                pendente = false;
             };
             window.addEventListener('scroll', () => {
-                if (!ticking) { requestAnimationFrame(update); ticking = true; }
+                if (!pendente) { requestAnimationFrame(mover); pendente = true; }
+            }, { passive: true });
+            mover();
+
+            // Luz (azul da marca + acabamento dourado) e inclinação de até 3°,
+            // só onde existe cursor de verdade. As variáveis ficam no .hero-eng,
+            // então todas as camadas reagem juntas, cada uma na sua intensidade.
+            if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+            hero.addEventListener('pointermove', e => {
+                const r = hero.getBoundingClientRect();
+                const px = (e.clientX - r.left) / r.width;
+                const py = (e.clientY - r.top) / r.height;
+                hero.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+                hero.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+                hero.style.setProperty('--tx', (px - 0.5).toFixed(3));
+                hero.style.setProperty('--ty', (py - 0.5).toFixed(3));
             });
-            update();
+            hero.addEventListener('pointerleave', () => {
+                ['--mx', '--my', '--tx', '--ty'].forEach(v => hero.style.removeProperty(v));
+            });
         }
 
+        // Profundidade dos cards: escreve a posição do cursor DENTRO do card
+        // (--cx/--cy, para a luz) e a inclinação (--tx/--ty, com teto de 3° no
+        // CSS). Um listener por card e só em ponteiro fino -- no toque nada
+        // disso roda, e a profundidade fica por conta de sombra e contraste.
+        function initCards3D() {
+            if (prefersReducedMotion()) return;
+            if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+            document.querySelectorAll('.card-3d').forEach(card => {
+                let pendente = false, ev = null;
+                const aplicar = () => {
+                    const r = card.getBoundingClientRect();
+                    const px = (ev.clientX - r.left) / r.width;
+                    const py = (ev.clientY - r.top) / r.height;
+                    card.style.setProperty('--cx', (px * 100).toFixed(1) + '%');
+                    card.style.setProperty('--cy', (py * 100).toFixed(1) + '%');
+                    card.style.setProperty('--tx', (px - 0.5).toFixed(3));
+                    card.style.setProperty('--ty', (py - 0.5).toFixed(3));
+                    pendente = false;
+                };
+                card.addEventListener('pointermove', e => {
+                    ev = e;
+                    if (!pendente) { requestAnimationFrame(aplicar); pendente = true; }
+                });
+                card.addEventListener('pointerleave', () => {
+                    ['--cx', '--cy', '--tx', '--ty'].forEach(v => card.style.removeProperty(v));
+                });
+            });
+        }
+        // No toque não existe hover, então o "projeto em foco" é o que está mais
+        // perto do centro da tela enquanto a pessoa rola -- mesma leitura de
+        // galeria do desktop, sem depender de cursor. Um IntersectionObserver
+        // com faixa central; nenhum listener de scroll novo.
+        function initPortfolioFoco() {
+            const row = document.getElementById('portfolio-row');
+            if (!row || prefersReducedMotion()) return;
+            if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+            const clusters = [...row.querySelectorAll('.portfolio-cluster')];
+            if (clusters.length < 2) return;
+            const visiveis = new Map();
+            const io = new IntersectionObserver(entradas => {
+                entradas.forEach(e => visiveis.set(e.target, e.intersectionRatio));
+                let melhor = null, maior = 0;
+                visiveis.forEach((ratio, el) => { if (ratio > maior) { maior = ratio; melhor = el; } });
+                clusters.forEach(c => c.classList.toggle('is-focus', c === melhor && maior > 0.55));
+            }, { threshold: [0, 0.25, 0.55, 0.8, 1], rootMargin: '-18% 0px -18% 0px' });
+            clusters.forEach(c => io.observe(c));
+        }
         function initMagnetic() {
             if (prefersReducedMotion()) return;
             document.querySelectorAll('.magnetic').forEach(el => {
@@ -663,9 +947,9 @@
             const secoesPortfolio = secoesHabilitadas.filter(s => s.id.startsWith('portfolio-'));
             const outrasSecoes = secoesHabilitadas.filter(s => !s.id.startsWith('portfolio-'));
 
-            const linkDireto = s => `<a href="#${s.id}" class="nav-link font-medium text-sm transition hover:opacity-70" style="color: ${config.colors.text}">${s.title}</a>`;
+            const linkDireto = s => `<a href="#${s.id}" class="nav-link font-medium text-sm text-white/80 transition">${s.title}</a>`;
 
-            const linkPortfolio = secoesPortfolio.length === 0 ? '' : `<a href="#portfolio" class="nav-link nav-link-portfolio font-medium text-sm transition hover:opacity-70" style="color: ${config.colors.text}">Projetos</a>`;
+            const linkPortfolio = secoesPortfolio.length === 0 ? '' : `<a href="#portfolio" class="nav-link nav-link-portfolio font-medium text-sm text-white/80 transition">Projetos</a>`;
 
             const navLinks = outrasSecoes.map(linkDireto).join('') + linkPortfolio;
 
@@ -679,21 +963,21 @@
             const ctaCurto = (config.hero && config.hero.ctaText) || 'Fale conosco';
 
             return `
-                <nav id="site-nav" class="sticky top-0 z-40 bg-white/70 backdrop-blur-md transition-shadow duration-300" style="border-bottom: 1px solid ${config.colors.border}">
+                <nav id="site-nav" class="site-nav-eng sticky top-0 z-40 backdrop-blur-md relative">
                     <div class="max-w-6xl mx-auto px-5 sm:px-6 py-4 flex justify-between items-center">
                         <div class="flex items-center gap-3">
-                            ${logo}
-                            <span class="font-display font-bold text-lg tracking-tight" style="color: ${config.colors.primary}">${config.company.name}</span>
+                            <span class="nav-chip">${logo}</span>
+                            <span class="font-display font-bold text-lg tracking-tight text-white">${config.company.name}</span>
                         </div>
                         <div class="hidden md:flex items-center gap-8">
                             ${navLinks}
-                            <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary glow-primary-hover text-white px-5 py-2.5 text-sm font-semibold whitespace-nowrap transition" style="border-radius: ${R('9999px')}">${ctaCurto}</a>
+                            <a href="${waHref}" target="_blank" rel="noopener" class="nav-cta px-5 py-2.5 text-sm font-display font-bold uppercase tracking-widest whitespace-nowrap transition" style="border-radius: ${R('2px')}">${ctaCurto}</a>
                         </div>
-                        <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg" style="color: ${config.colors.primary}" aria-label="Abrir menu">
+                        <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg text-white" aria-label="Abrir menu">
                             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
                         </button>
                     </div>
-                    <div id="mobile-menu" class="hidden md:hidden border-t bg-white px-5 py-4 flex flex-col gap-4" style="border-color: ${config.colors.border}">
+                    <div id="mobile-menu" class="hidden md:hidden border-t px-5 py-4 flex flex-col gap-4" style="border-color: color-mix(in srgb, var(--color-accent) 25%, transparent); background: color-mix(in srgb, var(--color-primary) 96%, transparent)">
                         ${navLinks}
                         <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary text-white px-5 py-3 text-sm font-semibold text-center" style="border-radius: ${R('9999px')}">${ctaCurto}</a>
                     </div>
@@ -740,78 +1024,114 @@
         function renderHero() {
             if (!config.hero || !config.hero.enabled) return '';
 
+            const c = config.colors;
+
             const waHref = config.contact && config.contact.whatsapp
                 ? waLink(config.contact.whatsapp, waMensagemPadrao())
                 : config.hero.ctaLink;
 
-            // Botão "Onde Estamos" só aparece com endereço real (mesma regra de sempre —
-            // nunca fabricar link de mapa); reusa mapsHref (endereço já validado, sem
-            // depender de googleMapsUrl específico).
+            // Botão "Onde Estamos" só aparece com endereço real (nunca fabricar link de mapa).
             const enderecoReal = config.contact && config.contact.address;
             const ondeEstamosHref = enderecoReal
                 ? (config.contact.googleMapsUrl || mapsHref(config.contact.address))
                 : null;
 
-            const c = config.colors;
+            const pilares = (config.institutional && config.institutional.enabled && config.institutional.pillars) || [];
 
-            // Etiqueta de uma linha com os pilares reais (ex.: Construção/Reforma/
-            // Gestão/Planejamento) -- só aparece se o tenant tiver esse dado
-            // preenchido (mesma regra condicional do grid de pilares em
-            // renderSections()); aqui é só o resumo curto, não substitui o grid.
-            const pilaresLinha = (config.institutional && config.institutional.enabled && config.institutional.pillars && config.institutional.pillars.length)
-                ? `
-                    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-6 font-display font-bold uppercase tracking-widest text-xs" style="color: ${c.primary}">
-                        ${config.institutional.pillars.map((p, i) => `${i > 0 ? `<span aria-hidden="true" style="color: ${c.accent}">·</span>` : ''}<span>${p}</span>`).join('')}
-                    </div>
-                `
+            // A última palavra do título recebe o dourado -- o dourado aqui é hierarquia
+            // (destaque, precisão, acabamento), nunca decoração espalhada.
+            const palavras = (config.hero.title || '').trim().split(/\s+/);
+            const ultima = palavras.length > 1 ? palavras.pop() : null;
+            const tituloHtml = staggerWords(palavras.join(' '))
+                + (ultima ? `<span style="color: ${c.accent}">${staggerWords(ultima)}</span>` : '');
+
+            // Fotografia: <picture> com variantes WebP quando o tenant as declara
+            // (hero.srcset é gerado por backend/scripts/otimizar_imagens.py). Sem o
+            // campo, serve o original -- nenhum tenant quebra por não ter rodado o script.
+            const foto = config.hero.backgroundImage;
+            const fonteWebp = config.hero.srcset
+                ? `<source type="image/webp" srcset="${config.hero.srcset}" sizes="${config.hero.sizes || '(max-width: 1023px) 100vw, 62vw'}">`
                 : '';
 
-            // Hero assimétrico (texto | foto), inspirado na composição de referência
-            // (headline curta + CTA à esquerda, imagem grande à direita, bastante
-            // espaço negativo) -- mas sem full-bg escuro nem elemento de review
-            // fake: o card de avaliação da referência não tem dado real equivalente
-            // (config.testimonials vazio pra maioria dos tenants), então some.
-            // Reaproveita o mesmo grid responsivo de renderSections() (já compilado
-            // no Tailwind, sem precisar de classe nova) e o mesmo .img-frame com
-            // cantos "blueprint" já usado em Sobre/Portfólio, pra manter a mesma
-            // linguagem visual em vez de inventar um tratamento de foto novo.
             return `
-                <section class="relative overflow-hidden" style="background-color: ${c.background}">
-                    ${renderBlueprintSignature(c.primary)}
-                    <div class="hero-in max-w-7xl mx-auto px-5 sm:px-6 py-20 md:py-28 relative z-10">
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-                            <div>
-                                ${config.company.logo ? `<img src="${config.company.logo}" alt="${config.company.name}" class="h-14 sm:h-16 w-auto max-w-[220px] object-contain mb-6" onerror="this.remove()">` : ''}
-                                ${config.company.tagline ? `<span class="font-display italic inline-block text-base sm:text-lg mb-4" style="color: ${c.textLight}">${config.company.tagline}</span>` : ''}
-                                <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-[1.05] tracking-tight" style="color: ${c.text}">
-                                    ${staggerWords(config.hero.title)}
-                                </h1>
-                                <p class="text-lg md:text-xl mb-6 max-w-xl leading-relaxed" style="color: ${c.textLight}">
-                                    ${config.hero.subtitle}
-                                </p>
-                                ${pilaresLinha}
-                                <div class="flex flex-col sm:flex-row flex-wrap gap-3">
-                                    <a href="${waHref}" target="_blank" rel="noopener" id="hero-cta" class="magnetic glow-primary-hover btn-primary text-white px-8 py-4 font-bold text-base inline-flex items-center justify-center gap-2 transition" style="border-radius: ${R('9999px')}">
-                                        ${WHATSAPP_ICON} ${config.hero.ctaText}
-                                    </a>
-                                    <a href="#servicos" class="px-8 py-4 font-semibold text-base inline-flex items-center justify-center transition hover:opacity-70" style="border: 1.5px solid ${c.text}26; color: ${c.text}; border-radius: ${R('9999px')}">
-                                        Conhecer serviços
-                                    </a>
-                                    ${ondeEstamosHref ? `
-                                    <a href="${ondeEstamosHref}" target="_blank" rel="noopener" class="px-8 py-4 font-semibold text-base inline-flex items-center justify-center gap-2 transition hover:opacity-70" style="border: 1.5px solid ${c.text}26; color: ${c.text}; border-radius: ${R('9999px')}">
-                                        📍 Onde estamos
-                                    </a>
-                                    ` : ''}
-                                </div>
-                                ${renderTrustStrip()}
+                <section id="hero" class="hero-eng" style="background-color: ${c.primary}; --luz: ${c.secondary}8C; --ouro: ${c.accent}; --ouroluz: ${c.accent}2E; background-image: linear-gradient(160deg, ${c.primaryDark} 0%, ${c.primary} 45%, ${c.secondary}40 100%)">
+
+                    <!-- PLANO 1 — fundo: malha, piso em perspectiva e vinheta -->
+                    <div class="hero-cena" aria-hidden="true">
+                        <div class="hero-mesh" data-parallax="0.34"></div>
+                        <div class="hero-piso" data-parallax="0.30" style="color: ${c.accent}"></div>
+                        <div class="hero-vinheta"></div>
+                    </div>
+
+                    <!-- PLANO 2 — elementos técnicos: cotas, réguas e marcas de corte -->
+                    <div class="hero-tec" data-parallax="0.24" aria-hidden="true">
+                        <span class="hero-regua" style="top: 132px; left: 56px; width: 240px"></span>
+                        <span class="hero-cota" style="top: 118px; right: 12%">EIXO A — A</span>
+                        <span class="hero-cruz" style="top: 220px; left: 40%"></span>
+                        <span class="hero-cruz" style="bottom: 26%; left: 8%"></span>
+                        <span class="hero-cruz" style="top: 30%; right: 6%"></span>
+                        <span class="hero-cota" style="bottom: 30px; left: 56px">ESC 1:100</span>
+                        <span class="hero-regua" style="bottom: 64px; right: 8%; width: 180px"></span>
+                        <span class="hero-cota" style="bottom: 130px; right: 8%">LAT 20.32 S / LON 40.34 O</span>
+                    </div>
+
+                    <div class="hero-foto" data-camada="foto" data-parallax="0.16" aria-hidden="true">
+                        <picture>
+                            ${fonteWebp}
+                            <img src="${foto}" alt="" fetchpriority="high" decoding="async" width="1600" height="900" onerror="this.closest('.hero-foto').remove()">
+                        </picture>
+                        <div class="hero-veu" style="background: linear-gradient(90deg, ${c.primary} 0%, ${c.primary}DB 26%, ${c.primary}4D 62%, ${c.primary}8C 100%)"></div>
+                        <div class="hero-veu" style="background: linear-gradient(0deg, ${c.primaryDark}BF 0%, transparent 42%)"></div>
+                        <span class="hero-marca hero-marca--tl" style="top: 34px; left: 15%; border-top: 1px solid ${c.accent}; border-left: 1px solid ${c.accent}"></span>
+                        <span class="hero-marca hero-marca--br" style="bottom: 34px; right: 40px; border-bottom: 1px solid ${c.accent}; border-right: 1px solid ${c.accent}"></span>
+                    </div>
+
+                    <div class="hero-luz" aria-hidden="true"></div>
+                    <div class="hero-luz-ouro" aria-hidden="true"></div>
+
+                    <!-- PLANO 4 — conteúdo, à frente da fotografia -->
+                    <div class="hero-in hero-plano max-w-7xl mx-auto px-5 sm:px-6 py-16 sm:py-20 lg:py-32 relative z-10" data-parallax="0.06">
+                        <div class="max-w-2xl" data-camada="texto">
+
+                            <div class="flex items-center gap-4 mb-7">
+                                <span class="font-display font-extrabold text-xs tracking-[0.3em]" style="color: ${c.accent}">01</span>
+                                <span class="block w-16 h-px" style="background-color: ${c.accent}"></span>
+                                ${config.company.tagline ? `<span class="text-xs uppercase tracking-[0.2em] text-white/60">${config.company.tagline}</span>` : ''}
                             </div>
-                            <div class="reveal img-frame w-full h-72 sm:h-96 lg:h-[540px]" style="transition-delay: 80ms">
-                                <img src="${config.hero.backgroundImage}" alt="" loading="eager" class="img-frame-photo w-full object-cover" style="border-radius: ${R('1.5rem')}" onerror="this.closest('.img-frame').remove()">
-                                <span class="img-frame-corner img-frame-corner--tl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
-                                <span class="img-frame-corner img-frame-corner--tr" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
-                                <span class="img-frame-corner img-frame-corner--bl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
-                                <span class="img-frame-corner img-frame-corner--br" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
+
+                            <!-- fluido de propósito: em Barlow Condensed uma palavra longa
+                                 (ex.: "Transformamos.") passava da borda e o overflow:hidden
+                                 do hero cortava a palavra em vez de estourar a página -->
+                            <h1 class="font-display font-extrabold uppercase text-white mb-6 leading-[0.94] tracking-tight" style="font-size: clamp(1.9rem, 8.2vw, 5.4rem)">
+                                ${tituloHtml}
+                            </h1>
+
+                            <p class="text-base sm:text-lg leading-relaxed text-white/75 max-w-lg mb-9 font-light">
+                                ${config.hero.subtitle}
+                            </p>
+
+                            <div class="flex flex-col sm:flex-row flex-wrap gap-3 mb-11">
+                                <a href="${waHref}" target="_blank" rel="noopener" id="hero-cta" class="magnetic bg-white px-8 py-4 font-display font-bold text-base tracking-widest uppercase inline-flex items-center justify-center gap-2 transition hover:opacity-90" style="color: ${c.primary}; border-radius: ${R('2px')}">
+                                    ${WHATSAPP_ICON} ${config.hero.ctaText}
+                                </a>
+                                <a href="#servicos" class="px-8 py-4 font-display font-semibold text-base tracking-widest uppercase text-white/90 inline-flex items-center justify-center transition hover:bg-white/10" style="border: 1px solid rgba(255,255,255,0.28); border-radius: ${R('2px')}">
+                                    Conhecer serviços
+                                </a>
+                                ${ondeEstamosHref ? `
+                                <a href="${ondeEstamosHref}" target="_blank" rel="noopener" class="px-8 py-4 font-display font-semibold text-base tracking-widest uppercase text-white/70 inline-flex items-center justify-center gap-2 transition hover:bg-white/10" style="border: 1px solid rgba(255,255,255,0.14); border-radius: ${R('2px')}">
+                                    📍 Onde estamos
+                                </a>` : ''}
                             </div>
+
+                            ${pilares.length ? `
+                            <div class="flex flex-wrap items-baseline gap-x-7 gap-y-2 pt-6 border-t border-white/15">
+                                ${pilares.map((p, i) => `
+                                    <span class="inline-flex items-baseline gap-2.5">
+                                        <span class="font-display font-bold text-[0.68rem] tracking-[0.2em]" style="color: ${c.accent}CC">${String(i + 1).padStart(2, '0')}</span>
+                                        <span class="font-display font-semibold text-sm tracking-[0.2em] uppercase text-white/80">${p}</span>
+                                    </span>
+                                `).join('')}
+                            </div>` : ''}
                         </div>
                     </div>
                 </section>
@@ -1052,14 +1372,25 @@
                                 const tituloProjeto = tituloLimpo.includes(' — ') ? tituloLimpo.split(' — ')[0] : tituloLimpo;
 
                                 return `
-                                    <div class="reveal portfolio-cluster" style="transition-delay: ${gi * 100}ms; scroll-margin-top: 100px;">
-                                        ${renderFotoPrincipal(principal)}
-                                        <h3 class="text-xl font-bold mt-5 mb-1" style="color: ${config.colors.text}">${tituloProjeto}</h3>
-                                        <p class="text-sm leading-relaxed mb-4" style="color: ${config.colors.textLight}">${principal.subtitle}</p>
+                                    <div class="reveal portfolio-cluster card-3d" data-projeto="${gi}" style="transition-delay: ${gi * 100}ms; scroll-margin-top: 100px;">
+                                        <span class="card-3d__luz" aria-hidden="true"></span>
+                                        <div class="pf-cabecalho card-3d__z2" style="color: ${config.colors.textLight}" aria-hidden="true">
+                                            <span class="pf-num font-display font-extrabold">PROJ ${String(gi + 1).padStart(2, '0')}</span>
+                                            <span class="pf-linha"></span>
+                                            <span class="pf-etiqueta font-display uppercase">${fotos.length} ${fotos.length > 1 ? 'etapas' : 'etapa'}</span>
+                                        </div>
+                                        <div class="card-3d__z1">${renderFotoPrincipal(principal)}</div>
+                                        <h3 class="card-3d__z3 text-xl font-bold mt-5 mb-1" style="color: ${config.colors.text}">${tituloProjeto}</h3>
+                                        <p class="card-3d__z2 text-sm leading-relaxed mb-4" style="color: ${config.colors.textLight}">${principal.subtitle}</p>
                                         ${miniaturas.length ? `
                                         <div class="grid grid-cols-3 gap-3">
                                             ${miniaturas.map(renderMiniatura).join('')}
                                         </div>` : ''}
+                                        <div class="pf-cota font-display" style="color: ${config.colors.textLight}" aria-hidden="true">
+                                            <span>ESC 1:100</span>
+                                            <span class="pf-cota__regua"></span>
+                                            <span>VITÓRIA / ES</span>
+                                        </div>
                                     </div>
                                 `;
                             }).join('')}
@@ -1095,9 +1426,11 @@
                         <div class="relative">
                             <div id="diferenciais-row" class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                                 ${enabledFeatures.map((feature, i) => `
-                                    <div class="reveal glow-primary-hover feature-card p-8 flex gap-5 transition" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
-                                        <span class="feature-number font-display font-extrabold block flex-shrink-0" aria-hidden="true" style="font-size: 2.75rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
-                                        <div>
+                                    <div class="reveal card-3d feature-card p-8 flex gap-5" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
+                                        <span class="card-3d__luz" aria-hidden="true"></span>
+                                        <span class="card-3d__fio" aria-hidden="true"></span>
+                                        <span class="card-3d__z1 feature-number font-display font-extrabold block flex-shrink-0" aria-hidden="true" style="font-size: 2.75rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
+                                        <div class="card-3d__z3">
                                             <div class="flex items-center gap-3 mb-2">
                                                 <span class="text-xl">${feature.icon}</span>
                                                 <h3 class="text-lg font-bold" style="color: ${config.colors.text}">
@@ -1133,15 +1466,17 @@
                         <div class="relative">
                             <div id="servicos-row" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             ${enabledServices.map((service, i) => `
-                                <div class="reveal glow-primary-hover service-card bg-white p-8 shadow-sm transition duration-300" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
-                                    <div class="flex items-center justify-between mb-5">
+                                <div class="reveal card-3d service-card bg-white p-8 shadow-sm" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
+                                    <span class="card-3d__luz" aria-hidden="true"></span>
+                                    <span class="card-3d__fio" aria-hidden="true"></span>
+                                    <div class="card-3d__z1 flex items-center justify-between mb-5">
                                         <div class="service-icon w-14 h-14 flex items-center justify-center text-2xl text-white" style="background: linear-gradient(135deg, ${config.colors.primary}, ${config.colors.primaryDark}); border-radius: ${R('0.75rem')}">${service.icon}</div>
                                         <span class="service-number font-display font-bold text-sm tracking-widest" aria-hidden="true" style="color: ${config.colors.border}">${String(i + 1).padStart(2, '0')} —</span>
                                     </div>
-                                    <h3 class="text-xl font-bold mb-3" style="color: ${config.colors.text}">
+                                    <h3 class="card-3d__z3 text-xl font-bold mb-3" style="color: ${config.colors.text}">
                                         ${service.title}
                                     </h3>
-                                    <p class="text-sm mb-5 leading-relaxed" style="color: ${config.colors.textLight}">
+                                    <p class="card-3d__z2 text-sm mb-5 leading-relaxed" style="color: ${config.colors.textLight}">
                                         ${service.description}
                                     </p>
                                     <ul class="space-y-2.5">
