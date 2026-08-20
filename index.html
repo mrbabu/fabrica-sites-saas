@@ -558,10 +558,10 @@
                     ${renderHero()}
                     ${renderTicker()}
                     ${renderSections()}
+                    ${renderFeatures()}
                     ${renderServices()}
                     ${renderCTAFaixa()}
                     ${renderPortfolio()}
-                    ${renderFeatures()}
                     ${renderInstitutional()}
                     ${renderTestimonials()}
                     ${renderFAQ()}
@@ -1451,7 +1451,7 @@
             // Isso não é um "antes/depois" inventado: é a sequência de etapas que a
             // própria fonte (gerar_apresentacao.py) já declara para aquele projeto.
             const renderFotoPrincipal = (item) => `
-                <div id="${item.id}" class="reveal-loop portfolio-card img-frame w-full h-80 md:h-[26rem]" data-portfolio-index="${item.index}" style="transition-delay: ${item.index * 60}ms;">
+                <div id="${item.id}" class="reveal-loop portfolio-card img-frame w-full h-96 md:h-[32rem]" data-portfolio-index="${item.index}" style="transition-delay: ${item.index * 60}ms;">
                     <img src="${item.image}" alt="${item.title}" loading="lazy" class="img-frame-photo w-full object-cover" style="border-radius: ${R('1rem')}" onerror="this.closest('.img-frame').remove()">
                     <span class="img-frame-corner img-frame-corner--tl" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
                     <span class="img-frame-corner img-frame-corner--tr" aria-hidden="true">${BLUEPRINT_CORNER_SVG}</span>
