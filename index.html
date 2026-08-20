@@ -284,7 +284,11 @@
            canto: reforça a leitura "01 — Experiência" pedida no briefing. */
         .feature-card { border: 1px solid var(--color-border, #e5e7eb); transition: transform 0.3s cubic-bezier(.2,.8,.2,1), border-color 0.3s ease, box-shadow 0.3s ease; }
         .feature-card:hover { transform: translateY(-6px); border-color: var(--color-primary); }
-        .feature-number { transition: color 0.3s ease; }
+        /* tamanho por contexto: o numero e maior no card de Diferenciais e menor
+           nos pilares da secao Sobre. Estava inline no render porque a classe e a
+           mesma nos dois lugares -- do inline sobrou so a cor, que e do tenant. */
+        .feature-number { transition: color 0.3s ease; font-size: 2.75rem; line-height: 1; }
+        .pilar-num { font-size: 2rem; }
         .feature-card:hover .feature-number { color: var(--color-primary); }
 
         /* ---- Cards com profundidade -----------------------------------------
@@ -361,6 +365,60 @@
                           background-image: linear-gradient(90deg, currentColor 1px, transparent 1px);
                           background-size: 22px 1px; background-position: 0 2px; background-repeat: repeat-x; }
 
+
+        /* ---- Ligadura entre seções (fase D) ---------------------------------
+           O problema não era falta de efeito, era costura: cada seção começava
+           com um corte seco de cor. Agora a cor da seção ANTERIOR vaza alguns
+           pixels para dentro da seguinte (--cor-anterior, escrita pelo JS), e
+           uma linha técnica atravessa a fronteira -- a mesma coluna em toda a
+           página, criando um eixo vertical implícito. Nada disso é percebido
+           como "efeito": é o que faz a página ler como uma composição só. */
+        main > section { position: relative; }
+        .secao-lig::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 150px;
+                             pointer-events: none; z-index: 0;
+                             background: linear-gradient(180deg, var(--cor-anterior, transparent) 0%, transparent 100%); }
+        .secao-lig > * { position: relative; z-index: 1; }
+        /* fio de eixo cruzando a costura: metade em cada seção */
+        .secao-lig::after { content: ''; position: absolute; left: 8%; top: -70px; width: 1px; height: 140px;
+                            pointer-events: none; z-index: 2;
+                            background: linear-gradient(180deg, transparent, var(--color-accent, #999) 48%, transparent);
+                            opacity: 0.3; }
+        /* cabeçalho da seção sobe um pouco mais rápido que o corpo -- a leitura
+           de profundidade vem da diferença de velocidade, não da amplitude */
+        .secao-cab { transform: translate3d(0, var(--py, 0px), 0); will-change: transform; }
+        @media (max-width: 1023px) {
+            .secao-lig::after { display: none; }
+            .secao-cab { transform: none; }
+        }
+
+
+        /* ---- Composição mobile (fase E) -------------------------------------
+           Não é o desktop encolhido: em 390px a mesma linguagem é dita com
+           menos elementos e mais densidade. O que sai são repetições e ar
+           excessivo -- profundidade, blueprint e fotografia continuam. */
+        @media (max-width: 639px) {
+            /* a logo do cliente JÁ carrega o nome da empresa; repetir ao lado
+               quebrava em duas linhas e comia 93px de header */
+            #site-nav .nav-marca { display: none; }
+            #site-nav .nav-chip { padding: 4px 8px; }
+            #site-nav .nav-chip img { height: 28px; max-width: 118px; }
+
+            /* seções: 80px de respiro viram 56 -- o ritmo continua, a página
+               encurta. scroll-margin evita o título entrar sob o header. */
+            main > section.secao-lig { padding-top: 3.5rem; padding-bottom: 3.5rem; scroll-margin-top: 76px; }
+            .secao-lig::before { height: 96px; }
+
+            /* cards mais densos: o ar de 32px era desktop traduzido */
+            .service-card, .feature-card { padding: 1.35rem 1.4rem; }
+            .service-icon { width: 2.75rem; height: 2.75rem; font-size: 1.25rem; }
+            .feature-card .feature-number { font-size: 2rem; }
+            .feature-card { gap: 1rem; }
+
+            /* portfólio: foto continua protagonista, a marcação técnica encolhe */
+            .pf-cabecalho { margin-bottom: 10px; }
+            .pf-cota { margin-top: 8px; font-size: 0.55rem; letter-spacing: 0.16em; }
+        }
+
         @media (prefers-reduced-motion: reduce) {
             .reveal, .reveal-loop { opacity: 1 !important; transform: none !important; transition: none !important; }
             .img-frame-photo { filter: none !important; transform: none !important; box-shadow: none !important; transition: none !important; }
@@ -378,6 +436,7 @@
             #portfolio-row:has(.portfolio-cluster:hover) .portfolio-cluster:not(:hover) {
                 transform: none !important; transition: none !important; opacity: 1 !important; filter: none !important; }
             .card-3d__luz, .card-3d__fio { display: none !important; }
+            .secao-cab { transform: none !important; }
             .whatsapp-pulse { animation: none !important; }
             .ticker-track { animation: none !important; }
             .magnetic { transition: none !important; }
@@ -515,6 +574,7 @@
             initParallax();
             initMagnetic();
             initCards3D();
+            initSecoes();
             initPortfolioFoco();
             initCountUp();
         }
@@ -836,6 +896,49 @@
             }, { threshold: [0, 0.25, 0.55, 0.8, 1], rootMargin: '-18% 0px -18% 0px' });
             clusters.forEach(c => io.observe(c));
         }
+        // Costura das seções: cada seção herda a cor da anterior num gradiente
+        // curto (--cor-anterior) e o cabeçalho ganha um parallax LOCAL, medido
+        // pela posição da própria seção na tela -- não pelo scroll absoluto.
+        // Isso evita o efeito acumular e a página "pular" no meio.
+        function initSecoes() {
+            const secoes = [...document.querySelectorAll('main > section')];
+            if (!secoes.length) return;
+
+            secoes.forEach((sec, i) => {
+                if (sec.id === 'hero') return;
+                sec.classList.add('secao-lig');
+                const anterior = secoes[i - 1];
+                if (anterior) {
+                    const cor = getComputedStyle(anterior).backgroundColor;
+                    if (cor && cor !== 'rgba(0, 0, 0, 0)') sec.style.setProperty('--cor-anterior', cor);
+                }
+                // o cabeçalho é o primeiro bloco centralizado da seção
+                const cab = sec.querySelector(':scope > div > .reveal.text-center, :scope > div > div.text-center');
+                if (cab) cab.classList.add('secao-cab');
+            });
+
+            if (prefersReducedMotion()) return;
+            const cabecalhos = [...document.querySelectorAll('.secao-cab')];
+            if (!cabecalhos.length) return;
+
+            let pendente = false;
+            const mover = () => {
+                const meio = window.innerHeight / 2;
+                cabecalhos.forEach(cab => {
+                    const r = cab.getBoundingClientRect();
+                    if (r.bottom < -200 || r.top > window.innerHeight + 200) return;
+                    // -1 (abaixo da tela) .. +1 (acima): amplitude máxima de 26px
+                    const progresso = Math.max(-1, Math.min(1, (meio - (r.top + r.height / 2)) / meio));
+                    cab.style.setProperty('--py', (progresso * -26).toFixed(1) + 'px');
+                });
+                pendente = false;
+            };
+            window.addEventListener('scroll', () => {
+                if (!pendente) { requestAnimationFrame(mover); pendente = true; }
+            }, { passive: true });
+            mover();
+        }
+
         function initMagnetic() {
             if (prefersReducedMotion()) return;
             document.querySelectorAll('.magnetic').forEach(el => {
@@ -967,7 +1070,7 @@
                     <div class="max-w-6xl mx-auto px-5 sm:px-6 py-4 flex justify-between items-center">
                         <div class="flex items-center gap-3">
                             <span class="nav-chip">${logo}</span>
-                            <span class="font-display font-bold text-lg tracking-tight text-white">${config.company.name}</span>
+                            <span class="${config.company.logo ? 'nav-marca ' : ''}font-display font-bold text-lg tracking-tight text-white">${config.company.name}</span>
                         </div>
                         <div class="hidden md:flex items-center gap-8">
                             ${navLinks}
@@ -1205,7 +1308,7 @@
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8 max-w-4xl mx-auto">
                             ${config.institutional.pillars.map((pilar, i) => `
                                 <div class="reveal glow-primary-hover feature-card p-6 text-center transition" style="transition-delay: ${i * 90}ms; border-radius: ${R('0.75rem')}">
-                                    <span class="feature-number font-display font-extrabold block mb-2" aria-hidden="true" style="font-size: 2rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
+                                    <span class="pilar-num feature-number font-display font-extrabold block mb-2" aria-hidden="true" style="color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
                                     <span class="block w-6 h-px mx-auto mb-3" style="background-color: ${config.colors.accent}"></span>
                                     <h3 class="font-display font-bold text-xs uppercase tracking-widest" style="color: ${config.colors.primary}">${pilar}</h3>
                                 </div>
@@ -1429,7 +1532,7 @@
                                     <div class="reveal card-3d feature-card p-8 flex gap-5" style="transition-delay: ${i * 90}ms; border-radius: ${R('1rem')}">
                                         <span class="card-3d__luz" aria-hidden="true"></span>
                                         <span class="card-3d__fio" aria-hidden="true"></span>
-                                        <span class="card-3d__z1 feature-number font-display font-extrabold block flex-shrink-0" aria-hidden="true" style="font-size: 2.75rem; line-height: 1; color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
+                                        <span class="card-3d__z1 feature-number font-display font-extrabold block flex-shrink-0" aria-hidden="true" style="color: ${config.colors.border}">${String(i + 1).padStart(2, '0')}</span>
                                         <div class="card-3d__z3">
                                             <div class="flex items-center gap-3 mb-2">
                                                 <span class="text-xl">${feature.icon}</span>
