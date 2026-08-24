@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/demo" },
     { "source": "/demo", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/demo" },
     { "source": "/demo/:path*", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/demo/:path*" },
     { "source": "/hunter", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/hunter" },
