@@ -46,7 +46,10 @@ justificativa real de oportunidade)
         |
         v
 Coleta de dados reais (nome, WhatsApp, localização — obrigatórios;
-logo/fotos — opcional)
+logo/fotos/conteúdo institucional real (missão/visão/valores) — opcional
+nesta fase de prospecção, mas é o que separa um site no nível do da MGR
+Reformas e Projetos de um site genérico: pedir de novo, com mais força,
+depois que o cliente fechar (ver seção 8, "Fluxo por cliente")
         |
         v
 gerar_demo_dfy.py
@@ -132,10 +135,19 @@ cliente contratar ou não o add-on de domínio próprio.
 2. Se optou pelo add-on: registrar o domínio `.com.br` do cliente — **em
    aberto**: agência registra em nome do cliente ou o cliente registra e
    só aponta o DNS.
-3. Criar um projeto Vercel próprio pro cliente (cópia do template
-   `index.html` + o `site-config.json` gerado/revisado).
-4. Apontar o domínio (próprio ou padrão da agência) no projeto Vercel.
-5. Ativação e suporte via WhatsApp (já coberto na oferta, seção 2).
+3. **Pedir fotos reais do trabalho do cliente** (obra/produto/loja — o que
+   fizer sentido pro negócio) **e conteúdo institucional real, se o
+   cliente tiver** (missão/visão/valores/CNPJ — nunca inventar isso, só
+   usar se o próprio cliente fornecer). Com as fotos em mãos, rodar
+   `python backend/scripts/gerar_portfolio_fotos.py <slug> <pasta_fotos>`
+   — é o que dá ao site o nível de portfólio do site da MGR Reformas e
+   Projetos (fotos reais classificadas por etapa, não banco de imagens).
+   Sem fotos do cliente, o site fica no nível básico (banco de imagens) —
+   não tem como simular isso automaticamente sem fabricar conteúdo.
+4. Criar um projeto Vercel próprio pro cliente (cópia do template
+   `index.html` + o `site-config.json` gerado/revisado/com portfólio).
+5. Apontar o domínio (próprio ou padrão da agência) no projeto Vercel.
+6. Ativação e suporte via WhatsApp (já coberto na oferta, seção 2).
 
 **Em aberto:**
 - Preço do add-on de domínio próprio (custo do registro + margem, ou

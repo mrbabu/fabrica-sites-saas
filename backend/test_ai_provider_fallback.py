@@ -49,6 +49,16 @@ class _ProvedorSucessoSemTokens:
         return {"ok": True}
 
 
+class _ProvedorSucessoComVisao:
+    """Dublê que simula um provedor com suporte a imagem."""
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def gerar_json_com_imagens(self, prompt: str, imagens: list, max_tokens: int = 4096) -> dict:
+        return {"ok": True, "n_imagens": len(imagens)}
+
+
 class TestCadeiaDeFallback(unittest.TestCase):
     """Testa AIProvider.gerar_json() com a ordem real gemini->nim->anthropic->ollama."""
 
@@ -149,6 +159,67 @@ class TestUsoTokensAtivo(unittest.TestCase):
         with patch.dict(ai_provider._PROVEDORES, dubles):
             provider = AIProvider()
             self.assertIsNone(provider.uso_tokens_ativo)
+
+
+class TestCadeiaDeFallbackComImagens(unittest.TestCase):
+    """Testa AIProvider.gerar_json_com_imagens() -- restrito a gemini/anthropic."""
+
+    def setUp(self):
+        os.environ["AI_PROVIDER_FALLBACK_ORDER"] = "nvidia_nim,gemini,anthropic,ollama"
+
+    def tearDown(self):
+        os.environ.pop("AI_PROVIDER_FALLBACK_ORDER", None)
+
+    def test_pula_nim_mesmo_na_frente_da_ordem_e_usa_gemini(self):
+        """NIM não suporta visão -- mesmo primeiro na ordem, deve ser ignorado."""
+        chamadas_nim = {"n": 0}
+
+        class _NimNuncaDeveSerChamado:
+            def __init__(self, *a, **kw):
+                chamadas_nim["n"] += 1
+                raise ErroProvedorIA("não deveria ter sido chamado")
+
+        dubles = {
+            "nvidia_nim": _NimNuncaDeveSerChamado,
+            "gemini": _ProvedorSucessoComVisao,
+            "anthropic": _ProvedorSucessoComVisao,
+        }
+        with patch.dict(ai_provider._PROVEDORES, dubles):
+            provider = AIProvider()
+            resultado = provider.gerar_json_com_imagens("descreva as fotos", [b"foto1", b"foto2"])
+
+            self.assertEqual(resultado, {"ok": True, "n_imagens": 2})
+            self.assertEqual(provider.provedor_ativo, "gemini")
+            self.assertEqual(chamadas_nim["n"], 0)
+
+    def test_cai_de_gemini_pra_anthropic_quando_gemini_falha(self):
+        dubles = {
+            "nvidia_nim": _ProvedorFalhaSempre,
+            "gemini": _ProvedorFalhaSempre,
+            "anthropic": _ProvedorSucessoComVisao,
+        }
+        with patch.dict(ai_provider._PROVEDORES, dubles):
+            provider = AIProvider()
+            resultado = provider.gerar_json_com_imagens("descreva as fotos", [b"foto1"])
+
+            self.assertEqual(resultado, {"ok": True, "n_imagens": 1})
+            self.assertEqual(provider.provedor_ativo, "anthropic")
+
+    def test_erro_quando_gemini_e_anthropic_falham(self):
+        dubles = {
+            "nvidia_nim": _ProvedorFalhaSempre,
+            "gemini": _ProvedorFalhaSempre,
+            "anthropic": _ProvedorFalhaSempre,
+        }
+        with patch.dict(ai_provider._PROVEDORES, dubles):
+            provider = AIProvider()
+            with self.assertRaises(ErroProvedorIA) as ctx:
+                provider.gerar_json_com_imagens("descreva as fotos", [b"foto1"])
+
+            mensagem_erro = str(ctx.exception)
+            self.assertIn("gemini", mensagem_erro)
+            self.assertIn("anthropic", mensagem_erro)
+            self.assertNotIn("nvidia_nim", mensagem_erro)
 
 
 if __name__ == "__main__":

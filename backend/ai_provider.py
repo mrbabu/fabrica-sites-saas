@@ -13,6 +13,9 @@ Abstrai a chamada ao modelo de linguagem por trás de uma interface única
 
 A ordem é escolhida por AI_PROVIDER (provedor preferido) e, se ele falhar,
 cai automaticamente para o próximo da cadeia.
+
+gerar_json_com_imagens() faz o mesmo fallback, mas restrito aos provedores
+com suporte a imagem (Gemini e Anthropic -- ver _PROVEDORES_COM_VISAO).
 """
 
 import json
@@ -205,6 +208,20 @@ class ProvedorGemini:
         texto = response.text.strip()
         return _extrair_json(texto)
 
+    def gerar_json_com_imagens(self, prompt: str, imagens: list[bytes], max_tokens: int = 4096) -> dict:
+        partes = [prompt] + [{"mime_type": "image/jpeg", "data": img} for img in imagens]
+        response = self.client.generate_content(
+            partes,
+            generation_config=self._genai.GenerationConfig(
+                response_mime_type="application/json",
+                max_output_tokens=max_tokens,
+                temperature=0.7,
+            ),
+            request_options={"timeout": 60},
+        )
+        texto = response.text.strip()
+        return _extrair_json(texto)
+
 
 class ProvedorAnthropic:
     """Chama modelos Claude via SDK oficial da Anthropic (fallback)"""
@@ -230,6 +247,28 @@ class ProvedorAnthropic:
             model=self.model,
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
+        )
+        texto = response.content[0].text.strip()
+        return _extrair_json(texto)
+
+    def gerar_json_com_imagens(self, prompt: str, imagens: list[bytes], max_tokens: int = 4096) -> dict:
+        import base64
+
+        blocos_imagem = [
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/jpeg",
+                    "data": base64.b64encode(img).decode("ascii"),
+                },
+            }
+            for img in imagens
+        ]
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": blocos_imagem + [{"type": "text", "text": prompt}]}],
         )
         texto = response.content[0].text.strip()
         return _extrair_json(texto)
@@ -354,6 +393,13 @@ _PROVEDORES = {
 
 _ORDEM_PADRAO = ["gemini", "nvidia_nim", "groq", "anthropic", "ollama"]
 
+# NIM/Groq/Ollama ficam de fora: nenhum dos três tem entrada de imagem
+# configurada neste projeto (NIM/Groq exigiriam um modelo de visão
+# específico via OpenAI-compatível; Ollama exigiria um modelo tipo llava
+# instalado localmente). Gemini e Anthropic já suportam imagem nativamente
+# nos SDKs já usados aqui só para texto.
+_PROVEDORES_COM_VISAO = {"gemini", "anthropic"}
+
 
 class AIProvider:
     """
@@ -403,6 +449,33 @@ class AIProvider:
 
         raise ErroProvedorIA(
             "Nenhum provedor de IA disponível. Tentativas:\n" + "\n".join(erros)
+        )
+
+    def gerar_json_com_imagens(self, prompt: str, imagens: list[bytes], max_tokens: int = 4096) -> dict:
+        """
+        Mesmo fallback de gerar_json(), restrito aos provedores com suporte
+        a imagem (_PROVEDORES_COM_VISAO) -- NIM/Groq/Ollama são pulados
+        mesmo que estejam na frente da ordem configurada.
+        """
+        ordem_com_visao = [nome for nome in self.ordem if nome in _PROVEDORES_COM_VISAO]
+        if not ordem_com_visao:
+            raise ErroProvedorIA(
+                f"Nenhum provedor com suporte a imagem na ordem configurada: {self.ordem}"
+            )
+
+        erros = []
+        for nome in ordem_com_visao:
+            try:
+                provedor = self._obter_instancia(nome)
+                resultado = provedor.gerar_json_com_imagens(prompt, imagens, max_tokens=max_tokens)
+                self._ativo_nome = nome
+                return resultado
+            except Exception as e:
+                erros.append(f"{nome}: {e}")
+                continue
+
+        raise ErroProvedorIA(
+            "Nenhum provedor de IA com visão disponível. Tentativas:\n" + "\n".join(erros)
         )
 
     @property
