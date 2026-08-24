@@ -40,6 +40,7 @@ try:
     from auth import verificar_api_key
     from routers.whatsapp_inbound import router as whatsapp_inbound_router
     from routers.demo_dfy import router as demo_dfy_router
+    from routers.demo_upload import router as demo_upload_router
     from routers.demo_preview import router as demo_preview_router
     from routers.demo_lista import router as demo_lista_router
     from routers.demo_login import router as demo_login_router
@@ -111,6 +112,7 @@ app.add_middleware(SessionMiddleware, secret_key=_session_secret, max_age=15 * 6
 # nem responde sozinho, ver backend/routers/whatsapp_inbound.py)
 app.include_router(whatsapp_inbound_router)
 app.include_router(demo_dfy_router)
+app.include_router(demo_upload_router)
 app.include_router(demo_preview_router)
 app.include_router(demo_lista_router)
 app.include_router(demo_login_router)

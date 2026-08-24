@@ -63,6 +63,15 @@ async def formulario_demo(request: Request, nome_empresa: str = "", nicho: str =
   button:disabled {{ background: #9ca3af; cursor: wait; }}
   #resultado {{ margin-top: 20px; padding: 14px; border-radius: 8px; display: none; }}
   #resultado.erro {{ background: #fef2f2; border: 1px solid #fca5a5; display: block; }}
+  #drop-zone {{ border: 2px dashed #d1d5db; border-radius: 8px; padding: 18px; text-align: center; font-size: 0.85rem; color: var(--muted); cursor: pointer; transition: border-color .15s, background .15s; }}
+  #drop-zone.arrastando {{ border-color: var(--accent); background: #f0fdfa; }}
+  #galeria-uploads {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }}
+  .chip-imagem {{ position: relative; width: 64px; height: 64px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }}
+  .chip-imagem img {{ width: 100%; height: 100%; object-fit: cover; display: block; }}
+  .chip-imagem button {{ position: absolute; top: 0; right: 0; margin: 0; width: 20px; height: 20px; padding: 0; line-height: 1; font-size: 0.9rem; background: rgba(0,0,0,.6); border-radius: 0 0 0 6px; }}
+  .chip-imagem.erro {{ border-color: #fca5a5; }}
+  .chip-imagem .legenda-erro {{ position: absolute; inset: 0; background: rgba(254,242,242,.95); color: #b91c1c; font-size: 0.55rem; display: flex; align-items: center; justify-content: center; text-align: center; padding: 2px; }}
+  .chip-imagem .enviando {{ position: absolute; inset: 0; background: rgba(15,23,42,.55); color: #fff; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; text-align: center; }}
 </style>
 </head>
 <body>
@@ -89,8 +98,11 @@ async def formulario_demo(request: Request, nome_empresa: str = "", nicho: str =
     <label>Me conte sobre seu negócio (opcional)</label>
     <textarea name="descricao_negocio" placeholder="O que torna esse negócio especial? Diferenciais, história, público-alvo..."></textarea>
 
-    <label>Fotos reais do trabalho (portfólio, opcional, até 8)</label>
+    <label>Fotos reais do trabalho (portfólio, opcional, até 8 no total)</label>
     <textarea name="portfolio_urls_raw" placeholder="Uma URL por linha — link direto de imagem (.jpg/.png/.webp), não link de página ou pasta compartilhada&#10;https://...&#10;https://..."></textarea>
+    <div id="drop-zone">Ou arraste as fotos aqui, ou clique pra escolher do computador</div>
+    <input type="file" id="input-arquivos" accept="image/jpeg,image/png,image/webp" multiple hidden>
+    <div id="galeria-uploads"></div>
 
     <button type="submit" id="btn-gerar">Gerar Demo</button>
   </form>
@@ -113,13 +125,95 @@ function formatarErroDetail(detail) {{
   return detail ? JSON.stringify(detail) : 'Erro ao gerar demo';
 }}
 
+// Upload de portfólio: alternativa ao textarea de URL — cada arquivo vira
+// uma chamada pro endpoint novo (backend/routers/demo_upload.py), que
+// devolve um caminho relativo. A URL absoluta só é montada aqui (o backend
+// não sabe seu próprio hostname público, que varia entre túnel/Tailscale/
+// local) e entra no MESMO portfolio_urls que o textarea já preenche.
+const MAX_PORTFOLIO_TOTAL = 8;
+const imagensEnviadas = []; // cada item: path (relativo) + url (absoluta)
+
+function contarPortfolioAtual() {{
+  const urlsTexto = (document.querySelector('[name=portfolio_urls_raw]').value || '')
+    .split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
+  return urlsTexto.length + imagensEnviadas.length;
+}}
+
+function renderizarGaleria() {{
+  document.getElementById('galeria-uploads').innerHTML = imagensEnviadas.map((img, i) => `
+    <div class="chip-imagem">
+      <img src="${{img.url}}" alt="">
+      <button type="button" data-i="${{i}}" title="Remover">×</button>
+    </div>
+  `).join('');
+}}
+
+document.getElementById('galeria-uploads').addEventListener('click', (e) => {{
+  const btn = e.target.closest('button[data-i]');
+  if (!btn) return;
+  imagensEnviadas.splice(Number(btn.dataset.i), 1);
+  renderizarGaleria();
+}});
+
+async function enviarArquivo(arquivo) {{
+  const galeria = document.getElementById('galeria-uploads');
+  const chip = document.createElement('div');
+  chip.className = 'chip-imagem';
+  chip.innerHTML = `<img src="${{URL.createObjectURL(arquivo)}}" alt=""><div class="enviando">Enviando…</div>`;
+  galeria.appendChild(chip);
+
+  try {{
+    const formData = new FormData();
+    formData.append('arquivo', arquivo);
+    const resp = await fetch('/api/v1/demo-upload/imagem', {{
+      method: 'POST',
+      headers: {{ 'X-API-Key': API_KEY }},
+      body: formData,
+    }});
+    const json = await resp.json();
+    if (!resp.ok) throw new Error(formatarErroDetail(json.detail));
+
+    imagensEnviadas.push({{ path: json.path, url: window.location.origin + json.path }});
+    renderizarGaleria();
+  }} catch (err) {{
+    chip.classList.add('erro');
+    chip.querySelector('.enviando')?.remove();
+    chip.innerHTML += `<div class="legenda-erro">${{err.message}}</div>`;
+  }}
+}}
+
+function processarArquivos(arquivos) {{
+  const restantes = MAX_PORTFOLIO_TOTAL - contarPortfolioAtual();
+  if (restantes <= 0) {{
+    alert(`Máximo de ${{MAX_PORTFOLIO_TOTAL}} fotos no total (URLs + upload).`);
+    return;
+  }}
+  [...arquivos].slice(0, restantes).forEach(enviarArquivo);
+}}
+
+const dropZone = document.getElementById('drop-zone');
+const inputArquivos = document.getElementById('input-arquivos');
+dropZone.addEventListener('click', () => inputArquivos.click());
+inputArquivos.addEventListener('change', (e) => {{
+  processarArquivos(e.target.files);
+  e.target.value = '';
+}});
+['dragover', 'dragleave', 'drop'].forEach(evento => {{
+  dropZone.addEventListener(evento, (e) => {{
+    e.preventDefault();
+    dropZone.classList.toggle('arrastando', evento === 'dragover');
+  }});
+}});
+dropZone.addEventListener('drop', (e) => processarArquivos(e.dataTransfer.files));
+
 document.getElementById('form-demo').addEventListener('submit', async (e) => {{
   e.preventDefault();
   const btn = document.getElementById('btn-gerar');
   const resultado = document.getElementById('resultado');
   const dados = Object.fromEntries(new FormData(e.target).entries());
-  const portfolioUrls = (dados.portfolio_urls_raw || '').split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
+  const urlsColadas = (dados.portfolio_urls_raw || '').split(/\\r?\\n/).map(s => s.trim()).filter(Boolean);
   delete dados.portfolio_urls_raw;
+  const portfolioUrls = [...urlsColadas, ...imagensEnviadas.map(img => img.url)].slice(0, MAX_PORTFOLIO_TOTAL);
   if (portfolioUrls.length > 0) dados.portfolio_urls = portfolioUrls;
   const leadId = dados.lead_id;
   delete dados.lead_id;

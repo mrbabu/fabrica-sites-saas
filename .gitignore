@@ -96,6 +96,12 @@ assets/portfolio/*
 assets/hero/*
 !assets/hero/.gitkeep
 
+# Uploads de portfólio feitos via /demo (backend/routers/demo_upload.py) --
+# arquivo temporário até a demo virar cliente e as fotos serem movidas pra
+# assets/portfolio/<slug>/; mesmo racional dos demais, nunca versionado
+assets/uploads/*
+!assets/uploads/.gitkeep
+
 # Leads reais da Fase 2 (dado de terceiro, não versionado) - o .example.csv
 # fica versionado como template/estrutura
 leads/*.csv
