@@ -70,6 +70,7 @@ prompt_teste_lovable.txt
 !vendas-config.json
 !/package.json
 !/package-lock.json
+!/vercel.json
 !backend/data/niches.json
 !backend/data/buscas_leads.json
 
