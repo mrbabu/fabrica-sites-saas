@@ -213,7 +213,6 @@
         .glow-primary { box-shadow: 0 14px 34px -12px color-mix(in srgb, var(--color-primary, #000) 50%, transparent); }
         .glow-primary-hover { transition: box-shadow 0.25s ease; }
         .glow-primary-hover:hover { box-shadow: 0 18px 42px -12px color-mix(in srgb, var(--color-primary, #000) 55%, transparent); }
-        .wa-label-fade { transition: opacity 0.35s ease; }
 
         /* Underline animado dos links do header — cresce da esquerda pra
            direita no hover, cor sempre var(--color-primary) (nunca hardcode
@@ -578,7 +577,6 @@
             initScrollReveal();
             initPortfolioNavActive();
             initLightbox();
-            initWhatsAppLabel();
             initParallax();
             initMagnetic();
             initCards3D();
@@ -795,18 +793,6 @@
             });
         }
 
-        function initWhatsAppLabel() {
-            const label = document.getElementById('wa-label');
-            if (!label || prefersReducedMotion()) return;
-            const phrases = ['Fale agora', 'Resposta rápida'];
-            let i = 0;
-            setInterval(() => {
-                i = (i + 1) % phrases.length;
-                label.style.opacity = '0';
-                setTimeout(() => { label.textContent = phrases[i]; label.style.opacity = '1'; }, 350);
-            }, 3400);
-        }
-
         function initParallax() {
             const hero = document.getElementById('hero');
             if (!hero) return;
@@ -1003,6 +989,16 @@
             return custom || `Olá! Vim pelo site da ${config.company.name} e gostaria de agendar um horário.`;
         }
 
+        // Rotulo unico do CTA de WhatsApp, reaproveitado em TODO ponto de
+        // contato que abre WhatsApp (nav, botao flutuante, faixa, CTA final)
+        // -- antes cada um tinha seu proprio texto hardcoded ("Fale agora",
+        // "Resposta rapida", "Falar no WhatsApp"), o que fazia a mesma acao
+        // parecer 4 acoes diferentes. Puxa do config em vez de fixar um
+        // texto generico no template (mesma razao de waMensagemPadrao()).
+        function ctaLabel() {
+            return (config.hero && config.hero.ctaText) || 'Fale conosco';
+        }
+
         function mapsHref(endereco) {
             // Link universal: abre o app de navegação padrão no celular
             // (Google Maps, Waze, etc. via seletor do sistema) ou o Google
@@ -1031,11 +1027,11 @@
             if (!wa) return '';
             const link = waLink(wa, `Olá! Vim pelo site da ${config.company.name} e gostaria de mais informações.`);
             return `
-                <a href="${link}" target="_blank" rel="noopener" aria-label="Fale agora no WhatsApp"
+                <a href="${link}" target="_blank" rel="noopener" aria-label="${ctaLabel()} no WhatsApp"
                    class="whatsapp-pulse fixed right-5 z-50 flex items-center gap-2 pl-4 pr-5 py-3.5 shadow-xl transition transform hover:scale-105"
                    style="background-color: ${config.colors.accent}; color: ${config.colors.text}; border-radius: ${shapeSharp ? '2px' : '20px 20px 4px 20px'}; bottom: calc(1.25rem + env(safe-area-inset-bottom));">
                     ${WHATSAPP_ICON}
-                    <span id="wa-label" class="wa-label-fade hidden sm:inline font-display font-bold uppercase tracking-wide text-xs">Fale agora</span>
+                    <span class="hidden sm:inline font-display font-bold uppercase tracking-wide text-xs">${ctaLabel()}</span>
                 </a>
             `;
         }
@@ -1068,11 +1064,6 @@
                 ? waLink(config.contact.whatsapp, waMensagemPadrao())
                 : '#contato';
 
-            // Rotulo do botao da nav: reaproveita o CTA do hero (ja vem do config)
-            // em vez de fixar "Agendar agora" no template -- mesma razao do
-            // waMensagemPadrao(): nem todo negocio agenda hora.
-            const ctaCurto = (config.hero && config.hero.ctaText) || 'Fale conosco';
-
             return `
                 <nav id="site-nav" class="site-nav-eng sticky top-0 z-40 backdrop-blur-md relative">
                     <div class="max-w-6xl mx-auto px-5 sm:px-6 py-4 flex justify-between items-center">
@@ -1082,7 +1073,7 @@
                         </div>
                         <div class="hidden md:flex items-center gap-8">
                             ${navLinks}
-                            <a href="${waHref}" target="_blank" rel="noopener" class="nav-cta px-5 py-2.5 text-sm font-display font-bold uppercase tracking-widest whitespace-nowrap transition" style="border-radius: ${R('2px')}">${ctaCurto}</a>
+                            <a href="${waHref}" target="_blank" rel="noopener" class="nav-cta px-5 py-2.5 text-sm font-display font-bold uppercase tracking-widest whitespace-nowrap transition" style="border-radius: ${R('2px')}">${ctaLabel()}</a>
                         </div>
                         <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg text-white" aria-label="Abrir menu">
                             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
@@ -1090,7 +1081,7 @@
                     </div>
                     <div id="mobile-menu" class="hidden md:hidden border-t px-5 py-4 flex flex-col gap-4" style="border-color: color-mix(in srgb, var(--color-accent) 25%, transparent); background: color-mix(in srgb, var(--color-primary) 96%, transparent)">
                         ${navLinks}
-                        <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary text-white px-5 py-3 text-sm font-semibold text-center" style="border-radius: ${R('9999px')}">${ctaCurto}</a>
+                        <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary text-white px-5 py-3 text-sm font-semibold text-center" style="border-radius: ${R('9999px')}">${ctaLabel()}</a>
                     </div>
                 </nav>
             `;
@@ -1296,6 +1287,14 @@
                 // Alterna com o mesmo token que Serviços/FAQ já usam (primary a 8%
                 // de opacidade) -- nenhuma cor nova, nenhuma regra específica de tenant.
                 const bgSecao = idx % 2 === 0 ? config.colors.background : `${config.colors.primary}08`;
+                // "Sobre Nós" vem logo depois do ticker (uma faixa fina), não de outra
+                // seção cheia -- o mesmo py-20/py-28 das demais somado à logo+selo
+                // acima do título deixava ~300-400px de vão quase vazio (medido:
+                // 334px do topo da seção até o "Sobre Nós" ficar visível), com o
+                // fundo praticamente só a palavra-marca a 5% de opacidade preenchendo
+                // esse espaço. Reduz só o padding-top desta seção; o bottom continua
+                // igual para manter o ritmo com as seções seguintes.
+                const paddingSecao = section.id === 'sobre' ? 'pt-10 pb-20 md:pt-14 md:pb-28' : 'py-20 md:py-28';
                 // Logo repetida junto do texto só na seção "Sobre Nós" (convenção de id
                 // usada pelo agent_construtor.py) -- reforça identidade da marca sem
                 // repetir em todas as seções de conteúdo/portfólio.
@@ -1344,7 +1343,7 @@
                 // só pra preencher o grid -- ver conversa sobre fotos repetidas seguidas).
                 if (!hasImage) {
                     return `
-                        <section id="${section.id}" class="reveal py-20 md:py-28 relative${section.id === 'sobre' ? ' overflow-hidden' : ''}" style="background-color: ${bgSecao}">
+                        <section id="${section.id}" class="reveal ${paddingSecao} relative${section.id === 'sobre' ? ' overflow-hidden' : ''}" style="background-color: ${bgSecao}">
                             ${palavraDeFundo}
                             <div class="max-w-6xl mx-auto px-5 sm:px-6 relative z-10">
                                 ${textBlock}
@@ -1624,7 +1623,7 @@
                                 Vamos conversar sobre o seu projeto?
                             </span>
                             <a href="${waHref}" target="_blank" rel="noopener" class="btn-primary glow-primary-hover text-white px-7 py-3.5 font-semibold text-sm inline-flex items-center gap-2 transition flex-shrink-0" style="border-radius: ${R('9999px')}">
-                                ${WHATSAPP_ICON} Falar no WhatsApp
+                                ${WHATSAPP_ICON} ${ctaLabel()}
                             </a>
                         </div>
                     </div>
@@ -1703,9 +1702,13 @@
         function renderCTA() {
             if (!config.cta || !config.cta.enabled) return '';
 
-            const waHref = config.contact && config.contact.whatsapp
-                ? waLink(config.contact.whatsapp, waMensagemPadrao())
-                : config.cta.buttonLink;
+            const temWhatsapp = config.contact && config.contact.whatsapp;
+            const waHref = temWhatsapp ? waLink(config.contact.whatsapp, waMensagemPadrao()) : config.cta.buttonLink;
+            // Mesmo rotulo dos outros CTAs de WhatsApp da pagina quando este
+            // tambem abre WhatsApp -- config.cta.buttonText so vale quando o
+            // canal e outro (ex.: mailto), onde "Solicitar orcamento" faria
+            // menos sentido que o texto que o cliente escolheu pra esse link.
+            const label = temWhatsapp ? ctaLabel() : config.cta.buttonText;
 
             return `
                 <section class="reveal py-20 md:py-24" style="background: linear-gradient(135deg, ${config.colors.primary}, ${config.colors.primaryDark})">
@@ -1717,7 +1720,7 @@
                             ${config.cta.description}
                         </p>
                         <a href="${waHref}" target="_blank" rel="noopener" class="glow-primary-hover bg-white px-9 py-4 font-bold text-base inline-flex items-center gap-2 transition transform hover:scale-105" style="color: ${config.colors.primary}; border-radius: ${R('9999px')}">
-                            ${WHATSAPP_ICON} ${config.cta.buttonText}
+                            ${WHATSAPP_ICON} ${label}
                         </a>
                     </div>
                 </section>
