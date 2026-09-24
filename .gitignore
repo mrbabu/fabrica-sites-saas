@@ -8,6 +8,7 @@
 *.pem
 *.secret
 *.ppk
+*.bak
 
 # Lembrete local de acesso à VM (IP Tailscale, caminho de chave privada)
 ACESSO-VM-TAILSCALE.txt
@@ -64,6 +65,7 @@ configs/
 site-configs/
 lovable_prompts/
 prompt_teste_lovable.txt
+backend/lovable_adapter.py
 *.json
 !site-config-example.json
 !site-config.json

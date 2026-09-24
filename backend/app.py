@@ -20,6 +20,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel, Field, field_validator, ConfigDict, HttpUrl
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
+import asyncio
 import os
 import secrets
 import sys
@@ -368,13 +369,17 @@ async def generate_site(
     try:
         logger.info(f"📝 Gerando site: {request.nome_empresa} ({request.nicho})")
         
-        # Gerar config
-        config = agente.gerar_config_site(
+        # Gerar config assincronamente sem bloquear o event loop
+        config = await asyncio.to_thread(
+            agente.gerar_config_site,
             request.nome_empresa,
             request.nicho,
-            request.cor_preferida
+            request.cor_preferida,
         )
         
+        tokens_usados = getattr(agente, "ultimo_tokens_usados", 0)
+        custo_usd = getattr(agente, "ultimo_custo_usd", 0.0)
+
         # Validar schema
         valido, erro, config_obj = ValidadorSchema.validar_json(config)
         
@@ -385,7 +390,9 @@ async def generate_site(
                 request.nicho,
                 False,
                 time.time() - tempo_inicio,
-                erro=erro
+                tokens_usados=tokens_usados,
+                custo_usd=custo_usd,
+                erro=erro,
             )
             raise HTTPException(
                 status_code=400,
@@ -408,7 +415,9 @@ async def generate_site(
             request.nome_empresa,
             request.nicho,
             True,
-            tempo_total
+            tempo_total,
+            tokens_usados=tokens_usados,
+            custo_usd=custo_usd,
         )
         
         logger.info(f"✅ Site gerado com sucesso em {tempo_total:.2f}s")
@@ -424,6 +433,8 @@ async def generate_site(
         raise
     except Exception as e:
         tempo_total = time.time() - tempo_inicio
+        tokens_usados = getattr(agente, "ultimo_tokens_usados", 0)
+        custo_usd = getattr(agente, "ultimo_custo_usd", 0.0)
         logger.error(f"❌ Erro ao gerar site: {e}")
         
         metricas.registrar_geracao(
@@ -431,7 +442,9 @@ async def generate_site(
             request.nicho,
             False,
             tempo_total,
-            erro=str(e)
+            tokens_usados=tokens_usados,
+            custo_usd=custo_usd,
+            erro=str(e),
         )
         
         raise HTTPException(
@@ -495,8 +508,9 @@ async def webhook_whatsapp(
         except ErroNormalizacaoLogo as e:
             logger.warning(f"⚠️  Falha ao normalizar logo, seguindo sem logo customizado: {e}")
 
-        # Gerar config com SEO by design (palavra-chave + localização)
-        config = agente.gerar_config_site(
+        # Gerar config com SEO by design assincronamente sem bloquear o event loop
+        config = await asyncio.to_thread(
+            agente.gerar_config_site,
             payload.nome_empresa,
             payload.ramo_atividade,
             payload.cor_preferida,
@@ -505,6 +519,9 @@ async def webhook_whatsapp(
             logo_url=logo_normalizado,
             google_maps_url=payload.google_maps_url,
         )
+
+        tokens_usados = getattr(agente, "ultimo_tokens_usados", 0)
+        custo_usd = getattr(agente, "ultimo_custo_usd", 0.0)
 
         # Validar schema
         valido, erro, config_obj = ValidadorSchema.validar_json(config)
@@ -516,7 +533,9 @@ async def webhook_whatsapp(
                 payload.ramo_atividade,
                 False,
                 time.time() - tempo_inicio,
-                erro=erro
+                tokens_usados=tokens_usados,
+                custo_usd=custo_usd,
+                erro=erro,
             )
             raise HTTPException(
                 status_code=400,
@@ -537,7 +556,9 @@ async def webhook_whatsapp(
             payload.nome_empresa,
             payload.ramo_atividade,
             True,
-            tempo_total
+            tempo_total,
+            tokens_usados=tokens_usados,
+            custo_usd=custo_usd,
         )
 
         logger.info(f"✅ Site gerado via WhatsApp em {tempo_total:.2f}s")

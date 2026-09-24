@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Aguardando o Postgres ficar disponivel em ${DATABASE_URL}..."
+echo "Aguardando o Postgres ficar disponivel..."
 until python -c "
 import os, sys
 import psycopg

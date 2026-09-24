@@ -42,7 +42,6 @@ async def formulario_demo(request: Request, nome_empresa: str = "", nicho: str =
     redirect = exigir_login_demo(request)
     if redirect:
         return redirect
-    api_key = os.getenv("WEBHOOK_API_KEY", "")
     return f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -111,8 +110,6 @@ async def formulario_demo(request: Request, nome_empresa: str = "", nicho: str =
 </div>
 
 <script>
-const API_KEY = {api_key!r};
-
 // FastAPI/Pydantic devolve "detail" como string (erros HTTPException, ex.:
 // falha ao chamar a IA) ou como lista de objetos {{msg, loc, type}} (erros de
 // validação 422, ex.: portfolio_urls inválido) — sem isso, new Error(array)
@@ -167,7 +164,6 @@ async function enviarArquivo(arquivo) {{
     formData.append('arquivo', arquivo);
     const resp = await fetch('/api/v1/demo-upload/imagem', {{
       method: 'POST',
-      headers: {{ 'X-API-Key': API_KEY }},
       body: formData,
     }});
     const json = await resp.json();
@@ -225,7 +221,7 @@ document.getElementById('form-demo').addEventListener('submit', async (e) => {{
   try {{
     const resp = await fetch('/api/v1/demo-dfy', {{
       method: 'POST',
-      headers: {{ 'Content-Type': 'application/json', 'X-API-Key': API_KEY }},
+      headers: {{ 'Content-Type': 'application/json' }},
       body: JSON.stringify(dados),
     }});
     const json = await resp.json();

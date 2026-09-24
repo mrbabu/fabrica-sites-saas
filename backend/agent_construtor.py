@@ -11,6 +11,7 @@ import sys
 import os
 import time
 import zlib
+import colorsys
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -25,7 +26,7 @@ except ImportError:
     pass
 
 from schema_validator import ValidadorSchema, FONT_PAIRS_VALIDOS, listar_todas_duplicatas
-from metrics import obter_metricas
+from metrics import obter_metricas, calcular_custo_tokens
 from ai_provider import obter_ai_provider, ErroProvedorIA
 from image_utils import _slugify, mapear_categoria, obter_imagens_categoria, obter_cor_primaria, ErroBancoImagens
 
@@ -236,59 +237,55 @@ class AgenteConstrutor:
     def __init__(self):
         """Inicializa o agente com o provedor de IA modular (NIM/Anthropic/Ollama)"""
         self.ai = obter_ai_provider()
+        self.ultimo_tokens_usados = 0
+        self.ultimo_custo_usd = 0.0
         print(f"✅ Agente Construtor pronto (cadeia de provedores: {' -> '.join(self.ai.ordem)})")
 
     def gerar_paleta_cores(self, cor_primaria: str) -> dict:
         """
-        Gera paleta de 8 cores hexadecimais complementares baseada em cor primária
-
-        Args:
-            cor_primaria: Cor em formato hex (ex: #6366f1)
-
-        Returns:
-            Dicionário com 8 variações de cores
+        Gera paleta de cores determinística a partir da cor primária usando colorsys.
+        Zero custo de IA, zero latência e 100% de hex válidos com 6 dígitos.
         """
-        prompt = f"""Você é um designer de cores especialista. Dada a cor primária {cor_primaria},
-gere uma paleta harmônica de 8 cores hexadecimais complementares.
-
-Retorne APENAS um JSON válido no seguinte formato (sem explicações):
-{{
-    "primary": "{cor_primaria}",
-    "primaryDark": "#...",
-    "secondary": "#...",
-    "accent": "#...",
-    "background": "#ffffff",
-    "text": "#...",
-    "textLight": "#...",
-    "border": "#..."
-}}
-
-Regras:
-- primary: a cor fornecida
-- primaryDark: versão mais escura (aprox -20% de luminosidade)
-- secondary: cor complementar harmônica
-- accent: cor que contrasta bem
-- background: deve ser clara (#ffffff ou similar)
-- text: cor escura para texto (#1f2937 ou similar)
-- textLight: cor cinza para texto secundário (#6b7280 ou similar)
-- border: cor muito clara (#e5e7eb ou similar)
-
-Todas as cores devem ser hexadecimais válidas. Sem markdown, sem explicações."""
+        hex_limpo = (cor_primaria or "").lstrip('#')
+        if len(hex_limpo) == 3:
+            hex_limpo = ''.join([c*2 for c in hex_limpo])
+        if len(hex_limpo) != 6:
+            hex_limpo = "4f46e5"
 
         try:
-            return self.ai.gerar_json(prompt, max_tokens=512)
-        except (ErroProvedorIA, json.JSONDecodeError) as e:
-            print(f"Aviso: Não foi possível gerar paleta de cores ({e}). Usando padrão.")
-            return {
-                "primary": cor_primaria,
-                "primaryDark": "#4f46e5",
-                "secondary": "#ec4899",
-                "accent": "#f59e0b",
-                "background": "#ffffff",
-                "text": "#1f2937",
-                "textLight": "#6b7280",
-                "border": "#e5e7eb"
-            }
+            r = int(hex_limpo[0:2], 16) / 255.0
+            g = int(hex_limpo[2:4], 16) / 255.0
+            b = int(hex_limpo[4:6], 16) / 255.0
+        except ValueError:
+            hex_limpo = "4f46e5"
+            r, g, b = 79/255.0, 70/255.0, 229/255.0
+
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+        # Primary dark: mesmo matiz e saturação, porém luminosidade reduzida em ~25%
+        r_dark, g_dark, b_dark = colorsys.hls_to_rgb(h, max(0.12, l * 0.75), s)
+        primary_dark = f"#{int(r_dark*255):02x}{int(g_dark*255):02x}{int(b_dark*255):02x}"
+
+        # Secondary: matiz análoga (+30 graus) ou complementar suave
+        h_sec = (h + 0.08) % 1.0
+        r_sec, g_sec, b_sec = colorsys.hls_to_rgb(h_sec, min(0.85, max(0.2, l * 1.05)), min(1.0, s * 0.9))
+        secondary = f"#{int(r_sec*255):02x}{int(g_sec*255):02x}{int(b_sec*255):02x}"
+
+        # Accent: cor complementar (+180 graus) com saturação viva
+        h_acc = (h + 0.5) % 1.0
+        r_acc, g_acc, b_acc = colorsys.hls_to_rgb(h_acc, 0.55, min(1.0, max(0.65, s)))
+        accent = f"#{int(r_acc*255):02x}{int(g_acc*255):02x}{int(b_acc*255):02x}"
+
+        return {
+            "primary": f"#{hex_limpo.lower()}",
+            "primaryDark": primary_dark.lower(),
+            "secondary": secondary.lower(),
+            "accent": accent.lower(),
+            "background": "#ffffff",
+            "text": "#1f2937",
+            "textLight": "#6b7280",
+            "border": "#e5e7eb"
+        }
 
     def gerar_config_site(
         self,
@@ -534,14 +531,33 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
 
         print(f"🤖 Gerando configuração (SEO by design) via {' -> '.join(self.ai.ordem)}...")
 
+        self.ultimo_tokens_usados = 0
+        self.ultimo_custo_usd = 0.0
+        prompt_tokens_acumulado = 0
+        completion_tokens_acumulado = 0
+        total_tokens_acumulado = 0
+
         ultimo_erro = None
         for tentativa in range(1, MAX_TENTATIVAS_GERACAO + 1):
             tempo_inicio_tentativa = time.time()
             config = self.ai.gerar_json(prompt, max_tokens=4096)
             print(f"   ↳ Provedor utilizado: {self.ai.provedor_ativo}")
 
+            uso_tentativa = getattr(self.ai, "uso_tokens_ativo", None)
+            if uso_tentativa and isinstance(uso_tentativa, dict):
+                prompt_tokens_acumulado += uso_tentativa.get("prompt", 0) or 0
+                completion_tokens_acumulado += uso_tentativa.get("completion", 0) or 0
+                total_tokens_acumulado += uso_tentativa.get("total", 0) or 0
+
             if logo_url:
                 config.setdefault("company", {})["logo"] = logo_url
+
+            # Garante que colors contenha a paleta calculada mesmo se omitida pela IA
+            if "colors" not in config or not isinstance(config.get("colors"), dict):
+                config["colors"] = dict(cores)
+            else:
+                for k, v in cores.items():
+                    config["colors"].setdefault(k, v)
 
             config = self._autocorrigir(config)
             config = self._preencher_fallbacks(
@@ -556,11 +572,20 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 descricao_negocio=descricao_negocio,
             )
 
-            # Validar schema básico (campos obrigatórios presentes)
-            self._validar_schema(config)
+            # Validar schema básico (campos obrigatórios presentes) com captura de erro para retry
+            try:
+                self._validar_schema(config)
+                valido_schema = True
+                erro_schema = None
+            except ValueError as ve:
+                valido_schema = False
+                erro_schema = str(ve)
 
-            # Validação completa (tipos, tamanhos, regras de negócio)
-            valido, erro, _ = ValidadorSchema.validar_json(config)
+            if not valido_schema:
+                valido, erro = False, erro_schema
+            else:
+                # Validação completa (tipos, tamanhos, regras de negócio)
+                valido, erro, _ = ValidadorSchema.validar_json(config)
 
             reparado = False
             reparo_tentado = False
@@ -570,10 +595,24 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 config_reparado, campos_reescritos = self._tentar_reparo_duplicacao(config, erro, nicho)
                 if config_reparado is not None:
                     reparo_tentado = True
+                    uso_reparo = getattr(self.ai, "uso_tokens_ativo", None)
+                    if uso_reparo and isinstance(uso_reparo, dict):
+                        prompt_tokens_acumulado += uso_reparo.get("prompt", 0) or 0
+                        completion_tokens_acumulado += uso_reparo.get("completion", 0) or 0
+                        total_tokens_acumulado += uso_reparo.get("total", 0) or 0
+
                     valido_reparo, erro_reparo, _ = ValidadorSchema.validar_json(config_reparado)
                     erro_pos_reparo = erro_reparo
                     if valido_reparo:
                         config, valido, erro, reparado = config_reparado, True, None, True
+
+            self.ultimo_tokens_usados = total_tokens_acumulado
+            self.ultimo_custo_usd = calcular_custo_tokens(
+                self.ai.provedor_ativo,
+                prompt_tokens=prompt_tokens_acumulado,
+                completion_tokens=completion_tokens_acumulado,
+                total_tokens=total_tokens_acumulado,
+            )
 
             if diagnostico_tentativas is not None:
                 diagnostico_tentativas.append({
@@ -586,7 +625,7 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                     "reparado": reparado,
                     "campos_reescritos": campos_reescritos,
                     "tempo_segundos": time.time() - tempo_inicio_tentativa,
-                    "tokens": getattr(self.ai, "uso_tokens_ativo", None),
+                    "tokens": uso_tentativa,
                 })
 
             if valido:
@@ -707,6 +746,10 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
         site_title = (metadata.get("siteTitle") or "").strip()
         if len(site_title) > 60:
             metadata["siteTitle"] = _truncar_para_limite(site_title, 60)
+
+        site_desc = (metadata.get("siteDescription") or "").strip()
+        if len(site_desc) > 160:
+            metadata["siteDescription"] = _truncar_para_limite(site_desc, 160)
 
         typography = config.setdefault("typography", {})
         if typography.get("fontPair") not in FONT_PAIRS_VALIDOS:
@@ -1040,7 +1083,10 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
                 print(f"❌ Validação falhou: {erro}\n")
                 metricas.registrar_geracao(
                     nome_empresa, nicho, False,
-                    time.time() - tempo_inicio, erro=erro
+                    time.time() - tempo_inicio,
+                    tokens_usados=self.ultimo_tokens_usados,
+                    custo_usd=self.ultimo_custo_usd,
+                    erro=erro
                 )
                 raise ValueError(f"Schema inválido: {erro}")
 
@@ -1063,7 +1109,9 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
 
             # Registrar sucesso
             metricas.registrar_geracao(
-                nome_empresa, nicho, True, tempo_total
+                nome_empresa, nicho, True, tempo_total,
+                tokens_usados=self.ultimo_tokens_usados,
+                custo_usd=self.ultimo_custo_usd
             )
 
             return config
@@ -1072,7 +1120,10 @@ Retorne APENAS o JSON, sem nenhum texto adicional ou markdown."""
             tempo_total = time.time() - tempo_inicio
             print(f"\n❌ Erro ao gerar configuração: {e}")
             metricas.registrar_geracao(
-                nome_empresa, nicho, False, tempo_total, erro=str(e)
+                nome_empresa, nicho, False, tempo_total,
+                tokens_usados=self.ultimo_tokens_usados,
+                custo_usd=self.ultimo_custo_usd,
+                erro=str(e)
             )
             raise
 

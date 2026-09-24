@@ -70,6 +70,35 @@ def _extrair_uso_openai(response) -> Optional[dict]:
     }
 
 
+def _extrair_uso_gemini(response) -> Optional[dict]:
+    """Extrai uso de tokens da resposta da API Gemini via usage_metadata"""
+    usage = getattr(response, "usage_metadata", None)
+    if usage is None:
+        return None
+    prompt = getattr(usage, "prompt_token_count", 0) or 0
+    completion = getattr(usage, "candidates_token_count", 0) or 0
+    total = getattr(usage, "total_token_count", 0) or (prompt + completion)
+    return {
+        "prompt": prompt,
+        "completion": completion,
+        "total": total,
+    }
+
+
+def _extrair_uso_anthropic(response) -> Optional[dict]:
+    """Extrai uso de tokens da resposta da API Anthropic via usage"""
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        return None
+    prompt = getattr(usage, "input_tokens", 0) or 0
+    completion = getattr(usage, "output_tokens", 0) or 0
+    return {
+        "prompt": prompt,
+        "completion": completion,
+        "total": prompt + completion,
+    }
+
+
 class ProvedorNvidiaNIM:
     """Chama modelos via NVIDIA NIM usando o SDK OpenAI-compatível"""
 
@@ -194,6 +223,7 @@ class ProvedorGemini:
             self.model_name,
             system_instruction="Você retorna exclusivamente JSON válido, sem markdown e sem texto adicional.",
         )
+        self.ultimo_uso_tokens: Optional[dict] = None
 
     def gerar_json(self, prompt: str, max_tokens: int = 4096) -> dict:
         response = self.client.generate_content(
@@ -205,6 +235,7 @@ class ProvedorGemini:
             ),
             request_options={"timeout": 30},
         )
+        self.ultimo_uso_tokens = _extrair_uso_gemini(response)
         texto = response.text.strip()
         return _extrair_json(texto)
 
@@ -219,6 +250,7 @@ class ProvedorGemini:
             ),
             request_options={"timeout": 60},
         )
+        self.ultimo_uso_tokens = _extrair_uso_gemini(response)
         texto = response.text.strip()
         return _extrair_json(texto)
 
@@ -236,6 +268,7 @@ class ProvedorAnthropic:
 
         self.api_key = os.getenv("ANTHROPIC_API_KEY")
         self.model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+        self.ultimo_uso_tokens: Optional[dict] = None
 
         if not self.api_key:
             raise ErroProvedorIA("ANTHROPIC_API_KEY não configurada")
@@ -248,6 +281,7 @@ class ProvedorAnthropic:
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
         )
+        self.ultimo_uso_tokens = _extrair_uso_anthropic(response)
         texto = response.content[0].text.strip()
         return _extrair_json(texto)
 
@@ -270,6 +304,7 @@ class ProvedorAnthropic:
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": blocos_imagem + [{"type": "text", "text": prompt}]}],
         )
+        self.ultimo_uso_tokens = _extrair_uso_anthropic(response)
         texto = response.content[0].text.strip()
         return _extrair_json(texto)
 
@@ -391,7 +426,12 @@ _PROVEDORES = {
     "ollama": ProvedorOllama,
 }
 
-_ORDEM_PADRAO = ["gemini", "nvidia_nim", "groq", "anthropic", "ollama"]
+# Anthropic sai da cadeia automatica barata para evitar custos acidentais,
+# entrando apenas se ANTHROPIC_FALLBACK=1 for explicitamente configurado.
+_ordem_base = ["gemini", "nvidia_nim", "groq", "ollama"]
+if os.getenv("ANTHROPIC_FALLBACK") == "1":
+    _ordem_base.insert(3, "anthropic")
+_ORDEM_PADRAO = _ordem_base
 
 # NIM/Groq/Ollama ficam de fora: nenhum dos três tem entrada de imagem
 # configurada neste projeto (NIM/Groq exigiriam um modelo de visão

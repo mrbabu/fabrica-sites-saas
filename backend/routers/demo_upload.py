@@ -21,7 +21,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from PIL import Image, UnidentifiedImageError
 
-from auth import verificar_api_key
+from auth import verificar_api_key_ou_sessao
 
 router = APIRouter(tags=["Demo DFY (ferramenta interna)"])
 
@@ -38,7 +38,7 @@ TAMANHO_MAX_BYTES = 8 * 1024 * 1024
 LARGURA_MAX = 2400
 
 
-@router.post("/api/v1/demo-upload/imagem", dependencies=[Depends(verificar_api_key)])
+@router.post("/api/v1/demo-upload/imagem", dependencies=[Depends(verificar_api_key_ou_sessao)])
 async def upload_imagem_portfolio(arquivo: UploadFile = File(...)):
     """
     Recebe 1 imagem, valida que é uma imagem de verdade (não confia em
