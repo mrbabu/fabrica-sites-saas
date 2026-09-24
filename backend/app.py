@@ -12,7 +12,7 @@ try:
 except ImportError:
     pass  # Se não tiver python-dotenv instalado, continua sem .env
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Header, Depends
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Header, Depends, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +20,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel, Field, field_validator, ConfigDict, HttpUrl
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
+from collections import defaultdict
 import asyncio
 import os
 import secrets
@@ -87,19 +88,28 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS - Permitir requisições de qualquer origem
+# CORS - Restrito por padrão com suporte a origens configuradas via env
+_cors_origins_env = os.getenv("CORS_ALLOWED_ORIGINS")
+if _cors_origins_env:
+    _allowed_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+else:
+    # Origens seguras padrão (dev local e frontends oficiais)
+    _allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "https://anuah-mansur.vercel.app",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
 # Sessão de login da ferramenta interna de demo (ver backend/auth_demo.py).
-# Sem SESSION_SECRET_KEY no ambiente, gera uma chave aleatória por processo
-# — login continua funcionando, só derruba sessões abertas a cada restart
-# (aceitável; nunca cair pra uma chave fixa/previsível no código).
 _session_secret = os.getenv("SESSION_SECRET_KEY")
 if not _session_secret:
     logging.getLogger("FabricaSitesAPI").warning(
@@ -107,7 +117,27 @@ if not _session_secret:
         "(sessões de /demo serão derrubadas no próximo restart)"
     )
     _session_secret = secrets.token_hex(32)
-app.add_middleware(SessionMiddleware, secret_key=_session_secret, max_age=15 * 60)
+
+_is_prod = os.getenv("ENV", "development").lower() in ("production", "prod")
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=_session_secret,
+    max_age=15 * 60,
+    same_site="lax",
+    https_only=_is_prod,
+)
+
+
+@app.middleware("http")
+async def adicionar_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"  # SAMEORIGIN para permitir o preview interno de demo
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if _is_prod:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 # Roteador de webhook inbound do WhatsApp (só recebe/registra — não qualifica
 # nem responde sozinho, ver backend/routers/whatsapp_inbound.py)
@@ -315,6 +345,23 @@ async def health_check():
     )
 
 
+_GERACAO_RATE_LIMIT_MAX = int(os.getenv("GERACAO_RATE_LIMIT_MAX", "10"))
+_GERACAO_RATE_LIMIT_WINDOW = 60
+_geracao_timestamps = defaultdict(list)
+
+
+def _verificar_rate_limit_geracao(client_ip: str) -> None:
+    agora = time.time()
+    tempos = _geracao_timestamps[client_ip]
+    _geracao_timestamps[client_ip] = [t for t in tempos if agora - t < _GERACAO_RATE_LIMIT_WINDOW]
+    if len(_geracao_timestamps[client_ip]) >= _GERACAO_RATE_LIMIT_MAX:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Limite de requisições de geração excedido ({_GERACAO_RATE_LIMIT_MAX}/min). Tente novamente mais tarde."
+        )
+    _geracao_timestamps[client_ip].append(agora)
+
+
 @app.post(
     "/api/v1/generate-site",
     response_model=SiteResponse,
@@ -323,7 +370,8 @@ async def health_check():
 )
 async def generate_site(
     request: SiteRequest,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    http_request: Request,
 ):
     """
     Gera site-config.json completo
@@ -367,6 +415,8 @@ async def generate_site(
     tempo_inicio = time.time()
     
     try:
+        client_ip = http_request.client.host if http_request.client else "127.0.0.1"
+        _verificar_rate_limit_geracao(client_ip)
         logger.info(f"📝 Gerando site: {request.nome_empresa} ({request.nicho})")
         
         # Gerar config assincronamente sem bloquear o event loop
@@ -461,7 +511,8 @@ async def generate_site(
 )
 async def webhook_whatsapp(
     payload: OnboardingWhatsApp,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    http_request: Request,
 ):
     """
     Recebe um lead capturado via WhatsApp (simulando o n8n) e gera o site
@@ -498,6 +549,8 @@ async def webhook_whatsapp(
     tempo_inicio = time.time()
 
     try:
+        client_ip = http_request.client.host if http_request.client else "127.0.0.1"
+        _verificar_rate_limit_geracao(client_ip)
         logger.info(f"📲 Lead recebido via WhatsApp: {payload.nome_empresa} ({payload.ramo_atividade})")
 
         # Normalizar logo (não bloqueia a geração do site se falhar)
