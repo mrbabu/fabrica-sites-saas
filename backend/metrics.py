@@ -27,6 +27,45 @@ class TipoEvento(str, Enum):
     ERRO_SCHEMA = "erro_schema"
 
 
+# Preço em USD por 1 milhão de tokens (input / output) por provedor
+PRECO_POR_MTOK = {
+    "nvidia_nim": {"input": 0.18, "output": 0.18},
+    "groq": {"input": 0.05, "output": 0.08},
+    "gemini": {"input": 0.10, "output": 0.40},
+    "anthropic": {"input": 0.25, "output": 1.25},
+    "ollama": {"input": 0.0, "output": 0.0},
+}
+
+
+def calcular_custo_tokens(
+    provedor: Optional[str],
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
+    total_tokens: int = 0,
+) -> float:
+    """Calcula o custo estimado em USD com base no provedor e na contagem de tokens."""
+    prov = (provedor or "").lower()
+    tabela = PRECO_POR_MTOK.get(prov)
+    if not tabela:
+        for k in PRECO_POR_MTOK:
+            if k in prov:
+                tabela = PRECO_POR_MTOK[k]
+                break
+    if not tabela:
+        tabela = {"input": 0.15, "output": 0.15}
+
+    if prompt_tokens > 0 or completion_tokens > 0:
+        custo = (prompt_tokens / 1_000_000 * tabela["input"]) + (
+            completion_tokens / 1_000_000 * tabela["output"]
+        )
+    else:
+        custo_medio = (tabela["input"] + tabela["output"]) / 2
+        custo = (total_tokens / 1_000_000) * custo_medio
+
+    return round(custo, 6)
+
+
+
 class Metricas:
     """Gerenciador de métricas e logging"""
 

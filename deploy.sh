@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy repetível do backend na VM Ampere de produção (152.67.59.214).
+# Deploy repetível do backend na VM de produção (definida por ${PROD_HOST:-sua-vm}).
 # Rodar via SSH (Tailscale) dentro da VM, no diretório onde o repo já foi
 # clonado. Pressupõe que o setup de uma vez só já foi feito — ver
 # infra/zero_trust_deploy.md (Docker, Tailscale, NSG fechado, .env

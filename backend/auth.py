@@ -12,7 +12,7 @@ import logging
 import os
 from typing import Optional
 
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Request
 
 logger = logging.getLogger("FabricaSitesAPI.auth")
 
@@ -32,3 +32,19 @@ def verificar_api_key(x_api_key: Optional[str] = Header(default=None, alias="X-A
         )
     if not x_api_key or x_api_key != WEBHOOK_API_KEY:
         raise HTTPException(status_code=401, detail="API key ausente ou inválida")
+
+
+def verificar_api_key_ou_sessao(
+    request: Request,
+    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
+) -> None:
+    """
+    Permite autenticação via cookie de sessão (ferramentas internas de UI)
+    OU via header X-API-Key (chamadas programáticas/n8n/CLI).
+    Evita expor a chave de API no código JavaScript entregue ao navegador.
+    """
+    from auth_demo import sessao_valida
+    if sessao_valida(request):
+        return
+    verificar_api_key(x_api_key)
+

@@ -161,6 +161,7 @@ def _formatar_tentativas_para_json(diagnostico: List[Dict]) -> List[Dict]:
             "regras": [] if entrada["sucesso"] else _categorizar_erro(entrada["erro"]),
             "tempo_segundos": entrada.get("tempo_segundos"),
             "provedor": entrada.get("provedor"),
+            "tokens": entrada.get("tokens"),
         })
     return formatado
 

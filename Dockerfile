@@ -10,11 +10,13 @@ COPY index.html index.html
 COPY assets/css/ assets/css/
 COPY vendas-config.json vendas-config.json
 COPY entrypoint.sh entrypoint.sh
-COPY leads/ leads/
 RUN chmod +x entrypoint.sh
+
+RUN useradd -u 1000 appuser && chown -R appuser:appuser /app
 
 WORKDIR /app/backend
 
+USER appuser
 EXPOSE 8000
 
 ENTRYPOINT ["/app/entrypoint.sh"]

@@ -10,6 +10,7 @@ Escopo desta primeira versão: só o endpoint de geração
 que este endpoint estiver confirmado funcionando.
 """
 
+import asyncio
 import re
 from pathlib import Path
 from typing import Optional
@@ -20,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from agent_construtor import AgenteConstrutor
 from image_utils import _slugify
-from auth import verificar_api_key
+from auth import verificar_api_key, verificar_api_key_ou_sessao
 from db import get_db
 import repository
 
@@ -104,7 +105,7 @@ class DemoDfyRequest(BaseModel):
         return v
 
 
-@router.post("/api/v1/demo-dfy", dependencies=[Depends(verificar_api_key)])
+@router.post("/api/v1/demo-dfy", dependencies=[Depends(verificar_api_key_ou_sessao)])
 async def gerar_demo(payload: DemoDfyRequest, db: Session = Depends(get_db)):
     """
     Gera uma demo DFY chamando o motor real e persiste no Postgres (tabela
@@ -124,7 +125,8 @@ async def gerar_demo(payload: DemoDfyRequest, db: Session = Depends(get_db)):
     agente = _obter_agente()
     slug = _slugify(payload.nome_empresa)
     try:
-        config = agente.executar(
+        config = await asyncio.to_thread(
+            agente.executar,
             nome_empresa=payload.nome_empresa,
             nicho=payload.nicho,
             cor_primaria=payload.cor_primaria,

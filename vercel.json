@@ -1,17 +1,6 @@
 {
-  "redirects": [
-    { "source": "/", "destination": "/demo", "permanent": false }
-  ],
+  "cleanUrls": true,
   "rewrites": [
-    { "source": "/demo", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/demo" },
-    { "source": "/demo/:path*", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/demo/:path*" },
-    { "source": "/hunter", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/hunter" },
-    { "source": "/hunter/:path*", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/hunter/:path*" },
-    { "source": "/api/:path*", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/api/:path*" },
-    { "source": "/webhook/:path*", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/webhook/:path*" },
-    { "source": "/assets/uploads/:path*", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/assets/uploads/:path*" },
-    { "source": "/health", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/health" },
-    { "source": "/docs", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/docs" },
-    { "source": "/openapi.json", "destination": "https://handles-presents-bingo-outcome.trycloudflare.com/openapi.json" }
+    { "source": "/", "destination": "/vendas.html" }
   ]
 }
