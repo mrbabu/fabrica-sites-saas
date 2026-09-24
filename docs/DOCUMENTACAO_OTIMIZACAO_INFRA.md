@@ -14,7 +14,7 @@ Este documento consolida as intervenções estruturais executadas nos ecossistem
 ## 1. O Que Foi Executado (Ações por Subsistema)
 
 ### 1.1 Host Windows, WSL2 e Infraestrutura de Energia (Fase 1)
-- **Plano de Energia do Sistema Operacional:** O plano do Windows foi alterado de **Equilibrado** para **Desempenho Máximo** (`0e82c2ba-de12-42a5-ac7b-69829265084e`) diretamente pelo usuário, devendo permanecer nesse estado para garantir máxima responsividade e desempenho da estação de trabalho.
+- **Plano de Energia do Sistema Operacional (Decisão Operacional de Desempenho):** O host está fixado em **Desempenho Máximo** (`0e82c2ba-de12-42a5-ac7b-69829265084e`) por decisão deliberada do usuário para garantir clocks elevados e responsividade contínua em compilações e desenvolvimento. A documentação inicial que propunha o plano `Equilibrado` com foco em economia energética está **formalmente declarada obsoleta**, e o perfil `Desempenho Máximo` **não deve ser revertido automaticamente** por scripts ou rotinas de otimização. As demais frentes de otimização (memória WSL2, Docker sob demanda, poda de modelos e controle de tokens) operam de forma independente e permanecem 100% ativas.
 - **Governança de Memória do WSL2:** Criado `%USERPROFILE%\.wslconfig` fixando teto de `memory=4GB`, limite de `processors=4` e ativação de `[experimental] autoMemoryReclaim=gradual` para devolução contínua de RAM ao Windows. WSL foi parado (`wsl --shutdown`, estado `Stopped`).
 - **Eliminação de Inicialização Fantasma (Boot):** Removidos da pasta de inicialização do Windows (`Startup`) o script `iniciar-docker-wsl.vbs` e o atalho do `Ollama.lnk` (preservados em backup seguro em `%USERPROFILE%\.backup_startup`).
 - **Limpeza de Modelos Locais (Ollama):** Exclusão do modelo `llama3` via CLI do Ollama, preservando unicamente o `qwen2.5:7b-instruct`. Isso liberou **4,7 GB** de armazenamento SSD.
@@ -142,3 +142,13 @@ python -m uvicorn api.main:app --host 127.0.0.1 --port 8100
 - ❌ **NUNCA injetar segredos do `.env` no HTML renderizado para o navegador:** Rotas de interface devem consumir cookies de sessão de login ou atuar como proxies no backend.
 - ❌ **NUNCA executar chamadas de LLM ou geração pesada diretamente dentro de funções `async def`:** Utilize sempre `await asyncio.to_thread(funcao_sincrona, ...)` para não congelar o event loop da aplicação.
 - ❌ **NUNCA salvar ou versionar chaves ou backups com extensões rastreáveis:** Mantenha `*.bak`, `.env` e pastas de cache explicitamente ignoradas no `.gitignore`.
+
+---
+
+## 6. Histórico de Revisões (Changelog de Auditoria)
+
+| Versão | Data | Responsável | Descrição da Revisão |
+| :--- | :---: | :---: | :--- |
+| **1.0** | 23/09/2026 | Auditoria / Executor | Versão inicial consolidando as 6 fases: limitação de RAM no WSL2 (4GB), Docker sob demanda (`restart: "no"`), higienização de modelos, controle estrito de tokens e isolamento assíncrono. |
+| **1.1** | 23/09/2026 | Usuário & Engenharia | **Retificação do Plano de Energia:** Fixação do perfil `Desempenho Máximo` (`0e82c2ba-de12-42a5-ac7b-69829265084e`) como diretriz operacional de desempenho; declaração de obsolescência formal da premissa anterior de economia de energia via `Equilibrado`; garantia de não reversão por agentes ou scripts. |
+
