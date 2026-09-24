@@ -177,7 +177,7 @@ class TestFormatarTentativasParaJson(unittest.TestCase):
         diagnostico = [{"tentativa": 1, "sucesso": True, "erro": None, "tempo_segundos": 10.5, "provedor": "ollama"}]
         formatado = _formatar_tentativas_para_json(diagnostico)
         self.assertEqual(formatado, [
-            {"numero": 1, "status": "passou", "regras": [], "tempo_segundos": 10.5, "provedor": "ollama"}
+            {"numero": 1, "status": "passou", "regras": [], "tempo_segundos": 10.5, "provedor": "ollama", "tokens": None}
         ])
 
     def test_falha_vira_status_falhou_com_regras(self):
@@ -188,7 +188,7 @@ class TestFormatarTentativasParaJson(unittest.TestCase):
         }]
         formatado = _formatar_tentativas_para_json(diagnostico)
         self.assertEqual(formatado, [
-            {"numero": 1, "status": "falhou", "regras": ["MODEL_DUPLICATION"], "tempo_segundos": 5.2, "provedor": "ollama"}
+            {"numero": 1, "status": "falhou", "regras": ["MODEL_DUPLICATION"], "tempo_segundos": 5.2, "provedor": "ollama", "tokens": None}
         ])
 
     def test_lista_vazia_retorna_lista_vazia(self):
