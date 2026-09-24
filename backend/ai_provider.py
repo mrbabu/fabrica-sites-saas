@@ -212,7 +212,11 @@ class ProvedorGemini:
             raise ErroProvedorIA("Pacote 'google-generativeai' não instalado") from e
 
         self.api_key = os.getenv("GEMINI_API_KEY")
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+        # gemini-2.0-flash foi descontinuado pelo Google em 2026 (API
+        # retorna 404 "no longer available", recomendando gemini-3.6-flash
+        # como substituto -- confirmado em 2026-09-24, mesmo nível de
+        # gratuidade no tier de API do AI Studio).
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 
         if not self.api_key:
             raise ErroProvedorIA("GEMINI_API_KEY não configurada")
